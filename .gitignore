@@ -1,0 +1,19 @@
+# Arduino / ESP32 build artifacts
+**/build/
+*.bin
+*.elf
+*.map
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Windows Hardware Drivers
+CP210x_Universal_Windows_Driver/

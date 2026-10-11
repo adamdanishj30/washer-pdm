@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIY Wire Splicing Visual Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .step-active {
+      background-color: #3b82f6 !important;
+      color: #ffffff !important;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased p-4 select-none min-h-screen flex items-center justify-center">
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-xl max-w-xl w-full">
+    
+    <!-- Top Stepper Header -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+      <div>
+        <div class="text-xs font-semibold tracking-wider uppercase text-slate-400">DIY Wire Splicing Guide</div>
+        <h2 id="step-title" class="font-bold text-base text-white flex items-center gap-2 mt-0.5">
+          <span id="step-badge" class="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 font-mono font-bold">Step 1</span>
+          <span id="step-heading">Cut Off Male Pins</span>
+        </h2>
+      </div>
+      <!-- Step Navigation Buttons -->
+      <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+        <button onclick="prevStep()" id="btn-prev" class="px-3 py-1 text-xs rounded hover:bg-slate-800 transition-colors opacity-50 cursor-not-allowed" disabled>Back</button>
+        <span id="step-counter" class="text-xs font-mono text-slate-400 px-1">1/4</span>
+        <button onclick="nextStep()" id="btn-next" class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors">Next</button>
+      </div>
+    </div>
+
+    <!-- Stepper Navigation Pills -->
+    <div class="grid grid-cols-4 gap-2 pt-3 pb-2 text-xs">
+      <button onclick="goToStep(1)" id="pill-1" class="py-1.5 px-2 rounded-md border border-slate-700 step-active text-center transition-all truncate">1. Snip Pins</button>
+      <button onclick="goToStep(2)" id="pill-2" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">2. Strip Plastic</button>
+      <button onclick="goToStep(3)" id="pill-3" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">3. Twist Copper</button>
+      <button onclick="goToStep(4)" id="pill-4" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">4. Tape Seal</button>
+    </div>
+
+    <!-- Main Visual Canvas Area -->
+    <div class="mt-2 relative rounded-lg border border-slate-700 bg-slate-950 p-4 min-h-[300px]">
+
+      <!-- ================= STEP 1: SNIP MALE PINS ================= -->
+      <div id="view-step-1" class="space-y-3">
+        <div class="flex items-center justify-center py-2">
+          <svg viewBox="0 0 380 140" class="w-full max-w-sm h-auto">
+            <!-- Wire A -->
+            <path d="M 20 45 L 230 45" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+            <text x="25" y="32" fill="#ef4444" font-size="10" font-weight="bold">Wire 1 (Red)</text>
+            <!-- Male Plug A -->
+            <rect x="230" y="38" width="28" height="14" rx="2" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+            <line x1="258" y1="45" x2="285" y2="45" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Wire B -->
+            <path d="M 20 95 L 230 95" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/>
+            <text x="25" y="82" fill="#3b82f6" font-size="10" font-weight="bold">Wire 2 (Blue)</text>
+            <!-- Male Plug B -->
+            <rect x="230" y="88" width="28" height="14" rx="2" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+            <line x1="258" y1="95" x2="285" y2="95" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Cut Line (Scissors) -->
+            <line x1="210" y1="20" x2="210" y2="120" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 3"/>
+            <circle cx="210" cy="70" r="14" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="204" y="75" font-size="14">✂️</text>
+            <text x="145" y="132" fill="#f59e0b" font-size="10" font-weight="bold">Cut right behind male plugs</text>
+          </svg>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-md p-3 text-xs space-y-1">
+          <div class="font-semibold text-amber-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span> Action:
+          </div>
+          <p class="text-slate-300">
+            Use your scissors to snip off the black rectangular male plugs from two wires. Discard the black plugs—you only keep the wires.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================= STEP 2: STRIP PLASTIC ================= -->
+      <div id="view-step-2" class="space-y-3 hidden">
+        <div class="flex items-center justify-center py-2">
+          <svg viewBox="0 0 380 140" class="w-full max-w-sm h-auto">
+            <!-- Wire A with stripped copper -->
+            <path d="M 20 45 L 200 45" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+            <text x="50" y="32" fill="#94a3b8" font-size="9">Plastic Insulator (Blocks Current)</text>
+            <!-- Exposed Copper Strands A -->
+            <line x1="200" y1="43" x2="250" y2="40" stroke="#f97316" stroke-width="2"/>
+            <line x1="200" y1="45" x2="255" y2="45" stroke="#ea580c" stroke-width="2.5"/>
+            <line x1="200" y1="47" x2="250" y2="49" stroke="#fb923c" stroke-width="2"/>
+            <rect x="200" y="25" width="55" height="40" rx="4" fill="none" stroke="#f97316" stroke-width="1" stroke-dasharray="2 2"/>
+            <text x="210" y="20" fill="#f97316" font-size="9" font-weight="bold">~1 cm Bare Copper</text>
+
+            <!-- Wire B with stripped copper -->
+            <path d="M 20 95 L 200 95" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/>
+            <!-- Exposed Copper Strands B -->
+            <line x1="200" y1="93" x2="250" y2="90" stroke="#f97316" stroke-width="2"/>
+            <line x1="200" y1="95" x2="255" y2="95" stroke="#ea580c" stroke-width="2.5"/>
+            <line x1="200" y1="97" x2="250" y2="99" stroke="#fb923c" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-md p-3 text-xs space-y-1">
+          <div class="font-semibold text-orange-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-orange-400"></span> Why strip the plastic jacket?
+          </div>
+          <p class="text-slate-300">
+            Plastic is an <strong class="text-white">electrical insulator</strong>. If plastic covers the wires, electricity cannot cross. Stripping reveals the raw copper so the metal can conduct.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================= STEP 3: TWIST COPPER ================= -->
+      <div id="view-step-3" class="space-y-3 hidden">
+        <div class="flex items-center justify-center py-2">
+          <svg viewBox="0 0 380 140" class="w-full max-w-sm h-auto">
+            <!-- Left Wire Red -->
+            <path d="M 20 70 L 140 70" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+            <text x="35" y="55" fill="#ef4444" font-size="10" font-weight="bold">Wire 1 (Female on far left)</text>
+
+            <!-- Right Wire Blue -->
+            <path d="M 240 70 L 360 70" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/>
+            <text x="245" y="55" fill="#3b82f6" font-size="10" font-weight="bold">Wire 2 (Female on far right)</text>
+
+            <!-- Twisted Copper Joint in Center -->
+            <g transform="translate(140, 60)">
+              <rect x="0" y="-5" width="100" height="30" rx="6" fill="#ea580c" fill-opacity="0.15" stroke="#ea580c" stroke-width="1.5"/>
+              <path d="M 5 10 Q 15 0, 25 10 T 45 10 T 65 10 T 85 10 T 95 10" stroke="#ea580c" stroke-width="3" fill="none"/>
+              <path d="M 5 10 Q 15 20, 25 10 T 45 10 T 65 10 T 85 10 T 95 10" stroke="#f97316" stroke-width="3" fill="none"/>
+              <text x="12" y="38" fill="#ea580c" font-size="9" font-weight="bold">⚡ COPPER BRAIDED TIGHTLY</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-md p-3 text-xs space-y-1">
+          <div class="font-semibold text-emerald-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Metal-to-Metal Contact:
+          </div>
+          <p class="text-slate-300">
+            Twist the two exposed copper ends tightly together like a spiral braid. Once copper touches copper, the electrical circuit is complete!
+          </p>
+        </div>
+      </div>
+
+      <!-- ================= STEP 4: TAPE SEAL ================= -->
+      <div id="view-step-4" class="space-y-3 hidden">
+        <div class="flex items-center justify-center py-2">
+          <svg viewBox="0 0 380 140" class="w-full max-w-sm h-auto">
+            <!-- Left Wire Red -->
+            <path d="M 20 70 L 130 70" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+            <!-- Right Wire Blue -->
+            <path d="M 250 70 L 360 70" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/>
+
+            <!-- Tape Wrapping -->
+            <g transform="translate(125, 50)">
+              <rect x="0" y="0" width="130" height="40" rx="8" fill="#0284c7" fill-opacity="0.25" stroke="#38bdf8" stroke-width="2"/>
+              <line x1="20" y1="2" x2="20" y2="38" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <line x1="65" y1="2" x2="65" y2="38" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <line x1="110" y1="2" x2="110" y2="38" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <text x="18" y="24" fill="#e0f2fe" font-size="10" font-weight="bold">🛡️ CLEAR TAPE SEALED</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-md p-3 text-xs space-y-1">
+          <div class="font-semibold text-blue-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span> Safety Achieved!
+          </div>
+          <p class="text-slate-300">
+            The tape becomes the new protective plastic jacket! Since all bare copper is sealed inside the tape, wires can touch each other on your desk with zero risk of short circuits.
+          </p>
+          <div class="pt-1 text-emerald-400 font-semibold flex items-center gap-1">
+            <span>🎉</span> Result: You now have a complete, safe Female-to-Female jumper wire!
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    const titles = {
+      1: { badge: "Step 1", heading: "Cut Off Male Pins" },
+      2: { badge: "Step 2", heading: "Strip 1 cm of Plastic Jacket" },
+      3: { badge: "Step 3", heading: "Twist Bare Copper Together" },
+      4: { badge: "Step 4", heading: "Wrap Tape to Seal (Safety)" }
+    };
+
+    function updateView() {
+      for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById(`view-step-${i}`).classList.add('hidden');
+        const pill = document.getElementById(`pill-${i}`);
+        pill.classList.remove('step-active');
+        pill.classList.add('text-slate-400');
+      }
+
+      document.getElementById(`view-step-${currentStep}`).classList.remove('hidden');
+      const activePill = document.getElementById(`pill-${currentStep}`);
+      activePill.classList.add('step-active');
+      activePill.classList.remove('text-slate-400');
+
+      document.getElementById('step-badge').textContent = titles[currentStep].badge;
+      document.getElementById('step-heading').textContent = titles[currentStep].heading;
+      document.getElementById('step-counter').textContent = `${currentStep}/${totalSteps}`;
+
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+
+      if (currentStep === 1) {
+        btnPrev.disabled = true;
+        btnPrev.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        btnPrev.disabled = false;
+        btnPrev.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      if (currentStep === totalSteps) {
+        btnNext.textContent = "Done";
+      } else {
+        btnNext.textContent = "Next";
+      }
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateView();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateView();
+      }
+    }
+
+    function goToStep(step) {
+      currentStep = step;
+      updateView();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multimodal PdM Rig - Visual Setup Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .step-active {
+      background-color: #3b82f6 !important;
+      color: #ffffff !important;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased p-4 select-none min-h-screen flex items-center justify-center">
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-xl max-w-xl w-full">
+    
+    <!-- Top Stepper Header -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+      <div>
+        <div class="text-xs font-semibold tracking-wider uppercase text-slate-400">Benchtop Hardware Walkthrough</div>
+        <h2 id="step-title" class="font-bold text-base text-white flex items-center gap-2 mt-0.5">
+          <span id="step-badge" class="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 font-mono font-bold">Step 1</span>
+          <span id="step-heading">Seat ESP32 on Expansion Shield</span>
+        </h2>
+      </div>
+      <!-- Step Navigation Buttons -->
+      <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+        <button onclick="prevStep()" id="btn-prev" class="px-3 py-1 text-xs rounded hover:bg-slate-800 transition-colors opacity-50 cursor-not-allowed" disabled>Back</button>
+        <span id="step-counter" class="text-xs font-mono text-slate-400 px-1">1/4</span>
+        <button onclick="nextStep()" id="btn-next" class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors">Next</button>
+      </div>
+    </div>
+
+    <!-- Stepper Pills -->
+    <div class="grid grid-cols-4 gap-2 pt-3 pb-2 text-xs">
+      <button onclick="goToStep(1)" id="pill-1" class="py-1.5 px-2 rounded-md border border-slate-700 step-active text-center transition-all truncate">1. Seating</button>
+      <button onclick="goToStep(2)" id="pill-2" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">2. MPU-6050</button>
+      <button onclick="goToStep(3)" id="pill-3" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">3. INMP441</button>
+      <button onclick="goToStep(4)" id="pill-4" class="py-1.5 px-2 rounded-md border border-slate-700 text-slate-400 hover:text-white text-center transition-all truncate">4. Test & Scan</button>
+    </div>
+
+    <!-- Main Visual Canvas Area -->
+    <div class="mt-2 relative rounded-lg border border-slate-700 bg-slate-950 p-4 min-h-[320px]">
+
+      <!-- ================= STEP 1: ESP32 Seating ================= -->
+      <div id="view-step-1" class="space-y-3">
+        <div class="flex items-center justify-center py-2">
+          <svg viewBox="0 0 380 180" class="w-full max-w-sm h-auto">
+            <!-- Shield Base -->
+            <rect x="20" y="20" width="340" height="140" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+            <text x="35" y="40" fill="#94a3b8" font-size="11" font-weight="bold">ESP32 30-PIN EXPANSION SHIELD</text>
+            
+            <!-- Terminal Blocks (Left & Right) -->
+            <rect x="25" y="55" width="28" height="95" rx="3" fill="#047857" stroke="#10b981" stroke-width="1"/>
+            <rect x="327" y="55" width="28" height="95" rx="3" fill="#047857" stroke="#10b981" stroke-width="1"/>
+            <text x="30" y="105" fill="#ecfdf5" font-size="9" font-weight="bold" transform="rotate(-90 30,105)">SCREW TERMINALS</text>
+            <text x="332" y="105" fill="#ecfdf5" font-size="9" font-weight="bold" transform="rotate(-90 332,105)">SCREW TERMINALS</text>
+
+            <!-- Female Header Sockets on Shield -->
+            <rect x="95" y="60" width="16" height="85" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="1"/>
+            <rect x="269" y="60" width="16" height="85" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="1"/>
+
+            <!-- ESP32 Module (Floating / Dropping in) -->
+            <g transform="translate(100, 40)">
+              <rect x="0" y="0" width="180" height="95" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
+              <!-- Antenna Area -->
+              <rect x="135" y="10" width="38" height="75" rx="3" fill="#b45309" stroke="#d97706" stroke-width="1"/>
+              <text x="142" y="52" fill="#fef3c7" font-size="9" font-weight="bold" transform="rotate(90 142,52)">PCB ANTENNA</text>
+              <!-- ESP-WROOM-32 Metal Can -->
+              <rect x="45" y="15" width="80" height="65" rx="3" fill="#475569" stroke="#64748b" stroke-width="1"/>
+              <text x="52" y="50" fill="#f8fafc" font-size="10" font-weight="bold">ESP-WROOM-32</text>
+              <!-- Micro-USB Port -->
+              <rect x="-8" y="35" width="16" height="25" rx="2" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="-4" y="28" fill="#38bdf8" font-size="9" font-weight="bold">USB</text>
+              <!-- Downward arrows indicating insertion -->
+              <path d="M 10 98 L 10 115 M 7 110 L 10 115 L 13 110" stroke="#38bdf8" stroke-width="2" fill="none"/>
+              <path d="M 170 98 L 170 115 M 167 110 L 170 115 L 173 110" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-md p-3 text-xs space-y-1.5">
+          <div class="font-semibold text-emerald-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Check Orientation Before Pressing:
+          </div>
+          <ul class="list-disc list-inside text-slate-300 space-y-1 pl-1">
+            <li>Orient the ESP32 so its <strong class="text-white">Micro-USB port</strong> faces the same outer edge as the power jack on the shield.</li>
+            <li>Look at the pin labels: Align <strong class="text-white font-mono">VIN</strong> and <strong class="text-white font-mono">GND</strong> on the ESP32 with <strong class="text-white font-mono">VIN</strong> / <strong class="text-white font-mono">GND</strong> on the shield.</li>
+            <li>Press firmly with both thumbs until all 30 pins are fully seated into the black socket headers.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ================= STEP 2: MPU-6050 Wiring ================= -->
+      <div id="view-step-2" class="space-y-3 hidden">
+        <div class="flex items-center justify-center">
+          <svg viewBox="0 0 380 180" class="w-full max-w-sm h-auto">
+            <!-- Shield Representation -->
+            <rect x="15" y="15" width="150" height="150" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="25" y="32" fill="#60a5fa" font-size="10" font-weight="bold">ESP32 TERMINALS</text>
+            
+            <!-- Terminal Points on Shield -->
+            <circle cx="150" cy="50" r="5" fill="#ef4444"/> <!-- 3V3 -->
+            <text x="120" y="53" fill="#fca5a5" font-size="9" font-mono font-bold>3V3</text>
+
+            <circle cx="150" cy="72" r="5" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/> <!-- GND -->
+            <text x="120" y="75" fill="#cbd5e1" font-size="9" font-mono font-bold>GND</text>
+
+            <circle cx="150" cy="94" r="5" fill="#eab308"/> <!-- GPIO 22 / SCL -->
+            <text x="100" y="97" fill="#fde047" font-size="9" font-mono font-bold>GPIO 22</text>
+
+            <circle cx="150" cy="116" r="5" fill="#22c55e"/> <!-- GPIO 21 / SDA -->
+            <text x="100" y="119" fill="#86efac" font-size="9" font-mono font-bold>GPIO 21</text>
+
+            <circle cx="150" cy="138" r="5" fill="#3b82f6"/> <!-- GND for AD0 -->
+            <text x="115" y="141" fill="#93c5fd" font-size="9" font-mono font-bold>GND</text>
+
+            <!-- MPU-6050 Module -->
+            <rect x="250" y="30" width="115" height="120" rx="5" fill="#0f766e" stroke="#14b8a6" stroke-width="1.5"/>
+            <text x="260" y="48" fill="#ccfbf1" font-size="10" font-weight="bold">MPU-6050</text>
+            <rect x="290" y="65" width="35" height="35" rx="3" fill="#134e4a" stroke="#2dd4bf" stroke-width="1"/>
+            <text x="298" y="85" fill="#99f6e4" font-size="8" font-mono>GYRO</text>
+
+            <!-- MPU Pins -->
+            <circle cx="260" cy="62" r="4" fill="#ef4444"/>
+            <text x="268" y="65" fill="#fecaca" font-size="8" font-mono>VCC</text>
+
+            <circle cx="260" cy="78" r="4" fill="#64748b"/>
+            <text x="268" y="81" fill="#cbd5e1" font-size="8" font-mono>GND</text>
+
+            <circle cx="260" cy="94" r="4" fill="#eab308"/>
+            <text x="268" y="97" fill="#fef08a" font-size="8" font-mono>SCL</text>
+
+            <circle cx="260" cy="110" r="4" fill="#22c55e"/>
+            <text x="268" y="113" fill="#bbf7d0" font-size="8" font-mono>SDA</text>
+
+            <circle cx="260" cy="126" r="4" fill="#3b82f6"/>
+            <text x="268" y="129" fill="#bfdbfe" font-size="8" font-mono>AD0</text>
+
+            <!-- Wires -->
+            <!-- Red: 3V3 -> VCC -->
+            <path d="M 155 50 C 190 40, 220 55, 255 62" stroke="#ef4444" stroke-width="2.5" fill="none"/>
+            <!-- Black: GND -> GND -->
+            <path d="M 155 72 C 190 70, 220 75, 255 78" stroke="#0f172a" stroke-width="3" fill="none"/>
+            <path d="M 155 72 C 190 70, 220 75, 255 78" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 2" fill="none"/>
+            <!-- Yellow: 22 -> SCL -->
+            <path d="M 155 94 C 190 90, 220 92, 255 94" stroke="#eab308" stroke-width="2.5" fill="none"/>
+            <!-- Green: 21 -> SDA -->
+            <path d="M 155 116 C 190 115, 220 112, 255 110" stroke="#22c55e" stroke-width="2.5" fill="none"/>
+            <!-- Blue: GND -> AD0 -->
+            <path d="M 155 138 C 190 140, 220 130, 255 126" stroke="#3b82f6" stroke-width="2.5" fill="none"/>
+          </svg>
+        </div>
+
+        <!-- Wire Legend -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span><strong class="font-mono">VCC</strong></span>
+            <span class="font-mono text-emerald-400 font-semibold">3V3 Terminal</span>
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-400 inline-block"></span><strong class="font-mono">GND</strong></span>
+            <span class="font-mono text-emerald-400 font-semibold">GND Terminal</span>
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-yellow-400 inline-block"></span><strong class="font-mono">SCL</strong></span>
+            <span class="font-mono text-yellow-400 font-semibold">GPIO 22</span>
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-green-500 inline-block"></span><strong class="font-mono">SDA</strong></span>
+            <span class="font-mono text-green-400 font-semibold">GPIO 21</span>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 px-1">
+          💡 Connect <strong class="text-white font-mono">AD0</strong> to <strong class="text-white font-mono">GND</strong> to fix the I2C address to <code class="bg-slate-800 px-1.5 py-0.5 rounded text-blue-400">0x68</code>.
+        </div>
+      </div>
+
+      <!-- ================= STEP 3: INMP441 Wiring ================= -->
+      <div id="view-step-3" class="space-y-3 hidden">
+        <div class="flex items-center justify-center">
+          <svg viewBox="0 0 380 180" class="w-full max-w-sm h-auto">
+            <!-- Shield Representation -->
+            <rect x="15" y="15" width="150" height="150" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="25" y="32" fill="#60a5fa" font-size="10" font-weight="bold">ESP32 TERMINALS</text>
+
+            <!-- Terminals -->
+            <circle cx="150" cy="45" r="5" fill="#ef4444"/>
+            <text x="120" y="48" fill="#fca5a5" font-size="9" font-mono font-bold>3V3</text>
+
+            <circle cx="150" cy="65" r="5" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="120" y="68" fill="#cbd5e1" font-size="9" font-mono font-bold>GND</text>
+
+            <circle cx="150" cy="85" r="5" fill="#f97316"/>
+            <text x="100" y="88" fill="#fdba74" font-size="9" font-mono font-bold>GPIO 33</text>
+
+            <circle cx="150" cy="105" r="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+            <text x="100" y="108" fill="#e2e8f0" font-size="9" font-mono font-bold>GPIO 25</text>
+
+            <circle cx="150" cy="125" r="5" fill="#64748b"/>
+            <text x="100" y="128" fill="#94a3b8" font-size="9" font-mono font-bold>GPIO 32</text>
+
+            <circle cx="150" cy="145" r="5" fill="#a855f7"/>
+            <text x="120" y="148" fill="#d8b4fe" font-size="9" font-mono font-bold>GND</text>
+
+            <!-- INMP441 Module -->
+            <rect x="250" y="25" width="115" height="130" rx="5" fill="#4338ca" stroke="#6366f1" stroke-width="1.5"/>
+            <text x="260" y="42" fill="#e0e7ff" font-size="10" font-weight="bold">INMP441 (I2S)</text>
+            <circle cx="330" cy="90" r="10" fill="#312e81" stroke="#818cf8" stroke-width="1.5"/>
+            <circle cx="330" cy="90" r="3" fill="#0f172a"/>
+            <text x="312" y="112" fill="#c7d2fe" font-size="8">MIC PORT</text>
+
+            <!-- Pins on INMP441 -->
+            <circle cx="260" cy="55" r="4" fill="#ef4444"/>
+            <text x="268" y="58" fill="#fecaca" font-size="8" font-mono>VDD</text>
+
+            <circle cx="260" cy="72" r="4" fill="#94a3b8"/>
+            <text x="268" y="75" fill="#cbd5e1" font-size="8" font-mono>GND</text>
+
+            <circle cx="260" cy="89" r="4" fill="#f97316"/>
+            <text x="268" y="92" fill="#fed7aa" font-size="8" font-mono>SCK</text>
+
+            <circle cx="260" cy="106" r="4" fill="#f8fafc"/>
+            <text x="268" y="109" fill="#f1f5f9" font-size="8" font-mono>WS</text>
+
+            <circle cx="260" cy="123" r="4" fill="#64748b"/>
+            <text x="268" y="126" fill="#cbd5e1" font-size="8" font-mono>SD</text>
+
+            <circle cx="260" cy="140" r="4" fill="#a855f7"/>
+            <text x="268" y="143" fill="#e9d5ff" font-size="8" font-mono>L/R</text>
+
+            <!-- Wires -->
+            <!-- VDD -> 3V3 -->
+            <path d="M 155 45 C 190 35, 220 50, 255 55" stroke="#ef4444" stroke-width="2.5" fill="none"/>
+            <!-- GND -> GND -->
+            <path d="M 155 65 C 190 60, 220 68, 255 72" stroke="#94a3b8" stroke-width="2" stroke-dasharray="3 2" fill="none"/>
+            <!-- SCK -> GPIO 33 -->
+            <path d="M 155 85 C 190 82, 220 86, 255 89" stroke="#f97316" stroke-width="2.5" fill="none"/>
+            <!-- WS -> GPIO 25 -->
+            <path d="M 155 105 C 190 102, 220 104, 255 106" stroke="#f8fafc" stroke-width="2.5" fill="none"/>
+            <!-- SD -> GPIO 32 -->
+            <path d="M 155 125 C 190 122, 220 120, 255 123" stroke="#64748b" stroke-width="2.5" fill="none"/>
+            <!-- L/R -> GND -->
+            <path d="M 155 145 C 190 148, 220 142, 255 140" stroke="#a855f7" stroke-width="2.5" fill="none"/>
+          </svg>
+        </div>
+
+        <!-- Wire Legend -->
+        <div class="grid grid-cols-3 gap-2 text-xs font-mono">
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 text-center">
+            <span class="text-orange-400 font-bold block">SCK</span>
+            <span class="text-slate-300">GPIO 33</span>
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 text-center">
+            <span class="text-slate-100 font-bold block">WS</span>
+            <span class="text-slate-300">GPIO 25</span>
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-700 text-center">
+            <span class="text-slate-400 font-bold block">SD</span>
+            <span class="text-slate-300">GPIO 32</span>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 px-1">
+          💡 <strong class="text-white">VDD</strong> connects to <strong class="text-emerald-400">3V3</strong>, <strong class="text-white">GND & L/R</strong> connect to <strong class="text-slate-300">GND</strong>.
+        </div>
+      </div>
+
+      <!-- ================= STEP 4: Arduino IDE Flash & Verify ================= -->
+      <div id="view-step-4" class="space-y-3 hidden">
+        <div class="space-y-2">
+          <!-- Step 4.1 -->
+          <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900 flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">1</span>
+            <div class="text-xs space-y-0.5">
+              <div class="font-semibold text-white">Plug Micro-USB Cable into Laptop</div>
+              <div class="text-slate-400">Red power LED on the ESP32 should turn solid ON.</div>
+            </div>
+          </div>
+
+          <!-- Step 4.2 -->
+          <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900 flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</span>
+            <div class="text-xs space-y-0.5">
+              <div class="font-semibold text-white">Open Arduino IDE & Select Board/Port</div>
+              <div class="text-slate-400">Board: <code class="bg-slate-800 px-1 py-0.5 rounded text-blue-400 font-mono">ESP32 Dev Module</code> | Port: <code class="bg-slate-800 px-1 py-0.5 rounded text-blue-400 font-mono">COM3 / COM4</code></div>
+            </div>
+          </div>
+
+          <!-- Step 4.3 -->
+          <div class="p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">3</span>
+            <div class="text-xs space-y-1">
+              <div class="font-semibold text-emerald-400">Upload 01_i2c_bus_scanner.ino</div>
+              <div class="text-slate-300">Open Serial Monitor at <strong class="text-white font-mono">115200 baud</strong>. You should see:</div>
+              <div class="bg-black/70 rounded p-2 font-mono text-[11px] text-emerald-300 border border-emerald-500/20">
+                [SUCCESS] I2C device found at address: 0x68<br/>
+                &lt;-- MPU-6050 Detected! (AD0 to GND)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    const titles = {
+      1: { badge: "Step 1", heading: "Seat ESP32 on Expansion Shield" },
+      2: { badge: "Step 2", heading: "Wire MPU-6050 (Vibration Sensor)" },
+      3: { badge: "Step 3", heading: "Wire INMP441 (Microphone Sensor)" },
+      4: { badge: "Step 4", heading: "Plug In & Verify with I2C Scanner" }
+    };
+
+    function updateView() {
+      for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById(`view-step-${i}`).classList.add('hidden');
+        const pill = document.getElementById(`pill-${i}`);
+        pill.classList.remove('step-active');
+        pill.classList.add('text-slate-400');
+      }
+
+      document.getElementById(`view-step-${currentStep}`).classList.remove('hidden');
+      const activePill = document.getElementById(`pill-${currentStep}`);
+      activePill.classList.add('step-active');
+      activePill.classList.remove('text-slate-400');
+
+      document.getElementById('step-badge').textContent = titles[currentStep].badge;
+      document.getElementById('step-heading').textContent = titles[currentStep].heading;
+      document.getElementById('step-counter').textContent = `${currentStep}/${totalSteps}`;
+
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+
+      if (currentStep === 1) {
+        btnPrev.disabled = true;
+        btnPrev.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        btnPrev.disabled = false;
+        btnPrev.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      if (currentStep === totalSteps) {
+        btnNext.textContent = "Done";
+      } else {
+        btnNext.textContent = "Next";
+      }
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateView();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateView();
+      }
+    }
+
+    function goToStep(step) {
+      currentStep = step;
+      updateView();
+    }
+  </script>
+</body>
+</html>

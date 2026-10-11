@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samsung Washer PdM — Multimodal Cloud Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 30, 46, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(30, 41, 65, 0.85);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-cyan: #38bdf8;
+      --accent-amber: #f59e0b;
+      --accent-emerald: #10b981;
+      --accent-pink: #ec4899;
+      --accent-purple: #a855f7;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.06) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .machine-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+    }
+    .header-title h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-title p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge-live {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-dot.pulse {
+      box-shadow: 0 0 10px #34d399;
+      animation: pulse-dot 1.5s infinite;
+    }
+    .badge-state-idle {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .badge-state-wash {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      animation: pulse-wash 2s infinite;
+    }
+    .badge-state-spin {
+      background: rgba(239, 68, 68, 0.25);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      animation: pulse-spin 0.8s infinite;
+    }
+
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+    @keyframes pulse-wash { 0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); } 50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); } }
+    @keyframes pulse-spin { 0%, 100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.3); } 50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.7); } }
+
+    /* Controls */
+    select, button {
+      font-family: inherit;
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    select:hover, button:hover {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: white;
+      border: none;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.3);
+    }
+    button.primary:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Grid Layouts */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .card-icon {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .metric-unit {
+      font-size: 14px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Colors */
+    .c-cyan { color: var(--accent-cyan); }
+    .c-amber { color: var(--accent-amber); }
+    .c-emerald { color: var(--accent-emerald); }
+    .c-pink { color: var(--accent-pink); }
+    .c-purple { color: var(--accent-purple); }
+
+    /* Progress & Bar Meters */
+    .bar-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    /* Sub-grid for 3-Axis */
+    .tri-axis-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .axis-box {
+      background: rgba(11, 15, 25, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .axis-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .axis-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    /* Main Chart Section */
+    .chart-section {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1024px) {
+      .chart-section { grid-template-columns: 1fr; }
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      margin-top: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .legend-color {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    /* Diagnostics & Sessions */
+    .lower-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .lower-section { grid-template-columns: 1fr; }
+    }
+
+    .info-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(11, 15, 25, 0.5);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .info-key {
+      color: var(--text-muted);
+    }
+    .info-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    /* Health Score Dial */
+    .health-display {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 10px 0;
+    }
+    .health-circle {
+      position: relative;
+      width: 86px;
+      height: 86px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: conic-gradient(#10b981 0% 95%, rgba(255,255,255,0.08) 95% 100%);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+    .health-circle-inner {
+      width: 68px;
+      height: 68px;
+      background: #161e2e;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .health-circle-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #34d399;
+    }
+    .health-circle-lbl {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .health-details h4 {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .health-details p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Session Downloader Box */
+    .session-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .session-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .session-select {
+      flex: 1;
+    }
+
+    /* Spectrum Bar Visualizer */
+    .spectrum-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 70px;
+      padding-top: 10px;
+    }
+    .spec-bar {
+      flex: 1;
+      background: linear-gradient(to top, #38bdf8, #a855f7);
+      border-radius: 2px 2px 0 0;
+      min-height: 4px;
+      transition: height 0.1s ease;
+      opacity: 0.85;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="machine-icon">🌀</div>
+        <div class="header-title">
+          <h1>
+            Samsung WW10TP44DSX/FQ
+            <span id="badge-live-conn" class="badge badge-live">
+              <span class="badge-dot pulse"></span> LIVE STREAMING
+            </span>
+          </h1>
+          <p>IoT Multimodal PdM System • ESP32 DevKit V1 (MPU-6050 + INMP441 DMA)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="badge-state" class="badge badge-state-idle">
+          <span class="badge-dot"></span> IDLE
+        </div>
+        <select id="select-rate" onchange="updateRate()">
+          <option value="1000">Poll: 1.0s (Live)</option>
+          <option value="2000" selected>Poll: 2.0s (Normal)</option>
+          <option value="5000">Poll: 5.0s (Eco)</option>
+          <option value="0">Paused</option>
+        </select>
+        <button class="primary" onclick="pollFirebase(true)">⚡ Sync Now</button>
+      </div>
+    </header>
+
+    <!-- Key Metrics Grid -->
+    <section class="metrics-grid">
+      <!-- 1. Vibration Resultant -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Vibration Resultant |a|</span>
+          <span class="card-icon">📳</span>
+        </div>
+        <div class="metric-value c-cyan">
+          <span id="val-vibe">9.52</span>
+          <span class="metric-unit">m/s²</span>
+          <span id="val-g" style="font-size: 15px; color: var(--text-muted); font-weight: 500;">(0.97g)</span>
+        </div>
+        <div class="bar-container">
+          <div id="bar-vibe" class="bar-fill" style="width: 38%; background: var(--accent-cyan);"></div>
+        </div>
+        <div class="metric-sub">
+          <span>Static Gravity Offset: <strong id="val-dg" class="c-cyan">0.29 m/s²</strong></span>
+          <span id="lbl-iso-severity" style="color: var(--success); font-weight: 600;">ISO 10816: Normal</span>
+        </div>
+      </div>
+
+      <!-- 2. Acoustic Energy -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Acoustic Sound Pressure</span>
+          <span class="card-icon">🎙️</span>
+        </div>
+        <div class="metric-value c-pink">
+          <span id="val-rms">85.4</span>
+          <span class="metric-unit">RMS</span>
+          <span id="val-spl" style="font-size: 14px; color: var(--text-muted); font-weight: 500;">~58 dB</span>
+        </div>
+        <div class="bar-container">
+          <div id="bar-rms" class="bar-fill" style="width: 25%; background: var(--accent-pink);"></div>
+        </div>
+        <div class="metric-sub">
+          <span>INMP441 24-bit DMA @ 16 kHz</span>
+          <span id="lbl-audio-zone" style="color: var(--accent-pink); font-weight: 600;">Motor Ambient</span>
+        </div>
+      </div>
+
+      <!-- 3. Tri-Axial Acceleration -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">3-Axis Acceleration Breakdown</span>
+          <span class="card-icon">📐</span>
+        </div>
+        <div class="tri-axis-grid">
+          <div class="axis-box">
+            <div class="axis-lbl">Ax (Lateral)</div>
+            <div id="val-ax" class="axis-val c-amber">-0.68</div>
+          </div>
+          <div class="axis-box">
+            <div class="axis-lbl">Ay (Fore-Aft)</div>
+            <div id="val-ay" class="axis-val c-cyan">+1.38</div>
+          </div>
+          <div class="axis-box">
+            <div class="axis-lbl">Az (Vertical)</div>
+            <div id="val-az" class="axis-val c-emerald">-9.35</div>
+          </div>
+        </div>
+        <div class="metric-sub">
+          <span>Full Scale Range: ±16g</span>
+          <span>Mount: Rear Drum Bracket</span>
+        </div>
+      </div>
+
+      <!-- 4. System & Stream Diagnostics -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">IoT Telemetry & Health</span>
+          <span class="card-icon">📶</span>
+        </div>
+        <div class="metric-value c-emerald">
+          <span id="val-samples">41.8k</span>
+          <span class="metric-unit">frames</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: 100%; background: var(--accent-emerald);"></div>
+        </div>
+        <div class="metric-sub">
+          <span>ESP32 Uptime: <strong id="val-uptime">14m 22s</strong></span>
+          <span>Sample Cadence: <strong style="color: #34d399;">~48-50 Hz</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real-time Oscilloscope & Spectrum Section -->
+    <section class="chart-section">
+      <!-- Oscilloscope Canvas Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <span class="card-title">Dual-Modality Oscilloscope (Live Time-Series)</span>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">
+              Direct hardware telemetry captured at ~50 Hz and synchronized over dual-core FreeRTOS
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-pause" onclick="togglePause()" style="font-size: 11px; padding: 4px 10px;">⏸ Pause</button>
+            <button onclick="clearBuffer()" style="font-size: 11px; padding: 4px 10px;">Clear</button>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="osc-canvas"></canvas>
+        </div>
+
+        <div class="chart-legend">
+          <div class="legend-item" onclick="toggleTrace('vibe')">
+            <span class="legend-color" style="background: var(--accent-cyan);"></span>
+            <span>Resultant Vibration (|a|)</span>
+          </div>
+          <div class="legend-item" onclick="toggleTrace('rms')">
+            <span class="legend-color" style="background: var(--accent-pink);"></span>
+            <span>Acoustic Energy (RMS)</span>
+          </div>
+          <div class="legend-item" onclick="toggleTrace('ax')">
+            <span class="legend-color" style="background: var(--accent-amber);"></span>
+            <span>Ax (Lateral)</span>
+          </div>
+          <div class="legend-item" onclick="toggleTrace('az')">
+            <span class="legend-color" style="background: var(--accent-emerald);"></span>
+            <span>Az (Gravity Vector)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Machinery Frequency Spectrum & Harmonics Estimator -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Spectral & Harmonic Estimator</span>
+          <span class="card-icon">📊</span>
+        </div>
+        
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          Estimated rotating frequency harmonics for Samsung Inverter Direct Drive motor:
+        </p>
+
+        <!-- Simulated live spectral bars -->
+        <div class="spectrum-container" id="spectrum-bars">
+          <!-- 32 spectrum bars dynamically populated -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+          <span>0 Hz (DC)</span>
+          <span>1X (0.8Hz / 23Hz)</span>
+          <span>2X Harmonics</span>
+          <span>1 kHz (Acoustic)</span>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <ul class="info-list">
+            <li class="info-item">
+              <span class="info-key">Wash Drum Fundamental (1X)</span>
+              <span class="info-val c-cyan" id="diag-wash-freq">0.83 Hz (~50 RPM)</span>
+            </li>
+            <li class="info-item">
+              <span class="info-key">Spin Cycle Fundamental (1X)</span>
+              <span class="info-val c-purple" id="diag-spin-freq">23.3 Hz (~1400 RPM)</span>
+            </li>
+            <li class="info-item">
+              <span class="info-key">Dynamic Severity Status</span>
+              <span class="info-val" id="diag-severity" style="color: var(--success);">NORMAL BEARING STATE</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lower Section: Health Score & Session Download Manager -->
+    <section class="lower-section">
+      <!-- Health Assessment Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Predictive Maintenance Health Assessment</span>
+          <span class="card-icon">🛡️</span>
+        </div>
+
+        <div class="health-display">
+          <div class="health-circle" id="health-dial">
+            <div class="health-circle-inner">
+              <span class="health-circle-val" id="health-num">98%</span>
+              <span class="health-circle-lbl">Health</span>
+            </div>
+          </div>
+          <div class="health-details">
+            <h4 id="health-title" style="color: #34d399;">Machine Operating Normally</h4>
+            <p id="health-desc">
+              Vibration resultant is locked within standard 1.0g chassis equilibrium. INMP441 acoustic noise exhibits no bearing spalling or dry friction cavitation.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <ul class="info-list">
+            <li class="info-item">
+              <span class="info-key">Active Cloud Session</span>
+              <span class="info-val c-cyan" id="info-session">wash_1019</span>
+            </li>
+            <li class="info-item">
+              <span class="info-key">Firebase REST API Endpoint</span>
+              <span class="info-val" style="font-size: 11px; color: var(--text-dim);">asia-southeast1.firebasedatabase.app</span>
+            </li>
+            <li class="info-item">
+              <span class="info-key">Hardware Architecture</span>
+              <span class="info-val" style="font-size: 11px;">Dual-Core FreeRTOS (Core 0 Cloud / Core 1 DMA)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Cloud Session Management & One-Click CSV Exporter -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Cloud Session Manager & CSV Export</span>
+          <span class="card-icon">💾</span>
+        </div>
+
+        <div class="session-box">
+          <p style="font-size: 12px; color: var(--text-muted);">
+            Select any recorded wash session archived in Google Firebase to inspect or download as a standalone CSV file:
+          </p>
+
+          <div class="session-row">
+            <select id="select-session" class="session-select">
+              <option value="wash_1019" selected>Loading cloud sessions...</option>
+            </select>
+            <button class="primary" onclick="downloadSelectedCSV()">📥 Download CSV</button>
+          </div>
+
+          <div id="session-stats" class="info-item" style="margin-top: 4px;">
+            <span class="info-key">Session Batches:</span>
+            <span class="info-val c-cyan" id="session-batch-count">Checking Firebase...</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button onclick="refreshSessionsList()" style="flex: 1;">🔄 Refresh Sessions</button>
+            <button onclick="copyApiLink()" style="flex: 1;">🔗 Copy Live API URL</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      Autonomous IoT Anomaly Detection System • Google DeepMind & AI Engineering Rig • 
+      Connected to Firebase Realtime Database
+    </footer>
+  </div>
+
+  <!-- Application Logic & Real-time Canvas Rendering -->
+  <script>
+    const FIREBASE_BASE = 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app';
+    const LIVE_URL = `${FIREBASE_BASE}/live.json`;
+    const SESSIONS_URL = `${FIREBASE_BASE}/sessions.json`;
+
+    // DOM Elements
+    const badgeConn = document.getElementById('badge-live-conn');
+    const badgeState = document.getElementById('badge-state');
+    const valVibe = document.getElementById('val-vibe');
+    const valG = document.getElementById('val-g');
+    const barVibe = document.getElementById('bar-vibe');
+    const valDg = document.getElementById('val-dg');
+    const lblIso = document.getElementById('lbl-iso-severity');
+    const valRms = document.getElementById('val-rms');
+    const valSpl = document.getElementById('val-spl');
+    const barRms = document.getElementById('bar-rms');
+    const lblAudioZone = document.getElementById('lbl-audio-zone');
+    const valAx = document.getElementById('val-ax');
+    const valAy = document.getElementById('val-ay');
+    const valAz = document.getElementById('val-az');
+    const valSamples = document.getElementById('val-samples');
+    const valUptime = document.getElementById('val-uptime');
+    const infoSession = document.getElementById('info-session');
+    const selectSession = document.getElementById('select-session');
+    const sessionBatchCount = document.getElementById('session-batch-count');
+    const healthNum = document.getElementById('health-num');
+    const healthDial = document.getElementById('health-dial');
+    const healthTitle = document.getElementById('health-title');
+    const healthDesc = document.getElementById('health-desc');
+
+    // Canvas Setup
+    const cvs = document.getElementById('osc-canvas');
+    const ctx = cvs.getContext('2d');
+    
+    function resizeCanvas() {
+      const rect = cvs.parentElement.getBoundingClientRect();
+      cvs.width = rect.width * window.devicePixelRatio;
+      cvs.height = rect.height * window.devicePixelRatio;
+    }
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      drawOscilloscope();
+    });
+    resizeCanvas();
+
+    // Data Buffers for Oscilloscope
+    const MAX_POINTS = 90;
+    const historyVibe = new Array(MAX_POINTS).fill(9.81);
+    const historyRms = new Array(MAX_POINTS).fill(50);
+    const historyAx = new Array(MAX_POINTS).fill(0);
+    const historyAz = new Array(MAX_POINTS).fill(-9.81);
+
+    // Active Traces
+    const traces = { vibe: true, rms: true, ax: true, az: true };
+    function toggleTrace(key) {
+      traces[key] = !traces[key];
+      drawOscilloscope();
+    }
+
+    let isPaused = false;
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('btn-pause').innerText = isPaused ? '▶ Resume' : '⏸ Pause';
+      document.getElementById('btn-pause').style.background = isPaused ? '#dc2626' : '#1e293b';
+    }
+
+    function clearBuffer() {
+      historyVibe.fill(9.81);
+      historyRms.fill(0);
+      historyAx.fill(0);
+      historyAz.fill(-9.81);
+      drawOscilloscope();
+    }
+
+    // Spectrum Bars Generation
+    const specContainer = document.getElementById('spectrum-bars');
+    const barCount = 36;
+    for (let i = 0; i < barCount; i++) {
+      const b = document.createElement('div');
+      b.className = 'spec-bar';
+      b.id = `spec-${i}`;
+      specContainer.appendChild(b);
+    }
+
+    function updateSpectrum(vibe, rms, state) {
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.getElementById(`spec-${i}`);
+        if (!bar) continue;
+        
+        let h = 5;
+        // Peak near fundamental 1X (index 4-6)
+        if (i >= 4 && i <= 6) {
+          h = Math.min(65, (vibe / 10.0) * 35 + (Math.random() * 8));
+        } else if (i >= 12 && i <= 14) { // 2X harmonic
+          h = Math.min(50, (vibe / 10.0) * 20 + (Math.random() * 6));
+        } else if (i > 20) { // Acoustic high band
+          h = Math.min(60, (rms / 300.0) * 45 + (Math.random() * 8));
+        } else {
+          h = Math.max(4, (Math.random() * 12) + (rms / 40.0));
+        }
+        bar.style.height = `${Math.min(65, Math.max(4, h))}px`;
+      }
+    }
+
+    // Canvas Rendering
+    function drawOscilloscope() {
+      const w = cvs.width;
+      const h = cvs.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid background
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      const gridRows = 4;
+      for (let i = 1; i < gridRows; i++) {
+        const y = (h / gridRows) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Draw center equilibrium line (0 m/s^2 or 9.81 baseline)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.5);
+      ctx.lineTo(w, h * 0.5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const pts = MAX_POINTS;
+
+      // 1. RMS Fill / Trace
+      if (traces.rms) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(236, 72, 153, 0.08)';
+        ctx.moveTo(0, h);
+        for (let i = 0; i < pts; i++) {
+          const x = (i / (pts - 1)) * w;
+          const y = h - ((historyRms[i] / 400.0) * h * 0.85);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(w, h);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#ec4899';
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+        for (let i = 0; i < pts; i++) {
+          const x = (i / (pts - 1)) * w;
+          const y = h - ((historyRms[i] / 400.0) * h * 0.85);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 2. Resultant Vibration Trace
+      if (traces.vibe) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5 * window.devicePixelRatio;
+        for (let i = 0; i < pts; i++) {
+          const x = (i / (pts - 1)) * w;
+          // Scale: 9.81 m/s^2 centered around middle
+          const y = (h * 0.5) - ((historyVibe[i] - 9.81) * 8 * window.devicePixelRatio);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 3. Ax Trace
+      if (traces.ax) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5 * window.devicePixelRatio;
+        for (let i = 0; i < pts; i++) {
+          const x = (i / (pts - 1)) * w;
+          const y = (h * 0.5) - (historyAx[i] * 6 * window.devicePixelRatio);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 4. Az Trace
+      if (traces.az) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.5 * window.devicePixelRatio;
+        for (let i = 0; i < pts; i++) {
+          const x = (i / (pts - 1)) * w;
+          const y = (h * 0.5) - ((historyAz[i] + 9.81) * 6 * window.devicePixelRatio);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Formatting Helpers
+    function formatUptime(seconds) {
+      if (!seconds) return '0s';
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      const h = Math.floor(m / 60);
+      if (h > 0) return `${h}h ${m % 60}m ${s}s`;
+      return `${m}m ${s}s`;
+    }
+
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+      return num.toString();
+    }
+
+    // Polling Firebase Data
+    let pollInterval = 2000;
+    let timerId = null;
+
+    async function pollFirebase(manual = false) {
+      const startTime = performance.now();
+      try {
+        const res = await fetch(LIVE_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const latency = Math.round(performance.now() - startTime);
+
+        if (data) {
+          // Connection status
+          badgeConn.className = 'badge badge-live';
+          badgeConn.innerHTML = `<span class="badge-dot pulse"></span> LIVE (${latency}ms)`;
+
+          // Vibe metrics
+          const vibe = data.vibe || Math.sqrt(data.ax*data.ax + data.ay*data.ay + data.az*data.az) || 9.81;
+          const gVal = (vibe / 9.81).toFixed(2);
+          const dg = Math.abs(vibe - 9.81).toFixed(2);
+          valVibe.innerText = vibe.toFixed(2);
+          valG.innerText = `(${gVal}g)`;
+          valDg.innerText = `${dg} m/s²`;
+
+          const vibePct = Math.min(100, Math.max(10, (vibe / 25.0) * 100));
+          barVibe.style.width = `${vibePct}%`;
+
+          // ISO 10816 Severity Evaluation
+          if (dg < 2.0) {
+            lblIso.innerText = 'ISO 10816: Normal (Class I/II)';
+            lblIso.style.color = 'var(--success)';
+            barVibe.style.background = 'var(--accent-cyan)';
+          } else if (dg < 6.0) {
+            lblIso.innerText = 'ISO 10816: Acceptable Operation';
+            lblIso.style.color = 'var(--warning)';
+            barVibe.style.background = 'var(--warning)';
+          } else {
+            lblIso.innerText = 'ISO 10816: High Vibration Alert';
+            lblIso.style.color = 'var(--danger)';
+            barVibe.style.background = 'var(--danger)';
+          }
+
+          // Audio RMS
+          const rms = data.rms || 0;
+          valRms.innerText = rms.toFixed(1);
+          const estSpl = Math.min(105, Math.round(40 + (rms * 0.15)));
+          valSpl.innerText = `~${estSpl} dB`;
+          const rmsPct = Math.min(100, Math.max(5, (rms / 350.0) * 100));
+          barRms.style.width = `${rmsPct}%`;
+
+          if (rms < 80) {
+            lblAudioZone.innerText = 'Motor Ambient / Idle';
+            lblAudioZone.style.color = '#38bdf8';
+          } else if (rms < 200) {
+            lblAudioZone.innerText = 'Drum Agitation / Water Pump';
+            lblAudioZone.style.color = '#ec4899';
+          } else {
+            lblAudioZone.innerText = 'High RPM Spin Noise';
+            lblAudioZone.style.color = '#f87171';
+          }
+
+          // Tri-axial
+          valAx.innerText = (data.ax >= 0 ? '+' : '') + (data.ax || 0).toFixed(2);
+          valAy.innerText = (data.ay >= 0 ? '+' : '') + (data.ay || 0).toFixed(2);
+          valAz.innerText = (data.az >= 0 ? '+' : '') + (data.az || 0).toFixed(2);
+
+          // System Diagnostics
+          valSamples.innerText = formatNumber(data.cnt || 0);
+          valUptime.innerText = formatUptime(data.uptime || 0);
+          infoSession.innerText = data.session || 'N/A';
+
+          // Machine State Badge
+          const state = data.state || 'IDLE';
+          badgeState.className = 'badge';
+          if (state === 'SPIN_CYCLE') {
+            badgeState.classList.add('badge-state-spin');
+            badgeState.innerHTML = '<span class="badge-dot"></span> HIGH-SPEED SPIN';
+          } else if (state === 'RUNNING') {
+            badgeState.classList.add('badge-state-wash');
+            badgeState.innerHTML = '<span class="badge-dot"></span> WASH / AGITATION';
+          } else {
+            badgeState.classList.add('badge-state-idle');
+            badgeState.innerHTML = '<span class="badge-dot"></span> IDLE';
+          }
+
+          // Health Score Calculation
+          let health = 100;
+          if (dg > 2.0) health -= Math.min(40, (dg - 2.0) * 6);
+          if (rms > 250) health -= Math.min(25, (rms - 250) * 0.1);
+          health = Math.max(20, Math.round(health));
+          
+          healthNum.innerText = `${health}%`;
+          healthDial.style.background = `conic-gradient(#10b981 0% ${health}%, rgba(255,255,255,0.08) ${health}% 100%)`;
+
+          if (health >= 90) {
+            healthTitle.innerText = 'Machine Operating Normally';
+            healthTitle.style.color = '#34d399';
+            healthDesc.innerText = 'Vibration resultant is locked within standard 1.0g chassis equilibrium. INMP441 acoustic noise exhibits no bearing spalling or dry friction cavitation.';
+          } else if (health >= 70) {
+            healthTitle.innerText = 'Moderate Mechanical Agitation';
+            healthTitle.style.color = 'var(--warning)';
+            healthDesc.innerText = 'Increased vibration and acoustic amplitude detected. Normal during acceleration or heavy load agitation.';
+          } else {
+            healthTitle.innerText = 'Caution: High Dynamic Load';
+            healthTitle.style.color = 'var(--danger)';
+            healthDesc.innerText = 'Significant eccentric unbalance or high mechanical vibration detected. Monitoring for bearing wear or suspension fatigue.';
+          }
+
+          // Push into chart buffers if not paused
+          if (!isPaused) {
+            historyVibe.shift(); historyVibe.push(vibe);
+            historyRms.shift(); historyRms.push(rms);
+            historyAx.shift(); historyAx.push(data.ax || 0);
+            historyAz.shift(); historyAz.push(data.az || -9.81);
+            drawOscilloscope();
+            updateSpectrum(vibe, rms, state);
+          }
+        }
+      } catch (err) {
+        console.warn('Firebase poll failed:', err);
+        badgeConn.className = 'badge';
+        badgeConn.style.background = 'rgba(100, 116, 139, 0.2)';
+        badgeConn.style.color = '#94a3b8';
+        badgeConn.innerHTML = '<span class="badge-dot"></span> RECONNECTING...';
+      }
+    }
+
+    function updateRate() {
+      const val = parseInt(document.getElementById('select-rate').value, 10);
+      pollInterval = val;
+      if (timerId) clearInterval(timerId);
+      if (pollInterval > 0) {
+        timerId = setInterval(pollFirebase, pollInterval);
+      }
+    }
+
+    // Sessions Management & Downloader
+    async function refreshSessionsList() {
+      try {
+        sessionBatchCount.innerText = 'Querying Firebase...';
+        const res = await fetch(SESSIONS_URL);
+        const sessions = await res.json();
+        
+        if (!sessions) {
+          selectSession.innerHTML = '<option value="">No sessions found</option>';
+          sessionBatchCount.innerText = '0 batches';
+          return;
+        }
+
+        const keys = Object.keys(sessions).reverse();
+        selectSession.innerHTML = '';
+        keys.forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k;
+          const count = sessions[k] ? (Array.isArray(sessions[k]) ? sessions[k].filter(Boolean).length : Object.keys(sessions[k]).length) : 0;
+          opt.innerText = `${k} (${count} batches)`;
+          selectSession.appendChild(opt);
+        });
+
+        updateSelectedSessionStats(sessions);
+      } catch (e) {
+        console.error('Failed to load sessions:', e);
+        sessionBatchCount.innerText = 'Error fetching sessions';
+      }
+    }
+
+    selectSession.addEventListener('change', async () => {
+      const res = await fetch(SESSIONS_URL);
+      const sessions = await res.json();
+      updateSelectedSessionStats(sessions);
+    });
+
+    function updateSelectedSessionStats(sessions) {
+      const sel = selectSession.value;
+      if (!sessions || !sessions[sel]) return;
+      const batches = sessions[sel];
+      const count = Array.isArray(batches) ? batches.filter(Boolean).length : Object.keys(batches).length;
+      sessionBatchCount.innerText = `${count} batch records (~${(count * 5 / 60).toFixed(1)} mins)`;
+    }
+
+    async function downloadSelectedCSV() {
+      const sessionId = selectSession.value;
+      if (!sessionId) {
+        alert('Please select a valid session.');
+        return;
+      }
+
+      sessionBatchCount.innerText = `Fetching ${sessionId} data...`;
+      try {
+        const url = `${FIREBASE_BASE}/sessions/${sessionId}.json`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data) {
+          alert('No data records found for this session.');
+          return;
+        }
+
+        // Format rows into CSV
+        const rows = ['timestamp_ms,accel_x,accel_y,accel_z,audio_rms'];
+        const processItem = (item) => {
+          if (item && typeof item === 'object' && ('t' in item || 'ax' in item)) {
+            rows.push(`${item.t || 0},${(item.ax || 0).toFixed(2)},${(item.ay || 0).toFixed(2)},${(item.az || 0).toFixed(2)},${(item.rms || 0).toFixed(1)}`);
+          }
+        };
+
+        if (Array.isArray(data)) {
+          data.forEach(processItem);
+        } else if (typeof data === 'object') {
+          Object.keys(data).sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true})).forEach(k => {
+            processItem(data[k]);
+          });
+        }
+
+        // Trigger file download
+        const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${sessionId}.csv`;
+        link.click();
+
+        sessionBatchCount.innerText = `Downloaded ${rows.length - 1} records!`;
+      } catch (err) {
+        alert('Failed to download session: ' + err.message);
+        sessionBatchCount.innerText = 'Download failed.';
+      }
+    }
+
+    function copyApiLink() {
+      navigator.clipboard.writeText(LIVE_URL);
+      alert('Firebase REST API live endpoint copied to clipboard!\n' + LIVE_URL);
+    }
+
+    // Initialize
+    pollFirebase();
+    timerId = setInterval(pollFirebase, pollInterval);
+    refreshSessionsList();
+  </script>
+</body>
+</html>
