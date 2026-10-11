@@ -18,23 +18,23 @@ for line in lines:
 
 embedded_json = json.dumps(data)
 
-html_content = f'''<!DOCTYPE html>
+def generate_html(default_view='live'):
+    return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Samsung Washer PdM - Vibration &amp; Acoustic Spike Monitor</title>
+  <title>Samsung Washer PdM - Live Rig &amp; Historical Diagnostics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {{
       --bg-body: #1e2229;
-      --bg-sidebar: #171a21;
       --bg-card: #252934;
       --bg-card-hover: #2c313e;
       --bg-inner: #1a1d24;
-      --border-card: rgba(255, 255, 255, 0.05);
+      --border-card: rgba(255, 255, 255, 0.06);
       --border-sub: rgba(255, 255, 255, 0.08);
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
@@ -44,7 +44,6 @@ html_content = f'''<!DOCTYPE html>
       --coral-accent: #fb923c;
       --purple-accent: #a78bfa;
       --blue-accent: #38bdf8;
-      --green-accent: #34d399;
       --red-accent: #ef4444;
     }}
 
@@ -60,7 +59,7 @@ html_content = f'''<!DOCTYPE html>
       overflow-x: hidden;
     }}
 
-    /* Top Navigation Bar */
+    /* Top Sticky Header */
     .top-nav {{
       background: var(--bg-body);
       border-bottom: 1px solid var(--border-card);
@@ -71,6 +70,8 @@ html_content = f'''<!DOCTYPE html>
       position: sticky;
       top: 0;
       z-index: 50;
+      flex-wrap: wrap;
+      gap: 12px;
     }}
 
     .nav-left {{
@@ -97,52 +98,41 @@ html_content = f'''<!DOCTYPE html>
       border-radius: 6px;
     }}
 
-    /* Center Tabs */
-    .nav-tabs-center {{
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }}
-    .nav-tab-item {{
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      text-decoration: none;
-      transition: color 0.2s;
-      position: relative;
-      padding: 6px 0;
-    }}
-    .nav-tab-item:hover {{
-      color: #fff;
-    }}
-    .nav-tab-item.active {{
-      color: #fff;
-    }}
-    .nav-tab-item.active::after {{
-      content: '';
-      position: absolute;
-      bottom: -16px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--teal-accent);
-      border-radius: 2px;
-    }}
-
-    /* Right Controls: Status & CSV (NO User Profile) */
+    /* Right Controls */
     .nav-right {{
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
     }}
+
+    .btn-mode-toggle {{
+      background: rgba(0, 240, 210, 0.12);
+      border: 1px solid var(--teal-accent);
+      color: var(--teal-accent);
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }}
+    .btn-mode-toggle:hover {{
+      background: var(--teal-accent);
+      color: #0f172a;
+      box-shadow: 0 0 14px var(--teal-glow);
+    }}
+
     .status-badge {{
       display: flex;
       align-items: center;
       gap: 8px;
       background: rgba(0, 240, 210, 0.08);
       border: 1px solid rgba(0, 240, 210, 0.2);
-      padding: 5px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
@@ -155,6 +145,7 @@ html_content = f'''<!DOCTYPE html>
       border-color: rgba(239, 68, 68, 0.3);
       color: #f87171;
     }}
+
     .status-dot {{
       width: 7px;
       height: 7px;
@@ -193,129 +184,16 @@ html_content = f'''<!DOCTYPE html>
       border-color: var(--border-sub);
     }}
 
-    .hamburger-btn {{
-      display: none;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      cursor: pointer;
-      padding: 4px;
-    }}
-
-    /* Main Container with Sidebar */
-    .app-layout {{
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      flex: 1;
-      min-height: calc(100vh - 65px);
-    }}
-
-    /* Left Sidebar */
-    .sidebar {{
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border-card);
-      padding: 24px 18px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }}
-
-    .sidebar-section-title {{
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-dim);
-      margin-bottom: 14px;
-      padding-left: 6px;
-    }}
-
-    .account-item {{
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin-bottom: 6px;
-    }}
-    .account-item:hover {{
-      background: rgba(255, 255, 255, 0.03);
-    }}
-    .account-item.active {{
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-    }}
-    .account-avatar-ring {{
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(0, 240, 210, 0.15);
-      border: 1px solid var(--teal-accent);
-      color: var(--teal-accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 13px;
-      transition: all 0.2s;
-    }}
-    .account-avatar-ring.avatar-coral {{
-      background: rgba(251, 146, 60, 0.15);
-      border-color: var(--coral-accent);
-      color: var(--coral-accent);
-    }}
-    .account-avatar-ring.avatar-purple {{
-      background: rgba(167, 139, 250, 0.15);
-      border-color: var(--purple-accent);
-      color: var(--purple-accent);
-    }}
-    .account-avatar-ring.avatar-dim {{
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(255, 255, 255, 0.14);
-      color: var(--text-dim);
-    }}
-    .account-meta {{
-      display: flex;
-      flex-direction: column;
-    }}
-    .account-name {{
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-main);
-    }}
-    .account-sub {{
-      font-size: 11px;
-      color: var(--text-dim);
-    }}
-
-    .sidebar-info-card {{
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 16px;
-    }}
-    .sidebar-info-card h4 {{
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 6px;
-    }}
-    .sidebar-info-card p {{
-      font-size: 11px;
-      color: var(--text-muted);
-      line-height: 1.5;
-      margin-bottom: 12px;
-    }}
-
-    /* Main View Area */
-    .main-view {{
-      padding: 24px 32px;
+    /* Main Container (Centered, clean full-width cards) */
+    .main-container {{
+      max-width: 1320px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 24px 28px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      max-width: 1440px;
+      flex: 1;
     }}
 
     /* Live Offline Alert Banner */
@@ -323,13 +201,12 @@ html_content = f'''<!DOCTYPE html>
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.28);
       border-radius: 10px;
-      padding: 10px 16px;
+      padding: 10px 18px;
       color: #fca5a5;
       font-size: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: -4px;
       animation: fadeIn 0.3s ease;
     }}
     @keyframes fadeIn {{
@@ -337,12 +214,12 @@ html_content = f'''<!DOCTYPE html>
       to {{ opacity: 1; transform: translateY(0); }}
     }}
 
-    /* Cards */
+    /* Clean Dark Cards */
     .card {{
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: 14px;
-      padding: 20px;
+      padding: 22px 24px;
       position: relative;
     }}
 
@@ -355,88 +232,24 @@ html_content = f'''<!DOCTYPE html>
       gap: 8px;
     }}
     .card-title-text {{
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
     }}
-    .card-menu-dots {{
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      opacity: 0.4;
-      cursor: pointer;
-    }}
-    .card-menu-dots:hover {{
-      opacity: 1;
-    }}
-    .mini-dot {{
-      width: 3.5px;
-      height: 3.5px;
-      background: #fff;
-      border-radius: 50%;
-      display: inline-block;
-    }}
-
-    /* Row 1: Top 3 Metric Cards */
-    .row-top-three {{
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }}
-
-    .dual-metric-flex {{
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 16px;
-    }}
-    .dual-metric-col {{
-      display: flex;
-      flex-direction: column;
-    }}
-    .metric-big-num {{
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 26px;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.1;
-    }}
-    .metric-sub-lbl {{
+    .card-sub-txt {{
       font-size: 11px;
       color: var(--text-dim);
-      margin-top: 4px;
-    }}
-
-    .stat-with-badge {{
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-top: 2px;
-    }}
-    .badge-percent {{
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--teal-accent);
-    }}
-    .badge-coral {{
-      color: var(--coral-accent);
-    }}
-
-    /* Row 2: Middle Section */
-    .row-middle {{
-      display: grid;
-      grid-template-columns: 1.8fr 1fr;
-      gap: 16px;
+      display: block;
+      margin-top: 3px;
     }}
 
     .chart-legend-row {{
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       font-size: 11px;
       color: var(--text-muted);
     }}
@@ -452,7 +265,7 @@ html_content = f'''<!DOCTYPE html>
       border-radius: 50%;
     }}
 
-    .canvas-container-mid {{
+    .canvas-container-box {{
       position: relative;
       width: 100%;
       height: 180px;
@@ -463,97 +276,7 @@ html_content = f'''<!DOCTYPE html>
       display: block;
     }}
 
-    /* Live Spike & Intensity Box (replaces donut) */
-    .spike-monitor-box {{
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      height: 100%;
-      padding-top: 2px;
-    }}
-    .spike-primary-readout {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }}
-    .spike-pill-badge {{
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 6px;
-      border: 1px solid currentColor;
-      transition: all 0.2s ease;
-    }}
-    .spike-bar-wrap {{
-      margin: 14px 0 10px 0;
-    }}
-    .spike-bar-track {{
-      position: relative;
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 6px;
-    }}
-    .spike-bar-fill {{
-      height: 100%;
-      background: linear-gradient(90deg, #00f0d2 0%, #38bdf8 45%, #fb923c 85%);
-      border-radius: 6px;
-      transition: width 0.12s ease;
-    }}
-    .spike-bar-pin {{
-      position: absolute;
-      top: -4px;
-      width: 4px;
-      height: 18px;
-      background: #ffffff;
-      border-radius: 2px;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
-      transition: left 0.12s ease;
-      transform: translateX(-50%);
-    }}
-    .spike-bar-scale {{
-      display: flex;
-      justify-content: space-between;
-      font-size: 9.5px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-dim);
-      margin-top: 6px;
-    }}
-    .spike-stat-grid {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border-sub);
-    }}
-    .spike-stat-cell {{
-      background: var(--bg-inner);
-      padding: 7px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border-card);
-      display: flex;
-      flex-direction: column;
-    }}
-    .spike-stat-lbl {{
-      font-size: 10px;
-      color: var(--text-dim);
-      font-weight: 600;
-    }}
-    .spike-stat-val {{
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-top: 2px;
-    }}
-
-    /* Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) */
-    .row-xyz-full {{
-      display: grid;
-      grid-template-columns: 1fr;
-    }}
-
+    /* Axis Toggle Badges */
     .axis-toggle-clean {{
       background: var(--bg-inner);
       border: 1px solid var(--border-card);
@@ -571,51 +294,6 @@ html_content = f'''<!DOCTYPE html>
     .axis-toggle-clean.dimmed {{
       opacity: 0.35;
       text-decoration: line-through;
-    }}
-
-    /* Row 4: Bottom Section (Timeline & Phase breakdown) */
-    .row-bottom {{
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
-    }}
-
-    /* Horizontal Phase Bars */
-    .phase-bars-list {{
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 4px;
-    }}
-    .phase-bar-row {{
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }}
-    .phase-header-flex {{
-      display: flex;
-      justify-content: space-between;
-      font-size: 11.5px;
-      font-weight: 600;
-    }}
-    .phase-name-txt {{
-      color: var(--text-muted);
-    }}
-    .phase-pct-txt {{
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-    }}
-    .progress-track-dark {{
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-      overflow: hidden;
-    }}
-    .progress-fill-teal {{
-      height: 100%;
-      background: var(--teal-accent);
-      border-radius: 4px;
     }}
 
     /* Timeline Scrubber Bar */
@@ -679,498 +357,166 @@ html_content = f'''<!DOCTYPE html>
       background: var(--bg-card-hover);
     }}
 
-    /* Mobile Drawer */
-    .mobile-drawer {{
-      position: fixed;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: 260px;
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border-card);
-      z-index: 100;
-      transform: translateX(-100%);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      padding: 24px 18px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }}
-    .mobile-drawer.open {{
-      transform: translateX(0);
-    }}
-    .mobile-drawer-overlay {{
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
-      z-index: 99;
-      display: none;
-    }}
-
-    @media (max-width: 1024px) {{
-      .app-layout {{
-        grid-template-columns: 1fr;
-      }}
-      .sidebar {{
-        display: none;
-      }}
-      .hamburger-btn {{
-        display: block;
-      }}
-      .row-middle {{
-        grid-template-columns: 1fr;
-      }}
-      .row-bottom {{
-        grid-template-columns: 1fr;
-      }}
-      .main-view {{
+    @media (max-width: 768px) {{
+      .main-container {{
         padding: 16px;
+        gap: 16px;
       }}
       .top-nav {{
         padding: 12px 16px;
-      }}
-      .nav-tabs-center {{
-        display: none;
-      }}
-    }}
-
-    @media (max-width: 768px) {{
-      .row-top-three {{
-        grid-template-columns: 1fr;
       }}
     }}
   </style>
 </head>
 <body>
 
-  <!-- Top Sticky Header -->
+  <!-- Top Navigation Bar -->
   <header class="top-nav">
     <div class="nav-left">
-      <button class="hamburger-btn" onclick="toggleMobileMenu()">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="3" y1="5" x2="17" y2="5"></line>
-          <line x1="3" y1="10" x2="17" y2="10"></line>
-          <line x1="3" y1="15" x2="17" y2="15"></line>
-        </svg>
-      </button>
       <a href="#" class="brand-title">
         <span class="brand-pill">PDM</span>
         <span>Samsung Washer Monitor</span>
       </a>
     </div>
 
-    <!-- Center Navigation Tabs -->
-    <nav class="nav-tabs-center">
-      <a class="nav-tab-item active" id="tab-historic" onclick="setMode('historic')">Dashboard (wash_1019)</a>
-      <a class="nav-tab-item" id="tab-live" onclick="setMode('live')">Real-Time Rig Telemetry</a>
-      <a class="nav-tab-item" onclick="toggleDoc()">Acoustic Diagnostics</a>
-      <a class="nav-tab-item" onclick="toggleDoc()">ISO 10816 Specs</a>
-    </nav>
-
-    <!-- Right Controls: Status & CSV (NO User Profile) -->
+    <!-- Center/Right Controls: View Toggle Button, Status Badge, Export -->
     <div class="nav-right">
-      <div class="status-badge" id="badge-live-tag">
-        <span class="status-dot" id="status-dot-indicator"></span>
-        <span id="lbl-status-text">wash_1019 Active</span>
+      <button class="btn-mode-toggle" id="btn-toggle-view" onclick="toggleViewMode()">
+        <span id="btn-mode-icon">📊</span>
+        <span id="btn-mode-text">Historical Data (wash_1019)</span>
+      </button>
+
+      <div class="status-badge offline-badge" id="badge-live-tag">
+        <span class="status-dot dot-offline" id="status-dot-indicator"></span>
+        <span id="lbl-status-text">Live Rig Offline (No Input)</span>
       </div>
-      <button class="btn-header-action" onclick="downloadWashCsv()">
+
+      <button class="btn-header-action" onclick="exportActiveCsv()">
         Export CSV
       </button>
     </div>
   </header>
 
-  <!-- Mobile Drawer -->
-  <div class="mobile-drawer-overlay" id="drawer-overlay" onclick="toggleMobileMenu()"></div>
-  <aside class="mobile-drawer" id="mobile-drawer">
-    <div>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <span class="brand-title">
-          <span class="brand-pill">PDM</span>
-          <span>Washer Monitor</span>
-        </span>
-        <button onclick="toggleMobileMenu()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
+  <!-- Main View Container: ONLY the 3 Cards from Screenshot -->
+  <main class="main-container">
+
+    <!-- Live Offline Alert Banner (shown only when in Live mode and rig has no input) -->
+    <div id="live-offline-banner" class="live-offline-banner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+        <span><strong>Live Rig Offline:</strong> No active sensor input detected from ESP32. Displaying last cached packet.</span>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div class="account-item active" id="m-acc-item-1" onclick="setMode('historic'); toggleMobileMenu()">
-          <div class="account-avatar-ring">W</div>
-          <div class="account-meta">
-            <span class="account-name">Wash 1019 Run</span>
-            <span class="account-sub">35.9 mins archived</span>
-          </div>
+      <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="setViewMode('historic')">Switch to Historical Data</button>
+    </div>
+
+    <!-- Card 1: Dual-Modality Telemetry (Screenshot 3) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text" id="title-spline">Dual-Modality Telemetry</span>
+          <span class="card-sub-txt" id="sub-spline">Vibration resultant &bull; Acoustic sound amplitude</span>
         </div>
-        <div class="account-item" id="m-acc-item-2" onclick="setMode('live'); toggleMobileMenu()">
-          <div class="account-avatar-ring avatar-dim" id="m-avatar-ring-rig">L</div>
-          <div class="account-meta">
-            <span class="account-name">Live ESP32 Rig</span>
-            <span class="account-sub" id="m-acc-sub-rig">Offline &bull; No Input</span>
-          </div>
+        <div class="chart-legend-row">
+          <span class="legend-item-dot">
+            <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a| (m/s&sup2;)
+          </span>
+          <span class="legend-item-dot">
+            <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound (RMS)
+          </span>
         </div>
-        <div class="account-item" onclick="downloadWashCsv()">
-          <div class="account-avatar-ring avatar-purple">D</div>
-          <div class="account-meta">
-            <span class="account-name">Download Data</span>
-            <span class="account-sub">CSV time-series</span>
-          </div>
-        </div>
+      </div>
+      <div class="canvas-container-box" style="height: 190px;">
+        <canvas id="spline-canvas"></canvas>
       </div>
     </div>
-    <div class="sidebar-info-card">
-      <h4>Google Firebase</h4>
-      <p>Autonomous Asia-SE1 cloud sync active.</p>
-      <button class="btn-dark-primary" style="width: 100%;" onclick="downloadWashCsv()">Export CSV</button>
+
+    <!-- Card 2: Tri-Axial Vibration (Ax, Ay, Az) (Screenshot 2) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
+          <span class="card-sub-txt">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
+            Ax: <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--coral-accent);"></span>
+            Ay: <strong id="vibe-leg-y">+1.40</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple-accent);"></span>
+            Az: <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" style="color: #fff;">
+            |a|: <strong id="head-vibe-mag">9.53</strong> m/s&sup2;
+          </span>
+        </div>
+      </div>
+      <div class="canvas-container-box" style="height: 200px;">
+        <canvas id="xyz-canvas"></canvas>
+      </div>
     </div>
-  </aside>
 
-  <!-- App Layout -->
-  <div class="app-layout">
-    
-    <!-- Sidebar: Nodes list -->
-    <aside class="sidebar">
-      <div>
-        <div class="sidebar-section-title">Nodes &amp; Sensors</div>
-        
-        <div class="account-item active" id="acc-item-1" onclick="setMode('historic')">
-          <div class="account-avatar-ring">W</div>
-          <div class="account-meta">
-            <span class="account-name">Samsung WW10T</span>
-            <span class="account-sub">wash_1019 cycle</span>
-          </div>
+    <!-- Card 3: Timeline & Controls (Screenshot 1) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
+          <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
         </div>
-
-        <div class="account-item" id="acc-item-2" onclick="setMode('live')">
-          <div class="account-avatar-ring avatar-dim" id="avatar-ring-rig">M</div>
-          <div class="account-meta">
-            <span class="account-name">MPU-6050 IMU</span>
-            <span class="account-sub" id="acc-sub-rig">Offline &bull; No Input</span>
-          </div>
-        </div>
-
-        <div class="account-item" onclick="toggleAxis('z')">
-          <div class="account-avatar-ring avatar-purple">A</div>
-          <div class="account-meta">
-            <span class="account-name">INMP441 Audio</span>
-            <span class="account-sub">16 kHz I2S DMA</span>
-          </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="axis-toggle-clean" style="color: var(--teal-accent);">
+            Current: <strong id="timeline-head-rms">105.6</strong> RMS
+          </span>
+          <span class="axis-toggle-clean" style="color: var(--coral-accent);">
+            Spike: <strong id="timeline-head-spike">1.0x</strong>
+          </span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #fff;" id="lbl-curr-time">
+            00:00 / 35:54
+          </span>
         </div>
       </div>
 
-      <div class="sidebar-info-card">
-        <h4>Predictive Maintenance</h4>
-        <p>10kg Front-Load Anomaly &amp; Vibration Monitor.</p>
-        <button class="btn-dark-primary" style="width: 100%;" onclick="downloadWashCsv()">Download CSV</button>
-      </div>
-    </aside>
-
-    <!-- Main View -->
-    <main class="main-view">
-
-      <!-- Live Offline Alert Banner -->
-      <div id="live-offline-banner" class="live-offline-banner" style="display: none;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
-          <span><strong>Live Rig Offline:</strong> No incoming sensor packets received from ESP32. Displaying last cached packet.</span>
-        </div>
-        <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="setMode('historic')">Return to wash_1019</button>
+      <div class="canvas-container-box" style="height: 165px;">
+        <canvas id="area-canvas"></canvas>
       </div>
 
-      <!-- Row 1: Top 3 Metric Cards -->
-      <section class="row-top-three">
-        
-        <!-- Card 1: Resultant Vibration -->
-        <div class="card">
-          <div class="card-header-row">
-            <span class="card-title-text">Vibration Resultant</span>
-            <div class="card-menu-dots">
-              <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
-            </div>
-          </div>
-          <div class="dual-metric-flex">
-            <div class="dual-metric-col">
-              <span class="metric-big-num" style="color: var(--teal-accent);" id="kpi-avg-vibe">9.58</span>
-              <span class="metric-sub-lbl">Avg (m/s&sup2;)</span>
-            </div>
-            <div class="dual-metric-col">
-              <span class="metric-big-num" style="color: var(--coral-accent);" id="kpi-peak-vibe">10.14</span>
-              <span class="metric-sub-lbl">Peak Spin (m/s&sup2;)</span>
-            </div>
-          </div>
-        </div>
+      <!-- Timeline Scrubber (Active in Historical mode) -->
+      <div class="timeline-scrubber-bar" id="wrap-scrubber" style="display: none;">
+        <span style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Scrub:</span>
+        <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
+        <span class="time-badge-mono" id="scrub-label">0.0m</span>
+      </div>
 
-        <!-- Card 2: Acoustic Sound Level -->
-        <div class="card">
-          <div class="card-header-row">
-            <span class="card-title-text">Acoustic Sound Level</span>
-            <div class="card-menu-dots">
-              <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
-            </div>
-          </div>
-          <div>
-            <div class="stat-with-badge">
-              <span class="metric-big-num" style="font-size: 24px; color: var(--teal-accent);" id="kpi-curr-rms">44.7</span>
-              <span class="badge-percent" id="kpi-rms-badge">BASELINE</span>
-            </div>
-            <span class="metric-sub-lbl">Instantaneous Acoustic RMS</span>
-            <div class="stat-with-badge" style="margin-top: 8px;">
-              <span class="metric-big-num" style="font-size: 18px; color: var(--coral-accent);" id="kpi-peak-rms">511.2</span>
-              <span class="badge-percent badge-coral">+326% Peak</span>
-            </div>
-            <span class="metric-sub-lbl">Wash Cycle Max Extraction Spike</span>
-          </div>
-        </div>
+      <!-- Action Buttons Row -->
+      <div class="action-button-row">
+        <button class="btn-dark-primary" id="btn-primary-action" onclick="onPrimaryAction()">
+          Pause Live Stream
+        </button>
+        <button class="btn-dark-secondary" id="btn-secondary-switch" onclick="toggleViewMode()">
+          Switch to Historical Data (wash_1019)
+        </button>
+        <button class="btn-dark-secondary" onclick="exportActiveCsv()">
+          Download CSV
+        </button>
+      </div>
+    </div>
 
-        <!-- Card 3: Instantaneous Spike Ratio -->
-        <div class="card">
-          <div class="card-header-row">
-            <span class="card-title-text">Instantaneous Spike Ratio</span>
-            <div class="card-menu-dots">
-              <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
-            </div>
-          </div>
-          <div class="stat-with-badge" style="margin-top: 4px;">
-            <span class="metric-big-num" style="color: var(--coral-accent);" id="kpi-spike-factor">1.0x</span>
-            <span class="badge-percent" id="kpi-spike-badge" style="color: var(--teal-accent);">BASELINE</span>
-          </div>
-          <span class="metric-sub-lbl" id="kpi-spike-detail">Current: 44.7 RMS (Normal: 120 RMS)</span>
-          <div style="font-size: 11px; color: var(--text-dim); margin-top: 10px; display: flex; justify-content: space-between;">
-            <span>Cycle Max Spike: <strong style="color: #fff;" id="kpi-max-spike">511.2 RMS</strong></span>
-            <span style="color: var(--coral-accent); font-weight: 700;">+326% Peak</span>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- Row 2: Middle Section -->
-      <section class="row-middle">
-        
-        <!-- Dual-Modality Waveform -->
-        <div class="card">
-          <div class="card-header-row">
-            <div>
-              <span class="card-title-text">Dual-Modality Telemetry</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Vibration resultant &bull; Acoustic sound amplitude</span>
-            </div>
-            <div class="chart-legend-row">
-              <span class="legend-item-dot">
-                <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a| (m/s&sup2;)
-              </span>
-              <span class="legend-item-dot">
-                <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound (RMS)
-              </span>
-            </div>
-          </div>
-          <div class="canvas-container-mid">
-            <canvas id="spline-canvas"></canvas>
-          </div>
-        </div>
-
-        <!-- Card: Signal Spike & Amplitude Monitor -->
-        <div class="card">
-          <div class="card-header-row">
-            <span class="card-title-text">Signal Spike &amp; Amplitude</span>
-            <div class="card-menu-dots">
-              <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
-            </div>
-          </div>
-
-          <div class="spike-monitor-box">
-            <div class="spike-primary-readout">
-              <div style="display: flex; align-items: baseline; gap: 6px;">
-                <span class="metric-big-num" style="font-size: 32px; color: var(--teal-accent);" id="gauge-curr-rms">44.7</span>
-                <span style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;">RMS</span>
-              </div>
-              <div class="spike-pill-badge" id="gauge-spike-pill" style="background: rgba(0,240,210,0.12); color: var(--teal-accent);">
-                Baseline 1.0x
-              </div>
-            </div>
-            <span class="metric-sub-lbl">Real-time acoustic intensity at scrub cursor</span>
-
-            <!-- Spike Level Meter Bar -->
-            <div class="spike-bar-wrap">
-              <div class="spike-bar-track">
-                <div class="spike-bar-fill" id="gauge-bar-fill" style="width: 8.7%;"></div>
-                <div class="spike-bar-pin" id="gauge-bar-pin" style="left: 8.7%;"></div>
-              </div>
-              <div class="spike-bar-scale">
-                <span>0</span>
-                <span>120 (Normal)</span>
-                <span>250 (Agitation)</span>
-                <span>511.2 (Peak Spike)</span>
-              </div>
-            </div>
-
-            <!-- 4-Stat Live Breakdown Grid -->
-            <div class="spike-stat-grid">
-              <div class="spike-stat-cell">
-                <span class="spike-stat-lbl">Spike Delta:</span>
-                <span class="spike-stat-val" id="cell-spike-delta" style="color: var(--teal-accent);">0% (Baseline)</span>
-              </div>
-              <div class="spike-stat-cell">
-                <span class="spike-stat-lbl">Total Accel |a|:</span>
-                <span class="spike-stat-val" id="cell-total-accel">9.58 m/s&sup2;</span>
-              </div>
-              <div class="spike-stat-cell">
-                <span class="spike-stat-lbl">Dynamic Shock:</span>
-                <span class="spike-stat-val" id="cell-dyn-shock" style="color: var(--coral-accent);">&plusmn;0.23 m/s&sup2;</span>
-              </div>
-              <div class="spike-stat-cell">
-                <span class="spike-stat-lbl">Cycle Peak Spike:</span>
-                <span class="spike-stat-val" style="color: #fff;">511.2 RMS (24.2m)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) Card -->
-      <section class="row-xyz-full">
-        <div class="card">
-          <div class="card-header-row">
-            <div>
-              <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
-                Ax: <strong id="vibe-leg-x">-0.77</strong> m/s&sup2;
-              </span>
-              <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--coral-accent);"></span>
-                Ay: <strong id="vibe-leg-y">+1.36</strong> m/s&sup2;
-              </span>
-              <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple-accent);"></span>
-                Az: <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
-              </span>
-              <span class="axis-toggle-clean" style="color: #fff;">
-                |a|: <strong id="head-vibe-mag">9.58</strong> m/s&sup2;
-              </span>
-            </div>
-          </div>
-          <div class="canvas-container-mid" style="height: 190px;">
-            <canvas id="xyz-canvas"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <!-- Row 4: Timeline + Phase Breakdown -->
-      <section class="row-bottom">
-        
-        <!-- Full Wash 1019 Timeline & Playback -->
-        <div class="card">
-          <div class="card-header-row">
-            <div>
-              <span class="card-title-text">Wash Cycle 1019 Timeline (35.9 Minutes)</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">35.9-min continuous acoustic waveform &bull; Scrubber with peak spike rulers</span>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="axis-toggle-clean" style="color: var(--teal-accent);">
-                Current: <strong id="timeline-head-rms">44.7</strong> RMS
-              </span>
-              <span class="axis-toggle-clean" style="color: var(--coral-accent);">
-                Spike: <strong id="timeline-head-spike">1.0x</strong>
-              </span>
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #fff;" id="lbl-curr-time">
-                00:00 / 35:54
-              </span>
-            </div>
-          </div>
-
-          <div class="canvas-container-mid" style="height: 160px;">
-            <canvas id="area-canvas"></canvas>
-          </div>
-
-          <!-- Timeline Scrubber -->
-          <div class="timeline-scrubber-bar">
-            <span style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Scrub:</span>
-            <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
-            <span class="time-badge-mono" id="scrub-label">0.0m</span>
-          </div>
-
-          <!-- Actions -->
-          <div class="action-button-row">
-            <button class="btn-dark-primary" onclick="togglePlayPause()" id="btn-play-wash">
-              Replay Wash 1019
-            </button>
-            <button class="btn-dark-secondary" onclick="downloadWashCsv()">
-              Download wash_1019.csv
-            </button>
-            <button class="btn-dark-secondary" onclick="setMode('live')">
-              Connect Live Firebase
-            </button>
-          </div>
-        </div>
-
-        <!-- Phase Breakdown -->
-        <div class="card">
-          <div class="card-header-row">
-            <span class="card-title-text">Cycle Phase Breakdown</span>
-            <div class="card-menu-dots">
-              <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
-            </div>
-          </div>
-
-          <div class="phase-bars-list">
-            <div class="phase-bar-row">
-              <div class="phase-header-flex">
-                <span class="phase-name-txt">Drum Fill &amp; Soak (0 - 8m)</span>
-                <span class="phase-pct-txt">44.7 RMS</span>
-              </div>
-              <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 20%;"></div>
-              </div>
-            </div>
-
-            <div class="phase-bar-row">
-              <div class="phase-header-flex">
-                <span class="phase-name-txt">Agitation &amp; Tumble (8 - 22m)</span>
-                <span class="phase-pct-txt">146.9 RMS</span>
-              </div>
-              <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 48%;"></div>
-              </div>
-            </div>
-
-            <div class="phase-bar-row">
-              <div class="phase-header-flex">
-                <span class="phase-name-txt">High-Spin Extraction (22 - 28m)</span>
-                <span class="phase-pct-txt" style="color: var(--coral-accent);">511.2 RMS (Peak)</span>
-              </div>
-              <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 100%; background: var(--coral-accent);"></div>
-              </div>
-            </div>
-
-            <div class="phase-bar-row">
-              <div class="phase-header-flex">
-                <span class="phase-name-txt">Final Drain &amp; Rinse (28 - 36m)</span>
-                <span class="phase-pct-txt">98.3 RMS</span>
-              </div>
-              <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 32%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-sub); font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-            Dynamic shock triggers during spin transition when drum speed crosses natural chassis resonant frequency (14 Hz).
-          </div>
-        </div>
-
-      </section>
-
-    </main>
-  </div>
+  </main>
 
   <script>
     const WASH_DATA = {embedded_json};
-    let currentMode = 'historic';
+    let currentMode = '{default_view}'; // 'live' or 'historic'
     let currentIndex = 0;
     let isPlaying = false;
     let playInterval = null;
+    let isLivePaused = false;
 
+    // Rolling buffer for Live telemetry
+    let LIVE_BUFFER = [];
     let lastLivePacketCnt = null;
     let lastLivePacketUptime = null;
     let lastPacketArrivedAt = 0;
@@ -1188,28 +534,20 @@ html_content = f'''<!DOCTYPE html>
     const timeSlider = document.getElementById('time-slider');
     const scrubLabel = document.getElementById('scrub-label');
     const lblCurrTime = document.getElementById('lbl-curr-time');
-    const btnPlayWash = document.getElementById('btn-play-wash');
     const lblStatusText = document.getElementById('lbl-status-text');
     const statusDot = document.getElementById('status-dot-indicator');
     const statusBadge = document.getElementById('badge-live-tag');
     const offlineBanner = document.getElementById('live-offline-banner');
 
-    const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
-    const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
-    const kpiCurrRms = document.getElementById('kpi-curr-rms');
-    const kpiRmsBadge = document.getElementById('kpi-rms-badge');
-    const kpiSpikeFactor = document.getElementById('kpi-spike-factor');
-    const kpiSpikeBadge = document.getElementById('kpi-spike-badge');
-    const kpiSpikeDetail = document.getElementById('kpi-spike-detail');
+    const btnToggleView = document.getElementById('btn-toggle-view');
+    const btnModeText = document.getElementById('btn-mode-text');
+    const btnModeIcon = document.getElementById('btn-mode-icon');
+    const wrapScrubber = document.getElementById('wrap-scrubber');
+    const btnPrimaryAction = document.getElementById('btn-primary-action');
+    const btnSecondarySwitch = document.getElementById('btn-secondary-switch');
 
-    const gaugeCurrRms = document.getElementById('gauge-curr-rms');
-    const gaugeSpikePill = document.getElementById('gauge-spike-pill');
-    const gaugeBarFill = document.getElementById('gauge-bar-fill');
-    const gaugeBarPin = document.getElementById('gauge-bar-pin');
-    const cellSpikeDelta = document.getElementById('cell-spike-delta');
-    const cellTotalAccel = document.getElementById('cell-total-accel');
-    const cellDynShock = document.getElementById('cell-dyn-shock');
-
+    const titleTimeline = document.getElementById('title-timeline');
+    const subTimeline = document.getElementById('sub-timeline');
     const timelineHeadRms = document.getElementById('timeline-head-rms');
     const timelineHeadSpike = document.getElementById('timeline-head-spike');
     const headVibeMag = document.getElementById('head-vibe-mag');
@@ -1256,7 +594,6 @@ html_content = f'''<!DOCTYPE html>
       drawXyz();
     }}
 
-    // Helper: Draw pill badge with solid dark background
     function drawPillBadge(ctx, x, y, text, color, align, dpr) {{
       ctx.font = `700 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
       const tw = ctx.measureText(text).width;
@@ -1280,41 +617,67 @@ html_content = f'''<!DOCTYPE html>
       ctx.fillText(text, px + (6 * dpr), py + (12 * dpr));
     }}
 
-    // Update Rig Status everywhere (sidebar, header badge, alert banner)
+    // Toggle between Live Rig page and Historical Data page
+    function toggleViewMode() {{
+      const newMode = (currentMode === 'live') ? 'historic' : 'live';
+      setViewMode(newMode);
+    }}
+
+    function setViewMode(mode) {{
+      currentMode = mode;
+      if (currentMode === 'live') {{
+        btnModeIcon.innerText = '📊';
+        btnModeText.innerText = 'Historical Data (wash_1019)';
+        wrapScrubber.style.display = 'none';
+        btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
+        btnSecondarySwitch.innerText = 'Switch to Historical Data (wash_1019)';
+        titleTimeline.innerText = 'Live Rig Telemetry Stream';
+        subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
+        lblCurrTime.innerText = 'LIVE (50 Hz)';
+        updateRigStatusUI(isRigOnline);
+        checkRigHeartbeat();
+      }} else {{
+        if (isPlaying) togglePlayPause();
+        btnModeIcon.innerText = '📡';
+        btnModeText.innerText = 'Live Rig (Real-Time)';
+        wrapScrubber.style.display = 'flex';
+        btnPrimaryAction.innerText = 'Replay Wash 1019';
+        btnSecondarySwitch.innerText = 'Switch to Live Rig (Real-Time)';
+        titleTimeline.innerText = 'Wash Cycle 1019 Timeline (35.9 Minutes)';
+        subTimeline.innerText = '35.9-min continuous acoustic waveform \u2022 Scrubber with peak spike rulers';
+        statusBadge.className = 'status-badge';
+        statusDot.className = 'status-dot';
+        lblStatusText.innerText = 'wash_1019 Archive (35.9m)';
+        offlineBanner.style.display = 'none';
+        applyRecord(WASH_DATA[currentIndex], false);
+        drawSpline();
+        drawXyz();
+        drawArea();
+      }}
+    }}
+
+    function onPrimaryAction() {{
+      if (currentMode === 'live') {{
+        isLivePaused = !isLivePaused;
+        btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
+      }} else {{
+        togglePlayPause();
+      }}
+    }}
+
     function updateRigStatusUI(online) {{
-      const sub1 = document.getElementById('acc-sub-rig');
-      const sub2 = document.getElementById('m-acc-sub-rig');
-      const ring1 = document.getElementById('avatar-ring-rig');
-      const ring2 = document.getElementById('m-avatar-ring-rig');
-
-      if (sub1) sub1.innerHTML = online 
-        ? '<span style="color:var(--teal-accent); font-weight:600;">Online &bull; 50 Hz</span>' 
-        : '<span style="color:var(--text-dim);">Offline &bull; No Input</span>';
-      if (sub2) sub2.innerHTML = online 
-        ? '<span style="color:var(--teal-accent); font-weight:600;">Online &bull; 50 Hz</span>' 
-        : '<span style="color:var(--text-dim);">Offline &bull; No Input</span>';
-
-      if (ring1) ring1.className = online ? 'account-avatar-ring avatar-coral' : 'account-avatar-ring avatar-dim';
-      if (ring2) ring2.className = online ? 'account-avatar-ring avatar-coral' : 'account-avatar-ring avatar-dim';
-
       if (currentMode === 'live') {{
         if (online) {{
-          if (statusBadge) statusBadge.className = 'status-badge';
-          if (statusDot) statusDot.className = 'status-dot';
-          if (lblStatusText) lblStatusText.innerText = 'Live Streaming (50 Hz)';
-          if (offlineBanner) offlineBanner.style.display = 'none';
+          statusBadge.className = 'status-badge';
+          statusDot.className = 'status-dot';
+          lblStatusText.innerText = 'Live Rig Active (50 Hz)';
+          offlineBanner.style.display = 'none';
         }} else {{
-          if (statusBadge) statusBadge.className = 'status-badge offline-badge';
-          if (statusDot) statusDot.className = 'status-dot dot-offline';
-          if (lblStatusText) lblStatusText.innerText = 'Live Rig Offline (No Input)';
-          if (offlineBanner) offlineBanner.style.display = 'flex';
+          statusBadge.className = 'status-badge offline-badge';
+          statusDot.className = 'status-dot dot-offline';
+          lblStatusText.innerText = 'Live Rig Offline (No Input)';
+          offlineBanner.style.display = 'flex';
         }}
-      }} else {{
-        // Historic wash_1019 mode
-        if (statusBadge) statusBadge.className = 'status-badge';
-        if (statusDot) statusDot.className = 'status-dot';
-        if (lblStatusText) lblStatusText.innerText = 'wash_1019 Active';
-        if (offlineBanner) offlineBanner.style.display = 'none';
       }}
     }}
 
@@ -1331,10 +694,8 @@ html_content = f'''<!DOCTYPE html>
             isRigOnline = true;
           }} else {{
             if (lastPacketArrivedAt === 0) {{
-              // Initial fetch with stagnant record -> Offline
               isRigOnline = false;
             }} else if (Date.now() - lastPacketArrivedAt > 4500) {{
-              // No packet increment in over 4.5 seconds -> Offline
               isRigOnline = false;
             }}
           }}
@@ -1342,11 +703,18 @@ html_content = f'''<!DOCTYPE html>
           lastLivePacketCnt = d.cnt;
           lastLivePacketUptime = d.uptime;
 
-          // If currently viewing Live mode, stream data
-          if (currentMode === 'live') {{
-            applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms], true);
-            drawXyz();
-            drawSpline();
+          // Push into Live rolling buffer
+          if (!isLivePaused) {{
+            const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms];
+            LIVE_BUFFER.push(newRec);
+            if (LIVE_BUFFER.length > 80) LIVE_BUFFER.shift();
+
+            if (currentMode === 'live') {{
+              applyRecord(newRec, true);
+              drawSpline();
+              drawXyz();
+              drawArea();
+            }}
           }}
         }} else {{
           isRigOnline = false;
@@ -1360,251 +728,27 @@ html_content = f'''<!DOCTYPE html>
     function applyRecord(rec, isFromLive = false) {{
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
-      const dg = Math.abs(vibe - 9.81);
-
-      // Normal baseline is 120 RMS during wash tumble
       const baselineRms = 120.0;
       const spikeRatio = Math.max(1.0, (rms / baselineRms)).toFixed(1);
-      const spikePct = Math.round(((rms - baselineRms) / baselineRms) * 100);
 
-      // 1. Top Card 2: Acoustic Sound Level
-      if (kpiCurrRms) kpiCurrRms.innerText = rms.toFixed(1);
-      if (kpiRmsBadge) {{
-        if (rms > 300) {{
-          kpiRmsBadge.innerText = 'HIGH SPIKE';
-          kpiRmsBadge.style.color = 'var(--coral-accent)';
-        }} else if (rms > 160) {{
-          kpiRmsBadge.innerText = 'AGITATION';
-          kpiRmsBadge.style.color = 'var(--blue-accent)';
-        }} else {{
-          kpiRmsBadge.innerText = 'BASELINE';
-          kpiRmsBadge.style.color = 'var(--teal-accent)';
-        }}
-      }}
+      if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
+      if (timelineHeadSpike) timelineHeadSpike.innerText = `${{spikeRatio}}x`;
+      if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
 
-      // 2. Top Card 3: Instantaneous Spike Ratio
-      if (kpiSpikeFactor) kpiSpikeFactor.innerText = `${{spikeRatio}}x`;
-      if (kpiSpikeBadge) {{
-        if (rms > 300) {{
-          kpiSpikeBadge.innerText = `+${{spikePct}}% SPIKE`;
-          kpiSpikeBadge.style.color = 'var(--coral-accent)';
-        }} else if (rms > 160) {{
-          kpiSpikeBadge.innerText = `+${{spikePct}}% TUMBLE`;
-          kpiSpikeBadge.style.color = 'var(--blue-accent)';
-        }} else {{
-          kpiSpikeBadge.innerText = 'BASELINE 1.0x';
-          kpiSpikeBadge.style.color = 'var(--teal-accent)';
-        }}
-      }}
-      if (kpiSpikeDetail) {{
-        kpiSpikeDetail.innerText = `Current: ${{rms.toFixed(1)}} RMS (Baseline: 120 RMS)`;
-      }}
-
-      // 3. Middle Card: Signal Spike & Amplitude
-      if (gaugeCurrRms) gaugeCurrRms.innerText = rms.toFixed(1);
-      if (gaugeSpikePill) {{
-        if (rms > 300) {{
-          gaugeSpikePill.innerText = `Spike ${{spikeRatio}}x (+${{spikePct}}%)`;
-          gaugeSpikePill.style.background = 'rgba(251, 146, 60, 0.15)';
-          gaugeSpikePill.style.color = 'var(--coral-accent)';
-        }} else if (rms > 160) {{
-          gaugeSpikePill.innerText = `Agitation ${{spikeRatio}}x (+${{spikePct}}%)`;
-          gaugeSpikePill.style.background = 'rgba(56, 189, 248, 0.15)';
-          gaugeSpikePill.style.color = 'var(--blue-accent)';
-        }} else {{
-          gaugeSpikePill.innerText = `Baseline 1.0x (${{rms <= 50 ? 'Drum Fill' : 'Normal'}})`;
-          gaugeSpikePill.style.background = 'rgba(0, 240, 210, 0.12)';
-          gaugeSpikePill.style.color = 'var(--teal-accent)';
-        }}
-      }}
-
-      const pctWidth = Math.min(100, Math.max(0, (rms / 511.2) * 100));
-      if (gaugeBarFill) gaugeBarFill.style.width = `${{pctWidth}}%`;
-      if (gaugeBarPin) gaugeBarPin.style.left = `${{pctWidth}}%`;
-
-      if (cellSpikeDelta) {{
-        cellSpikeDelta.innerText = spikePct > 0 ? `+${{spikePct}}%` : '0% (Baseline)';
-        cellSpikeDelta.style.color = spikePct > 80 ? 'var(--coral-accent)' : 'var(--teal-accent)';
-      }}
-      if (cellTotalAccel) cellTotalAccel.innerText = `${{vibe.toFixed(2)}} m/s\u00B2`;
-      if (cellDynShock) cellDynShock.innerText = `\u00B1${{dg.toFixed(2)}} m/s\u00B2`;
-
-      // 4. Header Badges: Only update historic timeline header if in historic mode
-      if (!isFromLive || currentMode === 'live') {{
-        if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
-        if (timelineHeadSpike) timelineHeadSpike.innerText = `${{spikeRatio}}x`;
-        if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
-      }}
-
-      // 5. Ax, Ay, Az text updates
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
       const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
-
       vibeLegX.innerText = strX;
       vibeLegY.innerText = strY;
       vibeLegZ.innerText = strZ;
 
-      // 6. Time readout: only update from historic wash when in historic mode
       if (!isFromLive) {{
         const maxT = WASH_DATA[WASH_DATA.length - 1][0];
         lblCurrTime.innerText = `${{formatMs(t)}} / ${{formatMs(maxT)}}`;
       }}
     }}
 
-    // Canvas 1: Dedicated Tri-Axial Vibration with Left Margin Gutter & Zero Overlap
-    function drawXyz() {{
-      const w = xyzCvs.width;
-      const h = xyzCvs.height;
-      const dpr = window.devicePixelRatio || 1;
-      xyzCtx.clearRect(0, 0, w, h);
-
-      const marginLeft = 68 * dpr;
-      const marginRight = 16 * dpr;
-      const marginTop = 16 * dpr;
-      const marginBottom = 16 * dpr;
-      const plotW = w - marginLeft - marginRight;
-      const plotH = h - marginTop - marginBottom;
-
-      // Lane 1: Ax & Ay centered around yZero (0.0 m/s^2)
-      const yZero = marginTop + (plotH * 0.32);
-      const scaleXY = 12 * dpr;
-
-      // Lane 2: Az centered around yGravity (-9.81 m/s^2)
-      const yGravity = marginTop + (plotH * 0.78);
-      const scaleZ = 12 * dpr;
-
-      // Vertical separator line dividing left gutter from plot area
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      xyzCtx.lineWidth = 1 * dpr;
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, marginTop);
-      xyzCtx.lineTo(marginLeft, h - marginBottom);
-      xyzCtx.stroke();
-
-      // Horizontal subtle baseline grid lines
-      const hLines = [
-        {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
-        {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
-        {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
-        {{ y: yGravity - ((-7.0 + 9.81) * scaleZ), lbl: '-7.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }},
-        {{ y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' }},
-        {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }}
-      ];
-
-      hLines.forEach(l => {{
-        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-        xyzCtx.beginPath();
-        xyzCtx.moveTo(marginLeft, l.y);
-        xyzCtx.lineTo(w - marginRight, l.y);
-        xyzCtx.stroke();
-
-        // Label in left gutter (NEVER collides with wave)
-        xyzCtx.fillStyle = l.col;
-        xyzCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
-        xyzCtx.textAlign = 'right';
-        xyzCtx.fillText(l.lbl, marginLeft - (8 * dpr), l.y + (3 * dpr));
-      }});
-      xyzCtx.textAlign = 'left';
-
-      // Dashed Zero Baseline across plot
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, yZero);
-      xyzCtx.lineTo(w - marginRight, yZero);
-      xyzCtx.stroke();
-
-      // Dashed Gravity Baseline across plot
-      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, yGravity);
-      xyzCtx.lineTo(w - marginRight, yGravity);
-      xyzCtx.stroke();
-      xyzCtx.setLineDash([]);
-
-      // Right-aligned baseline indicator tags
-      drawPillBadge(xyzCtx, w - marginRight, yZero, 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'right', dpr);
-      drawPillBadge(xyzCtx, w - marginRight, yGravity, 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', 'right', dpr);
-
-      const winSize = 40;
-      const startIdx = Math.max(0, currentIndex - (winSize / 2));
-      const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
-      const points = WASH_DATA.slice(startIdx, endIdx + 1);
-
-      if (points.length < 2) return;
-
-      // Plot Az (Purple) strictly in [marginLeft, w - marginRight]
-      if (axisVisible.z) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#a78bfa';
-        xyzCtx.lineWidth = 2.2 * dpr;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const az = points[i][3];
-          const y = yGravity - ((az + 9.81) * scaleZ);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
-        }}
-        xyzCtx.stroke();
-      }}
-
-      // Plot Ay (Coral) strictly in [marginLeft, w - marginRight]
-      if (axisVisible.y) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#fb923c';
-        xyzCtx.lineWidth = 2.2 * dpr;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const ay = points[i][2];
-          const y = yZero - (ay * scaleXY);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
-        }}
-        xyzCtx.stroke();
-      }}
-
-      // Plot Ax (Teal) strictly in [marginLeft, w - marginRight]
-      if (axisVisible.x) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#00f0d2';
-        xyzCtx.lineWidth = 2.2 * dpr;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const ax = points[i][1];
-          const y = yZero - (ax * scaleXY);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
-        }}
-        xyzCtx.stroke();
-      }}
-
-      // Active cursor dots
-      const curRel = currentIndex - startIdx;
-      if (curRel >= 0 && curRel < points.length) {{
-        const cx = marginLeft + ((curRel / (points.length - 1)) * plotW);
-        if (axisVisible.x) {{
-          const cyX = yZero - (points[curRel][1] * scaleXY);
-          xyzCtx.fillStyle = '#00f0d2';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-        }}
-        if (axisVisible.y) {{
-          const cyY = yZero - (points[curRel][2] * scaleXY);
-          xyzCtx.fillStyle = '#fb923c';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-        }}
-        if (axisVisible.z) {{
-          const cyZ = yGravity - ((points[curRel][3] + 9.81) * scaleZ);
-          xyzCtx.fillStyle = '#a78bfa';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-        }}
-      }}
-    }}
-
-    // Canvas 2: Dual-Modality Waveform with Isolated Left/Right Gutters
+    // Canvas 1: Dual-Modality Waveform (Screenshot 3)
     function drawSpline() {{
       const w = splineCvs.width;
       const h = splineCvs.height;
@@ -1661,10 +805,22 @@ html_content = f'''<!DOCTYPE html>
       splineCtx.fillText('m/s\u00B2', marginLeft - (8 * dpr), marginTop - (4 * dpr));
       splineCtx.textAlign = 'left';
 
-      const winSize = 40;
-      const startIdx = Math.max(0, currentIndex - (winSize / 2));
-      const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
-      const points = WASH_DATA.slice(startIdx, endIdx + 1);
+      // Select data source based on active mode
+      let points;
+      let curRelIdx = 0;
+      if (currentMode === 'live') {{
+        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curRelIdx = points.length - 1;
+      }} else {{
+        const winSize = 40;
+        const startIdx = Math.max(0, currentIndex - (winSize / 2));
+        const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
+        points = WASH_DATA.slice(startIdx, endIdx + 1);
+        curRelIdx = currentIndex - startIdx;
+      }}
 
       if (points.length < 2) return;
 
@@ -1727,10 +883,9 @@ html_content = f'''<!DOCTYPE html>
       splineCtx.stroke();
 
       // Active point dot
-      const curRel = currentIndex - startIdx;
-      if (curRel >= 0 && curRel < points.length) {{
-        const cx = marginLeft + ((curRel / (points.length - 1)) * plotW);
-        const normRms = points[curRel][4] / 520.0;
+      if (curRelIdx >= 0 && curRelIdx < points.length) {{
+        const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
+        const normRms = points[curRelIdx][4] / 520.0;
         const cyRms = marginTop + plotH - (normRms * plotH);
         splineCtx.fillStyle = '#fb923c';
         splineCtx.beginPath();
@@ -1739,7 +894,164 @@ html_content = f'''<!DOCTYPE html>
       }}
     }}
 
-    // Canvas 3: Full Wash 1019 Timeline with Isolated Left Gutter, Solid Pill Tags & Clamped Floating Badge
+    // Canvas 2: Tri-Axial Vibration (Ax, Ay, Az) (Screenshot 2)
+    function drawXyz() {{
+      const w = xyzCvs.width;
+      const h = xyzCvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      xyzCtx.clearRect(0, 0, w, h);
+
+      const marginLeft = 68 * dpr;
+      const marginRight = 16 * dpr;
+      const marginTop = 16 * dpr;
+      const marginBottom = 16 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      const yZero = marginTop + (plotH * 0.32);
+      const scaleXY = 12 * dpr;
+      const yGravity = marginTop + (plotH * 0.78);
+      const scaleZ = 12 * dpr;
+
+      // Vertical separator line
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      xyzCtx.lineWidth = 1 * dpr;
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, marginTop);
+      xyzCtx.lineTo(marginLeft, h - marginBottom);
+      xyzCtx.stroke();
+
+      // Baseline grid lines
+      const hLines = [
+        {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
+        {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
+        {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
+        {{ y: yGravity - ((-7.0 + 9.81) * scaleZ), lbl: '-7.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }},
+        {{ y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' }},
+        {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }}
+      ];
+
+      hLines.forEach(l => {{
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(marginLeft, l.y);
+        xyzCtx.lineTo(w - marginRight, l.y);
+        xyzCtx.stroke();
+
+        xyzCtx.fillStyle = l.col;
+        xyzCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        xyzCtx.textAlign = 'right';
+        xyzCtx.fillText(l.lbl, marginLeft - (8 * dpr), l.y + (3 * dpr));
+      }});
+      xyzCtx.textAlign = 'left';
+
+      // Dashed Zero Baseline
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yZero);
+      xyzCtx.lineTo(w - marginRight, yZero);
+      xyzCtx.stroke();
+
+      // Dashed Gravity Baseline
+      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yGravity);
+      xyzCtx.lineTo(w - marginRight, yGravity);
+      xyzCtx.stroke();
+      xyzCtx.setLineDash([]);
+
+      drawPillBadge(xyzCtx, w - marginRight, yZero, 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'right', dpr);
+      drawPillBadge(xyzCtx, w - marginRight, yGravity, 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', 'right', dpr);
+
+      let points;
+      let curRelIdx = 0;
+      if (currentMode === 'live') {{
+        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER.slice(-40) : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curRelIdx = points.length - 1;
+      }} else {{
+        const winSize = 40;
+        const startIdx = Math.max(0, currentIndex - (winSize / 2));
+        const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
+        points = WASH_DATA.slice(startIdx, endIdx + 1);
+        curRelIdx = currentIndex - startIdx;
+      }}
+
+      if (points.length < 2) return;
+
+      // Plot Az (Purple)
+      if (axisVisible.z) {{
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#a78bfa';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {{
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const az = points[i][3];
+          const y = yGravity - ((az + 9.81) * scaleZ);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }}
+        xyzCtx.stroke();
+      }}
+
+      // Plot Ay (Coral)
+      if (axisVisible.y) {{
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#fb923c';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {{
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const ay = points[i][2];
+          const y = yZero - (ay * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }}
+        xyzCtx.stroke();
+      }}
+
+      // Plot Ax (Teal)
+      if (axisVisible.x) {{
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#00f0d2';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {{
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const ax = points[i][1];
+          const y = yZero - (ax * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }}
+        xyzCtx.stroke();
+      }}
+
+      // Active cursor dots
+      if (curRelIdx >= 0 && curRelIdx < points.length) {{
+        const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
+        if (axisVisible.x) {{
+          const cyX = yZero - (points[curRelIdx][1] * scaleXY);
+          xyzCtx.fillStyle = '#00f0d2';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }}
+        if (axisVisible.y) {{
+          const cyY = yZero - (points[curRelIdx][2] * scaleXY);
+          xyzCtx.fillStyle = '#fb923c';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }}
+        if (axisVisible.z) {{
+          const cyZ = yGravity - ((points[curRelIdx][3] + 9.81) * scaleZ);
+          xyzCtx.fillStyle = '#a78bfa';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }}
+      }}
+    }}
+
+    // Canvas 3: Timeline & Controls (Screenshot 1)
     function drawArea() {{
       const w = areaCvs.width;
       const h = areaCvs.height;
@@ -1754,9 +1066,8 @@ html_content = f'''<!DOCTYPE html>
       const plotH = h - marginTop - marginBottom;
 
       const getY = (rms) => marginTop + plotH - ((rms / 520.0) * plotH);
-      const getX = (idx, total) => marginLeft + ((idx / (total - 1)) * plotW);
 
-      // Vertical separator line dividing left gutter from plot area
+      // Vertical separator line
       areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       areaCtx.lineWidth = 1 * dpr;
       areaCtx.beginPath();
@@ -1774,7 +1085,6 @@ html_content = f'''<!DOCTYPE html>
         areaCtx.lineTo(w - marginRight, yVal);
         areaCtx.stroke();
 
-        // Label in Left Gutter (NEVER touched by waveform)
         areaCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         areaCtx.font = `600 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
         areaCtx.textAlign = 'right';
@@ -1783,7 +1093,7 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.fillText('RMS', marginLeft - (8 * dpr), marginTop - (6 * dpr));
       areaCtx.textAlign = 'left';
 
-      // Horizontal Reference Lines with Solid Dark Pill Badges
+      // Peak & Baseline Markers
       const yPeak = getY(511.2);
       areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
       areaCtx.lineWidth = 1.2 * dpr;
@@ -1806,10 +1116,26 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.setLineDash([]);
       drawPillBadge(areaCtx, w - marginRight, yBase, 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'right', dpr);
 
-      const total = WASH_DATA.length;
+      // Data source based on mode
+      let dataSeries;
+      let curPointIdx = 0;
+      if (currentMode === 'live') {{
+        dataSeries = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curPointIdx = dataSeries.length - 1;
+      }} else {{
+        dataSeries = WASH_DATA;
+        curPointIdx = currentIndex;
+      }}
+
+      const total = dataSeries.length;
       if (total < 2) return;
 
-      // Area gradient strictly within [marginLeft, w - marginRight]
+      const getX = (idx) => marginLeft + ((idx / (total - 1)) * plotW);
+
+      // Area gradient
       const grad = areaCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       grad.addColorStop(0, 'rgba(0, 240, 210, 0.25)');
       grad.addColorStop(0.8, 'rgba(0, 240, 210, 0.04)');
@@ -1818,8 +1144,8 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.beginPath();
       areaCtx.moveTo(marginLeft, marginTop + plotH);
       for (let i = 0; i < total; i++) {{
-        const x = getX(i, total);
-        const y = getY(WASH_DATA[i][4]);
+        const x = getX(i);
+        const y = getY(dataSeries[i][4]);
         areaCtx.lineTo(x, y);
       }}
       areaCtx.lineTo(w - marginRight, marginTop + plotH);
@@ -1827,19 +1153,19 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.fillStyle = grad;
       areaCtx.fill();
 
-      // Top stroke
+      // Top curve stroke
       areaCtx.beginPath();
       areaCtx.strokeStyle = '#00f0d2';
       areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {{
-        const x = getX(i, total);
-        const y = getY(WASH_DATA[i][4]);
+        const x = getX(i);
+        const y = getY(dataSeries[i][4]);
         if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
       }}
       areaCtx.stroke();
 
-      // Cursor scrubber line strictly within plot bounds
-      const curX = getX(currentIndex, total);
+      // Cursor scrubber line
+      const curX = getX(curPointIdx);
       areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.8)';
       areaCtx.lineWidth = 1.5 * dpr;
       areaCtx.beginPath();
@@ -1847,7 +1173,7 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.lineTo(curX, marginTop + plotH);
       areaCtx.stroke();
 
-      const curRms = WASH_DATA[currentIndex][4];
+      const curRms = dataSeries[curPointIdx][4];
       const curY = getY(curRms);
 
       // Cursor dot
@@ -1856,7 +1182,7 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
 
-      // Floating cursor badge with glowing border and dark background
+      // Floating cursor badge
       const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
       const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
       const badgeText = `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x ${{spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'}})`;
@@ -1904,7 +1230,7 @@ html_content = f'''<!DOCTYPE html>
     function togglePlayPause() {{
       isPlaying = !isPlaying;
       if (isPlaying) {{
-        btnPlayWash.innerText = 'Pause Playback';
+        btnPrimaryAction.innerText = 'Pause Replay';
         playInterval = setInterval(() => {{
           currentIndex++;
           if (currentIndex >= WASH_DATA.length) currentIndex = 0;
@@ -1912,61 +1238,47 @@ html_content = f'''<!DOCTYPE html>
           onScrub(currentIndex);
         }}, 80);
       }} else {{
-        btnPlayWash.innerText = 'Replay Wash 1019';
+        btnPrimaryAction.innerText = 'Replay Wash 1019';
         if (playInterval) clearInterval(playInterval);
       }}
     }}
 
-    function setMode(mode) {{
-      currentMode = mode;
-      if (mode === 'live') {{
-        if (isPlaying) togglePlayPause();
-        document.getElementById('acc-item-1').classList.remove('active');
-        document.getElementById('acc-item-2').classList.add('active');
-        document.getElementById('tab-historic').classList.remove('active');
-        document.getElementById('tab-live').classList.add('active');
-        updateRigStatusUI(isRigOnline);
-        checkRigHeartbeat();
+    function exportActiveCsv() {{
+      if (currentMode === 'live') {{
+        let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\\n';
+        const src = LIVE_BUFFER.length > 0 ? LIVE_BUFFER : [[Date.now(), -0.74, 1.40, -9.40, 105.6]];
+        src.forEach(r => {{
+          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}}\\n`;
+        }});
+        const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'live_rig_stream.csv';
+        a.click();
       }} else {{
-        document.getElementById('acc-item-2').classList.remove('active');
-        document.getElementById('acc-item-1').classList.add('active');
-        document.getElementById('tab-live').classList.remove('active');
-        document.getElementById('tab-historic').classList.add('active');
-        updateRigStatusUI(isRigOnline);
-        applyRecord(WASH_DATA[currentIndex], false);
-        drawSpline();
-        drawXyz();
-        drawArea();
+        let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\\n';
+        WASH_DATA.forEach(r => {{
+          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}}\\n`;
+        }});
+        const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'wash_1019.csv';
+        a.click();
       }}
     }}
 
-    function downloadWashCsv() {{
-      let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\\n';
-      WASH_DATA.forEach(r => {{
-        csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}}\\n`;
-      }});
-      const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'wash_1019.csv';
-      a.click();
-    }}
-
-    function toggleMobileMenu() {{
-      const drawer = document.getElementById('mobile-drawer');
-      const overlay = document.getElementById('drawer-overlay');
-      drawer.classList.toggle('open');
-      overlay.style.display = drawer.classList.contains('open') ? 'block' : 'none';
-    }}
-
-    function toggleDoc() {{
-      window.open('hardware_bom_and_setup_guide.pdf', '_blank');
-    }}
-
-    // Default to clean historic mode on startup and start rig heartbeat polling
+    // Initialize: default to requested view
     setTimeout(() => {{
       resizeCanvases();
-      setMode('historic');
+      // Check query parameter or hash if user navigated directly
+      const urlParams = new URLSearchParams(window.location.search);
+      const isHistoricalUrl = window.location.pathname.includes('historical') || window.location.hash.includes('historical') || urlParams.get('mode') === 'historical';
+      if (isHistoricalUrl) {{
+        setViewMode('historic');
+      }} else {{
+        setViewMode('{default_view}');
+      }}
       checkRigHeartbeat();
       setInterval(checkRigHeartbeat, 2500);
     }}, 100);
@@ -1975,20 +1287,28 @@ html_content = f'''<!DOCTYPE html>
 </html>
 '''
 
-with open('dashboard.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
+# Generate default Live Rig view for index.html
+html_live = generate_html(default_view='live')
+# Generate default Historical Data view for historical.html
+html_historical = generate_html(default_view='historic')
 
 with open('index.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
+    f.write(html_live)
+
+with open('historical.html', 'w', encoding='utf-8') as f:
+    f.write(html_historical)
+
+with open('dashboard.html', 'w', encoding='utf-8') as f:
+    f.write(html_live)
 
 with open('cloud_dashboard.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
+    f.write(html_live)
 
 brain_path = r'C:\Users\adamd\.gemini\antigravity\brain\eaf1a310-7f2a-46d6-b3a7-72b474df813e\dashboard.html'
 try:
     with open(brain_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
+        f.write(html_live)
 except Exception as e:
     print('Brain artifact write note:', e)
 
-print('Successfully built UTF-8 clean dashboard with ZERO mojibake!')
+print('Successfully generated streamlined website with ONLY the 3 cards, Live Rig default, and Historical toggle!')

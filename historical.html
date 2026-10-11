@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Samsung Washer PdM - Live Rig &amp; Historical Diagnostics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-body: #1e2229;
+      --bg-card: #252934;
+      --bg-card-hover: #2c313e;
+      --bg-inner: #1a1d24;
+      --border-card: rgba(255, 255, 255, 0.06);
+      --border-sub: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --teal-accent: #00f0d2;
+      --teal-glow: rgba(0, 240, 210, 0.25);
+      --coral-accent: #fb923c;
+      --purple-accent: #a78bfa;
+      --blue-accent: #38bdf8;
+      --red-accent: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Sticky Header */
+    .top-nav {
+      background: var(--bg-body);
+      border-bottom: 1px solid var(--border-card);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .brand-pill {
+      background: var(--teal-accent);
+      color: #0f172a;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    /* Right Controls */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-mode-toggle {
+      background: rgba(0, 240, 210, 0.12);
+      border: 1px solid var(--teal-accent);
+      color: var(--teal-accent);
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-mode-toggle:hover {
+      background: var(--teal-accent);
+      color: #0f172a;
+      box-shadow: 0 0 14px var(--teal-glow);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 240, 210, 0.08);
+      border: 1px solid rgba(0, 240, 210, 0.2);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--teal-accent);
+      transition: all 0.25s ease;
+    }
+    .status-badge.offline-badge {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal-accent);
+      box-shadow: 0 0 8px var(--teal-accent);
+      animation: pulse-glow 2s infinite;
+      transition: all 0.25s ease;
+    }
+    .status-dot.dot-offline {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+      animation: none;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-header-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-header-action:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-sub);
+    }
+
+    /* Main Container (Centered, clean full-width cards) */
+    .main-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    /* Live Offline Alert Banner */
+    .live-offline-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      border-radius: 10px;
+      padding: 10px 18px;
+      color: #fca5a5;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Clean Dark Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 22px 24px;
+      position: relative;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-title-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-sub-txt {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: block;
+      margin-top: 3px;
+    }
+
+    .chart-legend-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .legend-item-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .dot-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .canvas-container-box {
+      position: relative;
+      width: 100%;
+      height: 180px;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Axis Toggle Badges */
+    .axis-toggle-clean {
+      background: var(--bg-inner);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      transition: opacity 0.2s;
+    }
+    .axis-toggle-clean.dimmed {
+      opacity: 0.35;
+      text-decoration: line-through;
+    }
+
+    /* Timeline Scrubber Bar */
+    .timeline-scrubber-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-sub);
+    }
+    .timeline-scrubber-bar input[type="range"] {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      accent-color: var(--teal-accent);
+      cursor: pointer;
+    }
+    .time-badge-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--teal-accent);
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .action-button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .btn-dark-primary {
+      background: var(--teal-accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-dark-primary:hover {
+      opacity: 0.9;
+    }
+    .btn-dark-secondary {
+      background: var(--bg-inner);
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-dark-secondary:hover {
+      background: var(--bg-card-hover);
+    }
+
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        gap: 16px;
+      }
+      .top-nav {
+        padding: 12px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="#" class="brand-title">
+        <span class="brand-pill">PDM</span>
+        <span>Samsung Washer Monitor</span>
+      </a>
+    </div>
+
+    <!-- Center/Right Controls: View Toggle Button, Status Badge, Export -->
+    <div class="nav-right">
+      <button class="btn-mode-toggle" id="btn-toggle-view" onclick="toggleViewMode()">
+        <span id="btn-mode-icon">📊</span>
+        <span id="btn-mode-text">Historical Data (wash_1019)</span>
+      </button>
+
+      <div class="status-badge offline-badge" id="badge-live-tag">
+        <span class="status-dot dot-offline" id="status-dot-indicator"></span>
+        <span id="lbl-status-text">Live Rig Offline (No Input)</span>
+      </div>
+
+      <button class="btn-header-action" onclick="exportActiveCsv()">
+        Export CSV
+      </button>
+    </div>
+  </header>
+
+  <!-- Main View Container: ONLY the 3 Cards from Screenshot -->
+  <main class="main-container">
+
+    <!-- Live Offline Alert Banner (shown only when in Live mode and rig has no input) -->
+    <div id="live-offline-banner" class="live-offline-banner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+        <span><strong>Live Rig Offline:</strong> No active sensor input detected from ESP32. Displaying last cached packet.</span>
+      </div>
+      <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="setViewMode('historic')">Switch to Historical Data</button>
+    </div>
+
+    <!-- Card 1: Dual-Modality Telemetry (Screenshot 3) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text" id="title-spline">Dual-Modality Telemetry</span>
+          <span class="card-sub-txt" id="sub-spline">Vibration resultant &bull; Acoustic sound amplitude</span>
+        </div>
+        <div class="chart-legend-row">
+          <span class="legend-item-dot">
+            <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a| (m/s&sup2;)
+          </span>
+          <span class="legend-item-dot">
+            <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound (RMS)
+          </span>
+        </div>
+      </div>
+      <div class="canvas-container-box" style="height: 190px;">
+        <canvas id="spline-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Card 2: Tri-Axial Vibration (Ax, Ay, Az) (Screenshot 2) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
+          <span class="card-sub-txt">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
+            Ax: <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--coral-accent);"></span>
+            Ay: <strong id="vibe-leg-y">+1.40</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple-accent);"></span>
+            Az: <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
+          </span>
+          <span class="axis-toggle-clean" style="color: #fff;">
+            |a|: <strong id="head-vibe-mag">9.53</strong> m/s&sup2;
+          </span>
+        </div>
+      </div>
+      <div class="canvas-container-box" style="height: 200px;">
+        <canvas id="xyz-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Card 3: Timeline & Controls (Screenshot 1) -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
+          <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="axis-toggle-clean" style="color: var(--teal-accent);">
+            Current: <strong id="timeline-head-rms">105.6</strong> RMS
+          </span>
+          <span class="axis-toggle-clean" style="color: var(--coral-accent);">
+            Spike: <strong id="timeline-head-spike">1.0x</strong>
+          </span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #fff;" id="lbl-curr-time">
+            00:00 / 35:54
+          </span>
+        </div>
+      </div>
+
+      <div class="canvas-container-box" style="height: 165px;">
+        <canvas id="area-canvas"></canvas>
+      </div>
+
+      <!-- Timeline Scrubber (Active in Historical mode) -->
+      <div class="timeline-scrubber-bar" id="wrap-scrubber" style="display: none;">
+        <span style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Scrub:</span>
+        <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
+        <span class="time-badge-mono" id="scrub-label">0.0m</span>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="action-button-row">
+        <button class="btn-dark-primary" id="btn-primary-action" onclick="onPrimaryAction()">
+          Pause Live Stream
+        </button>
+        <button class="btn-dark-secondary" id="btn-secondary-switch" onclick="toggleViewMode()">
+          Switch to Historical Data (wash_1019)
+        </button>
+        <button class="btn-dark-secondary" onclick="exportActiveCsv()">
+          Download CSV
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const WASH_DATA = [[5021, -0.77, 1.36, -9.4, 44.7], [10042, -0.74, 1.42, -9.42, 139.0], [15099, -0.62, 1.51, -9.82, 157.0], [20116, -0.78, 1.5, -9.62, 113.6], [25164, -0.58, 1.4, -9.33, 232.7], [30174, -0.64, 1.38, -9.43, 103.8], [35291, -0.75, 1.42, -9.4, 21.2], [40318, -0.72, 1.41, -9.38, 115.7], [45370, -0.77, 1.39, -9.5, 70.2], [50374, -0.72, 1.42, -9.41, 162.8], [55414, -0.72, 1.41, -9.46, 94.8], [60428, -0.73, 1.47, -9.5, 102.6], [65476, -0.71, 1.4, -9.32, 73.1], [70528, -0.69, 1.39, -9.46, 102.9], [75565, -0.76, 1.44, -9.47, 97.8], [80667, -0.75, 1.39, -9.45, 58.8], [85669, -0.7, 1.42, -9.55, 45.3], [90727, -0.69, 1.39, -9.47, 48.4], [95743, -0.74, 1.4, -9.48, 106.6], [100950, -0.77, 1.41, -9.36, 79.2], [105964, -0.78, 1.42, -9.46, 57.7], [111008, -0.72, 1.42, -9.47, 44.1], [116016, -0.76, 1.4, -9.47, 42.7], [121148, -0.76, 1.41, -9.44, 63.4], [126178, -0.7, 1.44, -9.45, 96.0], [131357, -0.74, 1.42, -9.47, 20.2], [136393, -0.72, 1.38, -9.42, 23.1], [141396, -0.71, 1.37, -9.41, 78.6], [146399, -0.72, 1.45, -9.43, 65.6], [151520, -0.74, 1.41, -9.33, 263.7], [156520, -0.7, 1.32, -9.43, 76.0], [161663, -0.73, 1.38, -9.43, 100.0], [166693, -0.71, 1.4, -9.4, 64.1], [171916, -0.74, 1.42, -9.53, 54.1], [176935, -0.79, 1.31, -9.35, 145.9], [181977, -0.71, 1.4, -9.25, 227.5], [187014, -0.71, 1.36, -9.43, 114.5], [192179, -0.76, 1.37, -9.46, 71.4], [197229, -0.69, 1.43, -9.47, 39.5], [202331, -0.71, 1.45, -9.46, 56.8], [207377, -0.7, 1.43, -9.54, 193.2], [212496, -0.74, 1.44, -9.44, 221.0], [217537, -0.72, 1.42, -9.44, 60.8], [222589, -0.74, 1.42, -9.41, 227.0], [227613, -0.71, 1.42, -9.38, 76.4], [232769, -0.71, 1.42, -9.41, 141.7], [237818, -0.77, 1.4, -9.37, 85.2], [242905, -0.72, 1.43, -9.46, 151.3], [247936, -0.75, 1.42, -9.44, 98.4], [252986, -0.72, 1.42, -9.45, 47.7], [258020, -0.75, 1.43, -9.53, 146.2], [263108, -0.73, 1.43, -9.5, 96.2], [268148, -0.71, 1.38, -9.45, 20.9], [273378, -0.75, 1.44, -9.4, 82.9], [278413, -0.76, 1.4, -9.36, 82.9], [283434, -0.8, 1.44, -9.53, 213.6], [288453, -0.7, 1.32, -9.34, 71.3], [293515, -0.7, 1.32, -9.33, 95.2], [298518, -0.64, 1.38, -9.24, 184.5], [303703, -0.7, 1.24, -9.44, 101.7], [308725, -0.73, 1.23, -9.64, 97.3], [313825, -0.71, 1.41, -9.32, 142.4], [318829, -0.68, 1.33, -9.62, 148.3], [323904, -0.73, 1.37, -9.49, 174.7], [328946, -0.74, 1.42, -9.52, 86.8], [334015, -0.73, 1.4, -9.55, 185.7], [339030, -0.74, 1.38, -9.35, 109.3], [344191, -0.74, 1.39, -9.48, 254.7], [349231, -0.8, 1.46, -9.47, 131.5], [354305, -0.8, 1.44, -9.31, 155.8], [359310, -0.72, 1.49, -9.39, 80.9], [364425, -0.77, 1.42, -9.48, 259.0], [369444, -0.72, 1.42, -9.46, 148.2], [374517, -0.76, 1.43, -9.39, 117.8], [379544, -0.7, 1.4, -9.35, 109.9], [384683, -0.74, 1.41, -9.45, 176.3], [389703, -0.74, 1.39, -9.4, 61.5], [394738, -0.74, 1.35, -9.55, 90.1], [400111, -0.67, 1.38, -9.35, 305.2], [405126, -0.73, 1.38, -9.43, 211.0], [410253, -0.8, 1.37, -9.6, 229.4], [415290, -0.66, 1.28, -9.3, 144.1], [420416, -0.72, 1.33, -9.57, 220.3], [425436, -0.87, 1.48, -9.43, 127.9], [430561, -0.78, 1.48, -9.37, 223.3], [435570, -0.67, 1.47, -9.47, 87.8], [440701, -0.73, 1.43, -9.43, 196.9], [445707, -0.74, 1.3, -9.78, 88.9], [450798, -0.73, 1.59, -9.19, 137.1], [455818, -0.64, 1.33, -9.77, 150.0], [461229, -0.71, 1.44, -9.23, 241.2], [466270, -0.78, 1.39, -9.43, 61.2], [471371, -0.74, 1.41, -9.37, 169.7], [476400, -0.71, 1.36, -9.45, 139.0], [481532, -0.77, 1.38, -9.46, 151.9], [486578, -0.8, 1.31, -9.38, 89.4], [491624, -0.77, 1.45, -9.42, 200.6], [496674, -0.68, 1.41, -9.43, 120.4], [501699, -0.68, 1.44, -9.39, 93.5], [506704, -0.75, 1.4, -9.44, 123.9], [511782, -0.74, 1.42, -9.7, 185.1], [516794, -0.73, 1.41, -9.46, 109.5], [521990, -0.73, 1.36, -9.59, 164.1], [527000, -0.78, 1.37, -9.41, 114.7], [532127, -0.79, 1.4, -9.24, 173.1], [537169, -0.8, 1.49, -9.48, 154.3], [542247, -0.79, 1.52, -9.25, 138.1], [547281, -0.83, 1.51, -9.39, 68.7], [552371, -0.58, 1.42, -9.14, 188.4], [557413, -0.71, 1.41, -9.59, 66.4], [562564, -0.83, 1.42, -9.3, 150.0], [567613, -0.71, 1.57, -9.48, 71.1], [572707, -0.78, 1.33, -9.39, 180.1], [577709, -0.49, 1.31, -9.3, 71.5], [582982, -0.84, 1.53, -9.56, 234.2], [587999, -0.67, 1.25, -9.11, 107.0], [593090, -0.52, 1.35, -9.25, 179.8], [598102, -0.8, 1.62, -9.36, 63.4], [603213, -0.72, 1.46, -9.46, 93.6], [608238, -0.7, 1.41, -9.43, 178.5], [613254, -0.74, 1.49, -9.54, 208.1], [618298, -0.75, 1.42, -9.4, 78.1], [623433, -0.77, 1.38, -9.36, 219.0], [628464, -0.72, 1.42, -9.53, 99.1], [633582, -0.66, 1.38, -9.43, 186.0], [638621, -0.71, 1.38, -9.49, 105.3], [643674, -0.74, 1.47, -9.64, 269.6], [648683, -0.72, 1.43, -9.37, 62.9], [653789, -0.63, 1.42, -9.47, 230.5], [658825, -0.77, 1.37, -9.42, 84.8], [663898, -0.68, 1.37, -9.36, 164.6], [668910, -0.79, 1.45, -9.43, 82.7], [674063, -0.73, 1.45, -9.24, 196.9], [679063, -0.8, 1.51, -9.38, 101.3], [684112, -0.64, 1.34, -9.22, 186.5], [689130, -0.67, 1.43, -9.5, 69.5], [694384, -0.7, 1.4, -9.35, 142.0], [699390, -0.74, 1.38, -9.46, 46.2], [704628, -0.81, 1.41, -9.56, 226.4], [709678, -0.73, 1.44, -9.42, 95.0], [714690, -0.72, 1.33, -9.52, 242.3], [719695, -0.71, 1.3, -9.66, 118.7], [724829, -0.74, 1.13, -9.53, 234.8], [729855, -0.76, 1.3, -9.51, 108.7], [734957, -0.64, 1.42, -9.69, 169.6], [740005, -0.72, 1.39, -9.58, 114.4], [745054, -0.74, 1.43, -9.47, 225.9], [750059, -0.76, 1.44, -9.51, 95.4], [755484, -0.77, 1.44, -9.43, 113.0], [760494, -0.66, 1.38, -9.4, 86.2], [765528, -0.75, 1.36, -9.39, 190.4], [770554, -0.73, 1.4, -9.41, 31.0], [775634, -0.73, 1.39, -9.45, 148.8], [780663, -0.73, 1.39, -9.53, 91.7], [785669, -0.71, 1.41, -9.36, 173.1], [790688, -0.72, 1.45, -9.44, 119.3], [795806, -0.74, 1.43, -9.55, 136.1], [800808, -0.75, 1.46, -9.55, 230.8], [805970, -0.7, 1.43, -9.45, 186.8], [811013, -0.74, 1.46, -9.45, 108.6], [816132, -0.71, 1.41, -9.48, 233.2], [821133, -0.76, 1.47, -9.49, 92.0], [826268, -0.78, 1.4, -9.46, 206.9], [831315, -0.76, 1.44, -9.34, 219.5], [836396, -0.74, 1.43, -9.34, 181.6], [841413, -0.54, 1.37, -9.09, 92.0], [846487, -0.58, 1.47, -9.32, 140.7], [851522, -0.72, 1.39, -9.83, 183.2], [856697, -0.73, 1.44, -9.4, 220.9], [861731, -0.61, 1.44, -9.14, 37.3], [866871, -0.8, 1.41, -9.81, 198.2], [871914, -0.81, 1.37, -9.32, 155.7], [877046, -0.66, 1.42, -9.19, 150.6], [882076, -0.79, 1.48, -9.7, 115.6], [887199, -0.84, 1.37, -9.51, 206.1], [892236, -0.77, 1.57, -9.53, 103.8], [897379, -0.52, 1.36, -9.24, 186.9], [902411, -0.71, 1.42, -9.45, 34.5], [907460, -0.6, 1.18, -9.35, 267.8], [912486, -0.55, 1.46, -9.1, 99.7], [917535, -0.8, 1.52, -9.4, 110.4], [922547, -0.68, 1.39, -9.0, 108.8], [927575, -0.78, 1.35, -9.39, 195.3], [932594, -0.88, 1.37, -9.52, 127.2], [937672, -0.61, 1.5, -9.58, 154.9], [942709, -0.72, 1.51, -9.67, 98.0], [947854, -0.7, 1.37, -9.63, 203.8], [952902, -0.75, 1.45, -9.26, 109.8], [957968, -0.62, 1.4, -9.26, 244.4], [962993, -0.7, 1.38, -9.64, 159.3], [968067, -0.7, 1.38, -9.24, 172.2], [973104, -0.74, 1.4, -9.87, 189.7], [978114, -0.96, 1.29, -9.47, 252.4], [983135, -0.72, 1.4, -9.58, 89.8], [988195, -0.92, 1.48, -9.7, 94.2], [993240, -0.63, 1.4, -9.46, 219.7], [998287, -0.51, 1.45, -9.12, 125.9], [1003363, -0.79, 1.38, -9.39, 94.7], [1008377, -0.63, 1.24, -9.91, 73.8], [1013501, -0.74, 1.49, -9.22, 167.4], [1018517, -0.67, 1.35, -8.9, 152.6], [1023521, -0.56, 1.25, -9.32, 165.3], [1028567, -0.71, 1.36, -9.52, 128.3], [1033645, -0.74, 1.28, -9.54, 226.3], [1038646, -0.76, 1.29, -9.45, 97.0], [1043739, -0.76, 1.57, -9.81, 168.1], [1048757, -0.7, 1.39, -9.35, 41.9], [1053879, -0.93, 1.45, -9.57, 151.6], [1058888, -0.67, 1.56, -9.55, 183.2], [1064001, -0.97, 1.35, -9.6, 136.1], [1069004, -0.75, 1.45, -9.85, 114.9], [1074108, -0.71, 1.55, -9.56, 209.7], [1079158, -0.65, 1.44, -8.62, 176.1], [1084264, -0.76, 1.23, -9.65, 305.2], [1089309, -0.78, 1.5, -9.5, 316.7], [1094390, -0.63, 1.26, -9.77, 234.1], [1099390, -0.92, 1.43, -9.53, 218.9], [1104538, -0.62, 1.18, -9.73, 177.4], [1109567, -1.03, 1.34, -9.78, 206.9], [1114691, -0.64, 1.28, -8.41, 369.2], [1119737, -0.33, 1.38, -9.39, 315.0], [1124830, -1.19, 1.47, -9.44, 191.3], [1129867, -0.63, 1.24, -9.36, 270.5], [1134933, -0.48, 1.32, -8.99, 401.4], [1139937, -0.6, 1.28, -9.52, 247.2], [1145069, -1.04, 1.44, -9.49, 305.2], [1150081, -0.8, 1.46, -9.03, 345.5], [1155153, -1.11, 1.56, -9.63, 291.2], [1160167, -1.04, 1.34, -9.7, 353.3], [1165292, -0.69, 1.48, -9.58, 289.7], [1170312, -0.66, 1.51, -9.24, 351.4], [1175432, -0.8, 1.55, -9.5, 511.2], [1180442, -0.8, 1.41, -9.08, 235.9], [1185570, -0.55, 1.3, -9.67, 213.4], [1190583, -0.67, 1.39, -8.69, 277.8], [1195698, -0.31, 1.24, -9.26, 284.5], [1200726, -0.58, 1.33, -9.72, 466.7], [1205806, -0.48, 1.26, -9.17, 165.4], [1210852, -0.91, 1.5, -9.59, 372.0], [1215951, -0.84, 1.43, -8.9, 389.0], [1220987, -0.88, 1.37, -9.79, 210.1], [1226060, -0.38, 1.29, -9.2, 253.6], [1231082, -0.49, 1.34, -10.01, 296.3], [1236157, -1.07, 1.42, -9.8, 313.5], [1241179, -0.94, 1.45, -9.18, 348.4], [1246317, -0.28, 1.25, -8.74, 402.3], [1251339, -1.03, 1.46, -9.54, 377.9], [1256420, -0.86, 1.14, -9.52, 254.2], [1261456, -0.64, 1.37, -9.74, 176.2], [1266558, -0.51, 1.22, -9.06, 115.8], [1271603, -0.58, 1.35, -8.81, 167.7], [1276836, -0.95, 1.41, -9.36, 82.8], [1281866, -0.68, 1.56, -9.49, 141.6], [1286879, -0.94, 1.49, -9.99, 224.9], [1291903, -0.54, 1.24, -9.38, 168.0], [1296904, -0.69, 1.37, -9.26, 217.5], [1301909, -0.78, 1.46, -9.47, 76.3], [1307025, -0.73, 1.39, -9.53, 104.6], [1312032, -0.75, 1.44, -9.43, 174.8], [1317221, -0.73, 1.43, -9.49, 178.1], [1322250, -0.72, 1.41, -9.46, 64.6], [1327329, -0.76, 1.43, -9.41, 208.8], [1332354, -0.74, 1.41, -9.4, 78.1], [1337482, -0.71, 1.45, -9.45, 209.2], [1342497, -0.75, 1.42, -9.43, 44.8], [1347619, -0.74, 1.42, -9.52, 210.2], [1352621, -0.8, 1.38, -9.44, 47.7], [1357856, -0.76, 1.41, -9.42, 222.1], [1362865, -0.71, 1.4, -9.42, 149.3], [1367956, -0.74, 1.42, -9.42, 209.2], [1372966, -0.74, 1.41, -9.36, 19.4], [1378095, -0.74, 1.43, -9.42, 197.5], [1383099, -0.75, 1.39, -9.46, 69.0], [1388228, -0.76, 1.4, -9.43, 249.1], [1393231, -0.73, 1.41, -9.46, 20.8], [1398336, -0.78, 1.42, -9.42, 204.6], [1403368, -0.77, 1.41, -9.48, 12.4], [1408459, -0.75, 1.42, -9.47, 188.9], [1413466, -0.78, 1.43, -9.44, 36.7], [1418579, -0.74, 1.45, -9.47, 229.9], [1423616, -0.77, 1.4, -9.37, 34.9], [1428679, -0.76, 1.43, -9.5, 213.6], [1433715, -0.74, 1.37, -9.45, 102.2], [1438797, -0.74, 1.42, -9.45, 130.3], [1443818, -0.75, 1.41, -9.38, 119.9], [1448872, -0.75, 1.39, -9.49, 217.0], [1453896, -0.72, 1.4, -9.42, 77.5], [1458952, -0.74, 1.44, -9.47, 248.0], [1463991, -0.75, 1.43, -9.42, 58.1], [1469109, -0.72, 1.42, -9.4, 80.9], [1474150, -0.75, 1.44, -9.46, 61.5], [1479217, -0.75, 1.33, -9.43, 204.4], [1484264, -0.77, 1.41, -9.38, 37.3], [1489302, -0.73, 1.4, -9.44, 177.0], [1494309, -0.78, 1.42, -9.4, 33.1], [1499470, -0.75, 1.42, -9.48, 173.8], [1504493, -0.73, 1.42, -9.47, 26.0], [1509511, -0.74, 1.41, -9.47, 174.3], [1514542, -0.76, 1.42, -9.42, 95.1], [1519670, -0.78, 1.44, -9.4, 276.8], [1524681, -0.8, 1.43, -9.45, 67.9], [1529812, -0.74, 1.43, -9.43, 217.7], [1534859, -0.76, 1.45, -9.44, 94.0], [1539956, -0.72, 1.4, -9.5, 142.5], [1544991, -0.72, 1.43, -9.43, 130.9], [1550042, -0.73, 1.44, -9.43, 156.8], [1555073, -0.74, 1.44, -9.51, 144.4], [1561300, -0.77, 1.39, -9.48, 243.6], [1566499, -0.75, 1.45, -9.5, 43.6], [1571505, -0.71, 1.43, -9.47, 50.4], [1576954, -0.75, 1.42, -9.46, 120.9], [1581979, -0.76, 1.43, -9.4, 24.9], [1587103, -0.69, 1.4, -9.48, 149.2], [1592114, -0.72, 1.45, -9.42, 12.7], [1597163, -0.73, 1.42, -9.47, 220.8], [1602208, -0.7, 1.42, -9.49, 73.5], [1607259, -0.75, 1.46, -9.47, 129.0], [1612281, -0.73, 1.44, -9.39, 89.7], [1617373, -0.76, 1.42, -9.42, 175.6], [1622395, -0.74, 1.4, -9.47, 51.9], [1627545, -0.77, 1.41, -9.5, 193.8], [1632588, -0.77, 1.45, -9.44, 46.8], [1637665, -0.79, 1.4, -9.49, 234.2], [1642697, -0.73, 1.44, -9.46, 85.1], [1647818, -0.77, 1.43, -9.51, 200.9], [1652862, -0.76, 1.41, -9.53, 132.2], [1657870, -0.75, 1.41, -9.48, 259.8], [1662894, -0.72, 1.44, -9.5, 108.4], [1667985, -0.76, 1.4, -9.55, 125.8], [1672997, -0.8, 1.42, -9.43, 121.2], [1678129, -0.75, 1.38, -9.48, 149.1], [1683171, -0.73, 1.42, -9.51, 183.3], [1688254, -0.73, 1.44, -9.4, 166.4], [1693286, -0.74, 1.41, -9.45, 143.0], [1698397, -0.81, 1.39, -9.45, 149.0], [1703447, -0.75, 1.41, -9.46, 52.4], [1708489, -0.76, 1.43, -9.47, 89.7], [1713489, -0.7, 1.42, -9.43, 29.1], [1718584, -0.78, 1.43, -9.4, 226.1], [1723631, -0.75, 1.45, -9.48, 154.1], [1728770, -0.74, 1.41, -9.47, 242.8], [1733789, -0.75, 1.38, -9.44, 13.0], [1738940, -0.76, 1.43, -9.46, 189.1], [1743971, -0.79, 1.45, -9.47, 116.9], [1749076, -0.76, 1.43, -9.47, 205.3], [1754091, -0.75, 1.38, -9.46, 193.0], [1759249, -0.75, 1.42, -9.4, 262.7], [1764275, -0.71, 1.42, -9.5, 59.0], [1769459, -0.74, 1.42, -9.42, 219.8], [1774472, -0.76, 1.44, -9.51, 175.0], [1779717, -0.73, 1.42, -9.49, 94.4], [1784721, -0.74, 1.39, -9.43, 93.9], [1789749, -0.72, 1.44, -9.47, 236.8], [1794792, -0.75, 1.42, -9.44, 85.3], [1799814, -0.75, 1.41, -9.47, 208.8], [1804838, -0.73, 1.45, -9.43, 23.0], [1809972, -0.77, 1.42, -9.43, 238.9], [1814975, -0.73, 1.44, -9.47, 32.2], [1820108, -0.77, 1.44, -9.47, 46.0], [1825109, -0.73, 1.41, -9.46, 53.9], [1830244, -0.75, 1.42, -9.54, 289.6], [1835270, -0.72, 1.44, -9.44, 59.4], [1840420, -0.77, 1.39, -9.4, 173.4], [1845450, -0.8, 1.42, -9.48, 8.7], [1850532, -0.75, 1.43, -9.48, 226.9], [1855564, -0.74, 1.43, -9.5, 157.1], [1860690, -0.78, 1.43, -9.38, 261.3], [1865708, -0.77, 1.39, -9.46, 77.2], [1870959, -0.76, 1.41, -9.47, 230.0], [1875967, -0.78, 1.42, -9.46, 78.3], [1880982, -0.77, 1.45, -9.5, 170.2], [1885997, -0.78, 1.4, -9.47, 61.9], [1891036, -0.77, 1.38, -9.44, 148.8], [1896036, -0.7, 1.41, -9.47, 131.6], [1901168, -0.73, 1.43, -9.49, 176.8], [1906174, -0.75, 1.43, -9.52, 66.3], [1911326, -0.74, 1.44, -9.49, 209.9], [1916358, -0.76, 1.45, -9.46, 106.0], [1921471, -0.77, 1.41, -9.52, 113.6], [1926477, -0.75, 1.45, -9.45, 50.4], [1931602, -0.79, 1.39, -9.41, 165.9], [1936613, -0.76, 1.47, -9.47, 163.4], [1941618, -0.73, 1.45, -9.5, 266.1], [1946650, -0.81, 1.43, -9.46, 97.4], [1960539, -0.77, 1.4, -9.5, 208.1], [1965957, -0.77, 1.44, -9.5, 62.5], [1970958, -0.76, 1.39, -9.42, 118.3], [1976322, -0.75, 1.39, -9.42, 197.0], [1981371, -0.69, 1.44, -9.46, 65.3], [1989421, -0.77, 1.45, -9.44, 72.6], [1994526, -0.69, 1.42, -9.47, 52.9], [1999549, -0.79, 1.41, -9.45, 74.6], [2004903, -0.72, 1.4, -9.46, 115.1], [2009923, -0.77, 1.39, -9.46, 87.4], [2015247, -0.76, 1.44, -9.47, 54.3], [2023526, -0.73, 1.44, -9.52, 74.2], [2028697, -0.75, 1.42, -9.42, 146.6], [2033704, -0.74, 1.42, -9.52, 133.9], [2039829, -0.77, 1.39, -9.44, 277.5], [2044857, -0.76, 1.43, -9.45, 84.5], [2049879, -0.73, 1.41, -9.45, 16.1], [2054914, -0.78, 1.41, -9.45, 67.5], [2060265, -0.74, 1.46, -9.45, 233.0], [2065301, -0.78, 1.38, -9.44, 108.9], [2070748, -0.79, 1.39, -9.45, 298.6], [2075752, -0.73, 1.41, -9.38, 206.7], [2081576, -0.77, 1.43, -9.44, 241.6], [2086581, -0.72, 1.43, -9.46, 76.7], [2092222, -0.71, 1.44, -9.46, 39.3], [2097289, -0.77, 1.41, -9.47, 44.5], [2102529, -0.73, 1.42, -9.41, 148.8], [2107576, -0.71, 1.43, -9.5, 13.5], [2113319, -0.73, 1.41, -9.45, 133.7], [2119226, -0.73, 1.45, -9.43, 20.2], [2124229, -0.72, 1.43, -9.49, 116.7], [2129277, -0.73, 1.39, -9.45, 33.1], [2134740, -0.79, 1.43, -9.53, 113.7], [2139741, -0.78, 1.42, -9.47, 179.1], [2144851, -0.73, 1.43, -9.43, 50.2], [2149865, -0.77, 1.44, -9.5, 53.3], [2155262, -0.73, 1.41, -9.5, 138.1], [2160308, -0.72, 1.41, -9.44, 105.4]];
+    let currentMode = 'historic'; // 'live' or 'historic'
+    let currentIndex = 0;
+    let isPlaying = false;
+    let playInterval = null;
+    let isLivePaused = false;
+
+    // Rolling buffer for Live telemetry
+    let LIVE_BUFFER = [];
+    let lastLivePacketCnt = null;
+    let lastLivePacketUptime = null;
+    let lastPacketArrivedAt = 0;
+    let isRigOnline = false;
+
+    const axisVisible = { x: true, y: true, z: true };
+
+    const splineCvs = document.getElementById('spline-canvas');
+    const xyzCvs = document.getElementById('xyz-canvas');
+    const areaCvs = document.getElementById('area-canvas');
+    const splineCtx = splineCvs.getContext('2d');
+    const xyzCtx = xyzCvs.getContext('2d');
+    const areaCtx = areaCvs.getContext('2d');
+
+    const timeSlider = document.getElementById('time-slider');
+    const scrubLabel = document.getElementById('scrub-label');
+    const lblCurrTime = document.getElementById('lbl-curr-time');
+    const lblStatusText = document.getElementById('lbl-status-text');
+    const statusDot = document.getElementById('status-dot-indicator');
+    const statusBadge = document.getElementById('badge-live-tag');
+    const offlineBanner = document.getElementById('live-offline-banner');
+
+    const btnToggleView = document.getElementById('btn-toggle-view');
+    const btnModeText = document.getElementById('btn-mode-text');
+    const btnModeIcon = document.getElementById('btn-mode-icon');
+    const wrapScrubber = document.getElementById('wrap-scrubber');
+    const btnPrimaryAction = document.getElementById('btn-primary-action');
+    const btnSecondarySwitch = document.getElementById('btn-secondary-switch');
+
+    const titleTimeline = document.getElementById('title-timeline');
+    const subTimeline = document.getElementById('sub-timeline');
+    const timelineHeadRms = document.getElementById('timeline-head-rms');
+    const timelineHeadSpike = document.getElementById('timeline-head-spike');
+    const headVibeMag = document.getElementById('head-vibe-mag');
+
+    const vibeLegX = document.getElementById('vibe-leg-x');
+    const vibeLegY = document.getElementById('vibe-leg-y');
+    const vibeLegZ = document.getElementById('vibe-leg-z');
+
+    function resizeCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+
+      const sRect = splineCvs.parentElement.getBoundingClientRect();
+      splineCvs.width = sRect.width * dpr;
+      splineCvs.height = sRect.height * dpr;
+
+      const xRect = xyzCvs.parentElement.getBoundingClientRect();
+      xyzCvs.width = xRect.width * dpr;
+      xyzCvs.height = xRect.height * dpr;
+
+      const aRect = areaCvs.parentElement.getBoundingClientRect();
+      areaCvs.width = aRect.width * dpr;
+      areaCvs.height = aRect.height * dpr;
+
+      drawSpline();
+      drawXyz();
+      drawArea();
+    }
+    window.addEventListener('resize', resizeCanvases);
+
+    function formatMs(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function toggleAxis(axis) {
+      axisVisible[axis] = !axisVisible[axis];
+      const pill = document.getElementById(`pill-tog-${axis}`);
+      if (pill) {
+        if (axisVisible[axis]) pill.classList.remove('dimmed');
+        else pill.classList.add('dimmed');
+      }
+      drawXyz();
+    }
+
+    function drawPillBadge(ctx, x, y, text, color, align, dpr) {
+      ctx.font = `700 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
+      const tw = ctx.measureText(text).width;
+      const pw = tw + (12 * dpr);
+      const ph = 17 * dpr;
+      const px = align === 'right' ? x - pw : (align === 'center' ? x - (pw / 2) : x);
+      const py = y - (ph / 2);
+
+      ctx.fillStyle = 'rgba(26, 29, 36, 0.94)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 4 * dpr);
+      else ctx.rect(px, py, pw, ph);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1 * dpr;
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.textAlign = 'left';
+      ctx.fillText(text, px + (6 * dpr), py + (12 * dpr));
+    }
+
+    // Toggle between Live Rig page and Historical Data page
+    function toggleViewMode() {
+      const newMode = (currentMode === 'live') ? 'historic' : 'live';
+      setViewMode(newMode);
+    }
+
+    function setViewMode(mode) {
+      currentMode = mode;
+      if (currentMode === 'live') {
+        btnModeIcon.innerText = '📊';
+        btnModeText.innerText = 'Historical Data (wash_1019)';
+        wrapScrubber.style.display = 'none';
+        btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
+        btnSecondarySwitch.innerText = 'Switch to Historical Data (wash_1019)';
+        titleTimeline.innerText = 'Live Rig Telemetry Stream';
+        subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
+        lblCurrTime.innerText = 'LIVE (50 Hz)';
+        updateRigStatusUI(isRigOnline);
+        checkRigHeartbeat();
+      } else {
+        if (isPlaying) togglePlayPause();
+        btnModeIcon.innerText = '📡';
+        btnModeText.innerText = 'Live Rig (Real-Time)';
+        wrapScrubber.style.display = 'flex';
+        btnPrimaryAction.innerText = 'Replay Wash 1019';
+        btnSecondarySwitch.innerText = 'Switch to Live Rig (Real-Time)';
+        titleTimeline.innerText = 'Wash Cycle 1019 Timeline (35.9 Minutes)';
+        subTimeline.innerText = '35.9-min continuous acoustic waveform • Scrubber with peak spike rulers';
+        statusBadge.className = 'status-badge';
+        statusDot.className = 'status-dot';
+        lblStatusText.innerText = 'wash_1019 Archive (35.9m)';
+        offlineBanner.style.display = 'none';
+        applyRecord(WASH_DATA[currentIndex], false);
+        drawSpline();
+        drawXyz();
+        drawArea();
+      }
+    }
+
+    function onPrimaryAction() {
+      if (currentMode === 'live') {
+        isLivePaused = !isLivePaused;
+        btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
+      } else {
+        togglePlayPause();
+      }
+    }
+
+    function updateRigStatusUI(online) {
+      if (currentMode === 'live') {
+        if (online) {
+          statusBadge.className = 'status-badge';
+          statusDot.className = 'status-dot';
+          lblStatusText.innerText = 'Live Rig Active (50 Hz)';
+          offlineBanner.style.display = 'none';
+        } else {
+          statusBadge.className = 'status-badge offline-badge';
+          statusDot.className = 'status-dot dot-offline';
+          lblStatusText.innerText = 'Live Rig Offline (No Input)';
+          offlineBanner.style.display = 'flex';
+        }
+      }
+    }
+
+    async function checkRigHeartbeat() {
+      try {
+        const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
+        const d = await res.json();
+        if (d && (d.cnt !== undefined || d.uptime !== undefined)) {
+          const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
+                                 (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
+
+          if (hasIncremented) {
+            lastPacketArrivedAt = Date.now();
+            isRigOnline = true;
+          } else {
+            if (lastPacketArrivedAt === 0) {
+              isRigOnline = false;
+            } else if (Date.now() - lastPacketArrivedAt > 4500) {
+              isRigOnline = false;
+            }
+          }
+
+          lastLivePacketCnt = d.cnt;
+          lastLivePacketUptime = d.uptime;
+
+          // Push into Live rolling buffer
+          if (!isLivePaused) {
+            const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms];
+            LIVE_BUFFER.push(newRec);
+            if (LIVE_BUFFER.length > 80) LIVE_BUFFER.shift();
+
+            if (currentMode === 'live') {
+              applyRecord(newRec, true);
+              drawSpline();
+              drawXyz();
+              drawArea();
+            }
+          }
+        } else {
+          isRigOnline = false;
+        }
+      } catch (e) {
+        isRigOnline = false;
+      }
+      updateRigStatusUI(isRigOnline);
+    }
+
+    function applyRecord(rec, isFromLive = false) {
+      const [t, ax, ay, az, rms] = rec;
+      const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
+      const baselineRms = 120.0;
+      const spikeRatio = Math.max(1.0, (rms / baselineRms)).toFixed(1);
+
+      if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
+      if (timelineHeadSpike) timelineHeadSpike.innerText = `${spikeRatio}x`;
+      if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
+
+      const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
+      const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
+      const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
+      vibeLegX.innerText = strX;
+      vibeLegY.innerText = strY;
+      vibeLegZ.innerText = strZ;
+
+      if (!isFromLive) {
+        const maxT = WASH_DATA[WASH_DATA.length - 1][0];
+        lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
+      }
+    }
+
+    // Canvas 1: Dual-Modality Waveform (Screenshot 3)
+    function drawSpline() {
+      const w = splineCvs.width;
+      const h = splineCvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      splineCtx.clearRect(0, 0, w, h);
+
+      const marginLeft = 58 * dpr;
+      const marginRight = 58 * dpr;
+      const marginTop = 18 * dpr;
+      const marginBottom = 18 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      // Vertical separator lines
+      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      splineCtx.lineWidth = 1 * dpr;
+      splineCtx.beginPath();
+      splineCtx.moveTo(marginLeft, marginTop);
+      splineCtx.lineTo(marginLeft, h - marginBottom);
+      splineCtx.moveTo(w - marginRight, marginTop);
+      splineCtx.lineTo(w - marginRight, h - marginBottom);
+      splineCtx.stroke();
+
+      // Right side: Sound RMS ticks
+      const soundTicks = [500, 375, 250, 125, 0];
+      soundTicks.forEach(val => {
+        const y = marginTop + plotH - ((val / 520.0) * plotH);
+        splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        splineCtx.beginPath();
+        splineCtx.moveTo(marginLeft, y);
+        splineCtx.lineTo(w - marginRight, y);
+        splineCtx.stroke();
+
+        splineCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
+        splineCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
+        splineCtx.textAlign = 'left';
+        splineCtx.fillText(`${val}`, w - marginRight + (8 * dpr), y + (3 * dpr));
+      });
+      splineCtx.fillText('RMS', w - marginRight + (8 * dpr), marginTop - (4 * dpr));
+
+      // Left side: Vibration m/s^2 ticks
+      const vibeTicks = [
+        { val: 12.0, lbl: '12.0' },
+        { val: 9.81, lbl: '9.81 (1g)' },
+        { val: 8.0, lbl: '8.0' }
+      ];
+      vibeTicks.forEach(t => {
+        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * 25 * dpr);
+        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
+        splineCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
+        splineCtx.textAlign = 'right';
+        splineCtx.fillText(t.lbl, marginLeft - (8 * dpr), y + (3 * dpr));
+      });
+      splineCtx.fillText('m/s²', marginLeft - (8 * dpr), marginTop - (4 * dpr));
+      splineCtx.textAlign = 'left';
+
+      // Select data source based on active mode
+      let points;
+      let curRelIdx = 0;
+      if (currentMode === 'live') {
+        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curRelIdx = points.length - 1;
+      } else {
+        const winSize = 40;
+        const startIdx = Math.max(0, currentIndex - (winSize / 2));
+        const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
+        points = WASH_DATA.slice(startIdx, endIdx + 1);
+        curRelIdx = currentIndex - startIdx;
+      }
+
+      if (points.length < 2) return;
+
+      // 1. Draw Sound Wave (Coral) strictly within [marginLeft, w - marginRight]
+      const gradCoral = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+      gradCoral.addColorStop(0, 'rgba(251, 146, 60, 0.15)');
+      gradCoral.addColorStop(1, 'rgba(251, 146, 60, 0.0)');
+
+      splineCtx.beginPath();
+      splineCtx.moveTo(marginLeft, marginTop + plotH);
+      for (let i = 0; i < points.length; i++) {
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
+        const normRms = points[i][4] / 520.0;
+        const y = marginTop + plotH - (normRms * plotH);
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w - marginRight, marginTop + plotH);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradCoral;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#fb923c';
+      splineCtx.lineWidth = 2.2 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
+        const normRms = points[i][4] / 520.0;
+        const y = marginTop + plotH - (normRms * plotH);
+        if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
+      }
+      splineCtx.stroke();
+
+      // 2. Draw Vibration Wave (Teal) strictly within [marginLeft, w - marginRight]
+      const gradTeal = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+      gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
+      gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
+
+      splineCtx.beginPath();
+      splineCtx.moveTo(marginLeft, marginTop + plotH);
+      for (let i = 0; i < points.length; i++) {
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
+        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w - marginRight, marginTop + plotH);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradTeal;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#00f0d2';
+      splineCtx.lineWidth = 2.2 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
+        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
+        if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
+      }
+      splineCtx.stroke();
+
+      // Active point dot
+      if (curRelIdx >= 0 && curRelIdx < points.length) {
+        const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
+        const normRms = points[curRelIdx][4] / 520.0;
+        const cyRms = marginTop + plotH - (normRms * plotH);
+        splineCtx.fillStyle = '#fb923c';
+        splineCtx.beginPath();
+        splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
+        splineCtx.fill();
+      }
+    }
+
+    // Canvas 2: Tri-Axial Vibration (Ax, Ay, Az) (Screenshot 2)
+    function drawXyz() {
+      const w = xyzCvs.width;
+      const h = xyzCvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      xyzCtx.clearRect(0, 0, w, h);
+
+      const marginLeft = 68 * dpr;
+      const marginRight = 16 * dpr;
+      const marginTop = 16 * dpr;
+      const marginBottom = 16 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      const yZero = marginTop + (plotH * 0.32);
+      const scaleXY = 12 * dpr;
+      const yGravity = marginTop + (plotH * 0.78);
+      const scaleZ = 12 * dpr;
+
+      // Vertical separator line
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      xyzCtx.lineWidth = 1 * dpr;
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, marginTop);
+      xyzCtx.lineTo(marginLeft, h - marginBottom);
+      xyzCtx.stroke();
+
+      // Baseline grid lines
+      const hLines = [
+        { y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s²', col: 'rgba(255, 255, 255, 0.25)' },
+        { y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' },
+        { y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s²', col: 'rgba(255, 255, 255, 0.25)' },
+        { y: yGravity - ((-7.0 + 9.81) * scaleZ), lbl: '-7.0 m/s²', col: 'rgba(167, 139, 250, 0.3)' },
+        { y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' },
+        { y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s²', col: 'rgba(167, 139, 250, 0.3)' }
+      ];
+
+      hLines.forEach(l => {
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(marginLeft, l.y);
+        xyzCtx.lineTo(w - marginRight, l.y);
+        xyzCtx.stroke();
+
+        xyzCtx.fillStyle = l.col;
+        xyzCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
+        xyzCtx.textAlign = 'right';
+        xyzCtx.fillText(l.lbl, marginLeft - (8 * dpr), l.y + (3 * dpr));
+      });
+      xyzCtx.textAlign = 'left';
+
+      // Dashed Zero Baseline
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yZero);
+      xyzCtx.lineTo(w - marginRight, yZero);
+      xyzCtx.stroke();
+
+      // Dashed Gravity Baseline
+      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yGravity);
+      xyzCtx.lineTo(w - marginRight, yGravity);
+      xyzCtx.stroke();
+      xyzCtx.setLineDash([]);
+
+      drawPillBadge(xyzCtx, w - marginRight, yZero, 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'right', dpr);
+      drawPillBadge(xyzCtx, w - marginRight, yGravity, 'Z 1g Gravity (-9.81 m/s²)', '#a78bfa', 'right', dpr);
+
+      let points;
+      let curRelIdx = 0;
+      if (currentMode === 'live') {
+        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER.slice(-40) : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curRelIdx = points.length - 1;
+      } else {
+        const winSize = 40;
+        const startIdx = Math.max(0, currentIndex - (winSize / 2));
+        const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
+        points = WASH_DATA.slice(startIdx, endIdx + 1);
+        curRelIdx = currentIndex - startIdx;
+      }
+
+      if (points.length < 2) return;
+
+      // Plot Az (Purple)
+      if (axisVisible.z) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#a78bfa';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const az = points[i][3];
+          const y = yGravity - ((az + 9.81) * scaleZ);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // Plot Ay (Coral)
+      if (axisVisible.y) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#fb923c';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const ay = points[i][2];
+          const y = yZero - (ay * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // Plot Ax (Teal)
+      if (axisVisible.x) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#00f0d2';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const ax = points[i][1];
+          const y = yZero - (ax * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // Active cursor dots
+      if (curRelIdx >= 0 && curRelIdx < points.length) {
+        const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
+        if (axisVisible.x) {
+          const cyX = yZero - (points[curRelIdx][1] * scaleXY);
+          xyzCtx.fillStyle = '#00f0d2';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }
+        if (axisVisible.y) {
+          const cyY = yZero - (points[curRelIdx][2] * scaleXY);
+          xyzCtx.fillStyle = '#fb923c';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }
+        if (axisVisible.z) {
+          const cyZ = yGravity - ((points[curRelIdx][3] + 9.81) * scaleZ);
+          xyzCtx.fillStyle = '#a78bfa';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+        }
+      }
+    }
+
+    // Canvas 3: Timeline & Controls (Screenshot 1)
+    function drawArea() {
+      const w = areaCvs.width;
+      const h = areaCvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      areaCtx.clearRect(0, 0, w, h);
+
+      const marginLeft = 60 * dpr;
+      const marginRight = 16 * dpr;
+      const marginTop = 20 * dpr;
+      const marginBottom = 18 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      const getY = (rms) => marginTop + plotH - ((rms / 520.0) * plotH);
+
+      // Vertical separator line
+      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      areaCtx.lineWidth = 1 * dpr;
+      areaCtx.beginPath();
+      areaCtx.moveTo(marginLeft, marginTop);
+      areaCtx.lineTo(marginLeft, h - marginBottom);
+      areaCtx.stroke();
+
+      // Horizontal Y-Axis Numeric Rulers in Left Gutter
+      const yTicks = [500, 375, 250, 125, 0];
+      yTicks.forEach(val => {
+        const yVal = getY(val);
+        areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        areaCtx.beginPath();
+        areaCtx.moveTo(marginLeft, yVal);
+        areaCtx.lineTo(w - marginRight, yVal);
+        areaCtx.stroke();
+
+        areaCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        areaCtx.font = `600 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
+        areaCtx.textAlign = 'right';
+        areaCtx.fillText(`${val}`, marginLeft - (8 * dpr), yVal + (3 * dpr));
+      });
+      areaCtx.fillText('RMS', marginLeft - (8 * dpr), marginTop - (6 * dpr));
+      areaCtx.textAlign = 'left';
+
+      // Peak & Baseline Markers
+      const yPeak = getY(511.2);
+      areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
+      areaCtx.lineWidth = 1.2 * dpr;
+      areaCtx.setLineDash([4 * dpr, 4 * dpr]);
+      areaCtx.beginPath();
+      areaCtx.moveTo(marginLeft, yPeak);
+      areaCtx.lineTo(w - marginRight, yPeak);
+      areaCtx.stroke();
+      areaCtx.setLineDash([]);
+      drawPillBadge(areaCtx, w - marginRight, yPeak, 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', 'right', dpr);
+
+      const yBase = getY(120.0);
+      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
+      areaCtx.lineWidth = 1 * dpr;
+      areaCtx.setLineDash([3 * dpr, 3 * dpr]);
+      areaCtx.beginPath();
+      areaCtx.moveTo(marginLeft, yBase);
+      areaCtx.lineTo(w - marginRight, yBase);
+      areaCtx.stroke();
+      areaCtx.setLineDash([]);
+      drawPillBadge(areaCtx, w - marginRight, yBase, 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'right', dpr);
+
+      // Data source based on mode
+      let dataSeries;
+      let curPointIdx = 0;
+      if (currentMode === 'live') {
+        dataSeries = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curPointIdx = dataSeries.length - 1;
+      } else {
+        dataSeries = WASH_DATA;
+        curPointIdx = currentIndex;
+      }
+
+      const total = dataSeries.length;
+      if (total < 2) return;
+
+      const getX = (idx) => marginLeft + ((idx / (total - 1)) * plotW);
+
+      // Area gradient
+      const grad = areaCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+      grad.addColorStop(0, 'rgba(0, 240, 210, 0.25)');
+      grad.addColorStop(0.8, 'rgba(0, 240, 210, 0.04)');
+      grad.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
+
+      areaCtx.beginPath();
+      areaCtx.moveTo(marginLeft, marginTop + plotH);
+      for (let i = 0; i < total; i++) {
+        const x = getX(i);
+        const y = getY(dataSeries[i][4]);
+        areaCtx.lineTo(x, y);
+      }
+      areaCtx.lineTo(w - marginRight, marginTop + plotH);
+      areaCtx.closePath();
+      areaCtx.fillStyle = grad;
+      areaCtx.fill();
+
+      // Top curve stroke
+      areaCtx.beginPath();
+      areaCtx.strokeStyle = '#00f0d2';
+      areaCtx.lineWidth = 2 * dpr;
+      for (let i = 0; i < total; i++) {
+        const x = getX(i);
+        const y = getY(dataSeries[i][4]);
+        if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
+      }
+      areaCtx.stroke();
+
+      // Cursor scrubber line
+      const curX = getX(curPointIdx);
+      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.8)';
+      areaCtx.lineWidth = 1.5 * dpr;
+      areaCtx.beginPath();
+      areaCtx.moveTo(curX, marginTop);
+      areaCtx.lineTo(curX, marginTop + plotH);
+      areaCtx.stroke();
+
+      const curRms = dataSeries[curPointIdx][4];
+      const curY = getY(curRms);
+
+      // Cursor dot
+      areaCtx.fillStyle = '#00f0d2';
+      areaCtx.beginPath();
+      areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
+      areaCtx.fill();
+
+      // Floating cursor badge
+      const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
+      const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
+      const badgeText = `${curRms.toFixed(1)} RMS (${spikeMult}x ${spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'})`;
+
+      areaCtx.font = `700 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
+      const tw = areaCtx.measureText(badgeText).width;
+      const bw = tw + (14 * dpr);
+      const bh = 20 * dpr;
+
+      let bx = curX - (bw / 2);
+      if (bx < marginLeft + (4 * dpr)) bx = marginLeft + (4 * dpr);
+      if (bx + bw > w - marginRight - (4 * dpr)) bx = w - marginRight - bw - (4 * dpr);
+
+      let by = curY - (26 * dpr);
+      if (by < marginTop + (4 * dpr)) by = curY + (12 * dpr);
+
+      const badgeCol = curRms > 250 ? '#fb923c' : '#00f0d2';
+      areaCtx.fillStyle = 'rgba(20, 24, 33, 0.94)';
+      areaCtx.beginPath();
+      if (areaCtx.roundRect) areaCtx.roundRect(bx, by, bw, bh, 4 * dpr);
+      else areaCtx.rect(bx, by, bw, bh);
+      areaCtx.fill();
+
+      areaCtx.strokeStyle = badgeCol;
+      areaCtx.lineWidth = 1.2 * dpr;
+      areaCtx.stroke();
+
+      areaCtx.fillStyle = badgeCol;
+      areaCtx.textAlign = 'center';
+      areaCtx.fillText(badgeText, bx + (bw / 2), by + (13.5 * dpr));
+      areaCtx.textAlign = 'left';
+    }
+
+    function onScrub(val) {
+      currentIndex = parseInt(val, 10);
+      const curRec = WASH_DATA[currentIndex];
+      const minutes = ((curRec[0] / 60000)).toFixed(1);
+      scrubLabel.innerText = `${minutes}m`;
+      applyRecord(curRec, false);
+      drawSpline();
+      drawXyz();
+      drawArea();
+    }
+
+    function togglePlayPause() {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        btnPrimaryAction.innerText = 'Pause Replay';
+        playInterval = setInterval(() => {
+          currentIndex++;
+          if (currentIndex >= WASH_DATA.length) currentIndex = 0;
+          timeSlider.value = currentIndex;
+          onScrub(currentIndex);
+        }, 80);
+      } else {
+        btnPrimaryAction.innerText = 'Replay Wash 1019';
+        if (playInterval) clearInterval(playInterval);
+      }
+    }
+
+    function exportActiveCsv() {
+      if (currentMode === 'live') {
+        let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n';
+        const src = LIVE_BUFFER.length > 0 ? LIVE_BUFFER : [[Date.now(), -0.74, 1.40, -9.40, 105.6]];
+        src.forEach(r => {
+          csv += `${r[0]},${r[1]},${r[2]},${r[3]},${r[4]}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'live_rig_stream.csv';
+        a.click();
+      } else {
+        let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n';
+        WASH_DATA.forEach(r => {
+          csv += `${r[0]},${r[1]},${r[2]},${r[3]},${r[4]}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'wash_1019.csv';
+        a.click();
+      }
+    }
+
+    // Initialize: default to requested view
+    setTimeout(() => {
+      resizeCanvases();
+      // Check query parameter or hash if user navigated directly
+      const urlParams = new URLSearchParams(window.location.search);
+      const isHistoricalUrl = window.location.pathname.includes('historical') || window.location.hash.includes('historical') || urlParams.get('mode') === 'historical';
+      if (isHistoricalUrl) {
+        setViewMode('historic');
+      } else {
+        setViewMode('historic');
+      }
+      checkRigHeartbeat();
+      setInterval(checkRigHeartbeat, 2500);
+    }, 100);
+  </script>
+</body>
+</html>
