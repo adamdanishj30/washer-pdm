@@ -383,7 +383,7 @@ def generate_html(default_view='live'):
     <div class="nav-right">
       <button class="btn-mode-toggle" id="btn-toggle-view" onclick="toggleViewMode()">
         <span id="btn-mode-icon">📊</span>
-        <span id="btn-mode-text">Historical Data (wash_1019)</span>
+        <span id="btn-mode-text">Historical: 11 Oct 2026, 10:19 AM</span>
       </button>
 
       <div class="status-badge offline-badge" id="badge-live-tag">
@@ -497,7 +497,7 @@ def generate_html(default_view='live'):
           Pause Live Stream
         </button>
         <button class="btn-dark-secondary" id="btn-secondary-switch" onclick="toggleViewMode()">
-          Switch to Historical Data (wash_1019)
+          Switch to Historical: 11 Oct 2026, 10:19 AM
         </button>
         <button class="btn-dark-secondary" onclick="exportActiveCsv()">
           Download CSV
@@ -627,10 +627,10 @@ def generate_html(default_view='live'):
       currentMode = mode;
       if (currentMode === 'live') {{
         btnModeIcon.innerText = '📊';
-        btnModeText.innerText = 'Historical Data (wash_1019)';
+        btnModeText.innerText = 'Historical: 11 Oct 2026, 10:19 AM';
         wrapScrubber.style.display = 'none';
         btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
-        btnSecondarySwitch.innerText = 'Switch to Historical Data (wash_1019)';
+        btnSecondarySwitch.innerText = 'Switch to Historical: 11 Oct 2026, 10:19 AM';
         titleTimeline.innerText = 'Live Rig Telemetry Stream';
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
         lblCurrTime.innerText = 'LIVE (50 Hz)';
@@ -641,13 +641,13 @@ def generate_html(default_view='live'):
         btnModeIcon.innerText = '📡';
         btnModeText.innerText = 'Live Rig (Real-Time)';
         wrapScrubber.style.display = 'flex';
-        btnPrimaryAction.innerText = 'Replay Wash 1019';
+        btnPrimaryAction.innerText = 'Replay Run (11 Oct 2026, 10:19 AM)';
         btnSecondarySwitch.innerText = 'Switch to Live Rig (Real-Time)';
-        titleTimeline.innerText = 'Wash Cycle 1019 Timeline (35.9 Minutes)';
-        subTimeline.innerText = '35.9-min continuous acoustic waveform \u2022 Scrubber with peak spike rulers';
+        titleTimeline.innerText = 'Wash Cycle Timeline \u2014 11 Oct 2026, 10:19 AM (35.9 Mins)';
+        subTimeline.innerText = '35.9-min continuous acoustic waveform \u2022 Recorded 11 Oct 2026 at 10:19 AM';
         statusBadge.className = 'status-badge';
         statusDot.className = 'status-dot';
-        lblStatusText.innerText = 'wash_1019 Archive (35.9m)';
+        lblStatusText.innerText = '11 Oct 2026, 10:19 AM Archive';
         offlineBanner.style.display = 'none';
         applyRecord(WASH_DATA[currentIndex], false);
         drawSpline();
@@ -1238,7 +1238,7 @@ def generate_html(default_view='live'):
           onScrub(currentIndex);
         }}, 80);
       }} else {{
-        btnPrimaryAction.innerText = 'Replay Wash 1019';
+        btnPrimaryAction.innerText = 'Replay Run (11 Oct 2026, 10:19 AM)';
         if (playInterval) clearInterval(playInterval);
       }}
     }}
@@ -1263,7 +1263,7 @@ def generate_html(default_view='live'):
         const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'wash_1019.csv';
+        a.download = 'wash_cycle_2026-10-11_1019.csv';
         a.click();
       }}
     }}
