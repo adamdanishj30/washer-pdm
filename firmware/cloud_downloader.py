@@ -32,8 +32,13 @@ def download_sessions():
             if not batches:
                 continue
 
-            csv_file = os.path.join(data_dir, f"{session_id}.csv")
-            print(f"--> Processing session: {session_id}")
+            if session_id.startswith("wash_"):
+                suffix = session_id.replace("wash_", "")
+                fname = f"wash_cycle_2026-10-11_{suffix}.csv"
+            else:
+                fname = f"{session_id}.csv"
+            csv_file = os.path.join(data_dir, fname)
+            print(f"--> Processing session: {session_id} -> {fname}")
             
             # Extract and sort batches
             rows = []

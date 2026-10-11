@@ -1,7 +1,8 @@
 import json
 import os
 
-with open('data/wash_1019.csv', 'r', encoding='utf-8') as f:
+csv_path = 'data/wash_cycle_2026-10-11_1019.csv' if os.path.exists('data/wash_cycle_2026-10-11_1019.csv') else 'data/wash_1019.csv'
+with open(csv_path, 'r', encoding='utf-8') as f:
     lines = f.readlines()[1:]
 
 data = []

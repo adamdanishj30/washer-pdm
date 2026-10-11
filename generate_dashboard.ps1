@@ -1,4 +1,5 @@
-$embeddedJs = Get-Content "data/wash_1019_embedded.js" -Raw
+$jsPath = if (Test-Path "data/wash_cycle_2026-10-11_1019_embedded.js") { "data/wash_cycle_2026-10-11_1019_embedded.js" } else { "data/wash_1019_embedded.js" }
+$embeddedJs = Get-Content $jsPath -Raw
 
 $templatePart1 = @'
 <!DOCTYPE html>
