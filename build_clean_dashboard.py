@@ -61,23 +61,22 @@ def generate_html(default_view='live'):
 
     /* Top Sticky Header */
     .top-nav {{
-      background: var(--bg-body);
+      background: var(--bg-card);
       border-bottom: 1px solid var(--border-card);
-      padding: 16px 28px;
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 50;
-      flex-wrap: wrap;
-      gap: 12px;
+      gap: 16px;
     }}
 
-    .nav-left {{
+    .nav-brand-row {{
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }}
 
     .brand-title {{
@@ -98,12 +97,17 @@ def generate_html(default_view='live'):
       border-radius: 6px;
     }}
 
-    /* Right Controls */
-    .nav-right {{
+    .nav-controls-row {{
       display: flex;
       align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      gap: 10px;
+    }}
+
+    .mobile-status-tag {{
+      display: none;
+    }}
+    .desktop-status-tag {{
+      display: flex;
     }}
 
     .btn-mode-toggle {{
@@ -119,6 +123,7 @@ def generate_html(default_view='live'):
       align-items: center;
       gap: 8px;
       transition: all 0.2s;
+      white-space: nowrap;
     }}
     .btn-mode-toggle:hover {{
       background: var(--teal-accent);
@@ -139,6 +144,7 @@ def generate_html(default_view='live'):
       font-weight: 600;
       color: var(--teal-accent);
       transition: all 0.25s ease;
+      white-space: nowrap;
     }}
     .status-badge.offline-badge {{
       background: rgba(239, 68, 68, 0.1);
@@ -154,6 +160,7 @@ def generate_html(default_view='live'):
       box-shadow: 0 0 8px var(--teal-accent);
       animation: pulse-glow 2s infinite;
       transition: all 0.25s ease;
+      flex-shrink: 0;
     }}
     .status-dot.dot-offline {{
       background: #ef4444;
@@ -178,6 +185,7 @@ def generate_html(default_view='live'):
       align-items: center;
       gap: 6px;
       transition: all 0.2s;
+      white-space: nowrap;
     }}
     .btn-header-action:hover {{
       background: var(--bg-card-hover);
@@ -268,8 +276,11 @@ def generate_html(default_view='live'):
     .canvas-container-box {{
       position: relative;
       width: 100%;
-      height: 180px;
     }}
+    .box-spline {{ height: 185px; }}
+    .box-xyz {{ height: 195px; }}
+    .box-timeline {{ height: 165px; }}
+
     canvas {{
       width: 100%;
       height: 100%;
@@ -277,6 +288,12 @@ def generate_html(default_view='live'):
     }}
 
     /* Axis Toggle Badges */
+    .vibe-badges-container {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
     .axis-toggle-clean {{
       background: var(--bg-inner);
       border: 1px solid var(--border-card);
@@ -294,6 +311,19 @@ def generate_html(default_view='live'):
     .axis-toggle-clean.dimmed {{
       opacity: 0.35;
       text-decoration: line-through;
+    }}
+
+    .timeline-stats-container {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+    .time-readout-pill {{
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
     }}
 
     /* Timeline Scrubber Bar */
@@ -328,6 +358,11 @@ def generate_html(default_view='live'):
       margin-top: 14px;
       flex-wrap: wrap;
     }}
+    .secondary-btn-group {{
+      display: flex;
+      gap: 10px;
+      flex: 1;
+    }}
     .btn-dark-primary {{
       background: var(--teal-accent);
       color: #0f172a;
@@ -338,6 +373,7 @@ def generate_html(default_view='live'):
       font-weight: 700;
       cursor: pointer;
       transition: opacity 0.2s;
+      white-space: nowrap;
     }}
     .btn-dark-primary:hover {{
       opacity: 0.9;
@@ -352,18 +388,135 @@ def generate_html(default_view='live'):
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
+      white-space: nowrap;
     }}
     .btn-dark-secondary:hover {{
       background: var(--bg-card-hover);
     }}
 
+    /* Mobile Responsive Optimizations (< 768px) */
     @media (max-width: 768px) {{
-      .main-container {{
-        padding: 16px;
-        gap: 16px;
-      }}
       .top-nav {{
-        padding: 12px 16px;
+        padding: 10px 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }}
+      .nav-brand-row {{
+        justify-content: space-between;
+        width: 100%;
+      }}
+      .mobile-status-tag {{
+        display: flex;
+        padding: 4px 10px;
+        font-size: 10.5px;
+      }}
+      .desktop-status-tag {{
+        display: none;
+      }}
+      .nav-controls-row {{
+        width: 100%;
+        gap: 8px;
+      }}
+      .nav-controls-row .btn-mode-toggle {{
+        flex: 1;
+        justify-content: center;
+        padding: 7px 10px;
+        font-size: 11.5px;
+      }}
+      .nav-controls-row .btn-header-action {{
+        padding: 7px 12px;
+        font-size: 11.5px;
+      }}
+
+      .main-container {{
+        padding: 10px 8px;
+        gap: 10px;
+      }}
+      .live-offline-banner {{
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px 10px;
+        font-size: 11px;
+      }}
+      .live-offline-banner button {{
+        width: 100%;
+        padding: 6px 10px !important;
+        text-align: center;
+      }}
+
+      .card {{
+        padding: 12px 10px;
+        border-radius: 10px;
+      }}
+      .card-header-row {{
+        margin-bottom: 8px;
+        gap: 6px;
+      }}
+      .card-title-text {{
+        font-size: 13px;
+      }}
+      .card-sub-txt {{
+        font-size: 10px;
+      }}
+      .chart-legend-row {{
+        font-size: 10px;
+        gap: 10px;
+      }}
+
+      .box-spline {{ height: 145px; }}
+      .box-xyz {{ height: 155px; }}
+      .box-timeline {{ height: 140px; }}
+
+      .vibe-badges-container {{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        gap: 5px;
+      }}
+      .vibe-badges-container .axis-toggle-clean {{
+        justify-content: center;
+        padding: 4px 6px;
+        font-size: 10px;
+      }}
+
+      .timeline-stats-container {{
+        width: 100%;
+        justify-content: space-between;
+        gap: 4px;
+      }}
+      .timeline-stats-container .axis-toggle-clean,
+      .timeline-stats-container .time-readout-pill {{
+        font-size: 10px;
+        padding: 3px 6px;
+      }}
+
+      .action-button-row {{
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+      }}
+      .action-button-row .btn-dark-primary {{
+        width: 100%;
+        padding: 9px 12px;
+        font-size: 12px;
+        text-align: center;
+      }}
+      .secondary-btn-group {{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+      }}
+      .secondary-btn-group .btn-dark-secondary {{
+        width: 100%;
+        padding: 7px 8px;
+        font-size: 10.5px;
+        text-align: center;
+        justify-content: center;
+        display: flex;
+        align-items: center;
       }}
     }}
   </style>
@@ -372,21 +525,25 @@ def generate_html(default_view='live'):
 
   <!-- Top Navigation Bar -->
   <header class="top-nav">
-    <div class="nav-left">
+    <div class="nav-brand-row">
       <a href="#" class="brand-title">
         <span class="brand-pill">PDM</span>
         <span>Samsung Washer Monitor</span>
       </a>
+      <div class="status-badge offline-badge mobile-status-tag" id="badge-live-tag-mobile">
+        <span class="status-dot dot-offline" id="status-dot-indicator-mobile"></span>
+        <span id="lbl-status-text-mobile">Offline</span>
+      </div>
     </div>
 
     <!-- Center/Right Controls: View Toggle Button, Status Badge, Export -->
-    <div class="nav-right">
+    <div class="nav-controls-row">
       <button class="btn-mode-toggle" id="btn-toggle-view" onclick="toggleViewMode()">
         <span id="btn-mode-icon">📊</span>
         <span id="btn-mode-text">Historical: 11 Oct 2026, 10:19 AM</span>
       </button>
 
-      <div class="status-badge offline-badge" id="badge-live-tag">
+      <div class="status-badge offline-badge desktop-status-tag" id="badge-live-tag">
         <span class="status-dot dot-offline" id="status-dot-indicator"></span>
         <span id="lbl-status-text">Live Rig Offline (No Input)</span>
       </div>
@@ -403,8 +560,8 @@ def generate_html(default_view='live'):
     <!-- Live Offline Alert Banner (shown only when in Live mode and rig has no input) -->
     <div id="live-offline-banner" class="live-offline-banner" style="display: none;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
-        <span><strong>Live Rig Offline:</strong> No active sensor input detected from ESP32. Displaying last cached packet.</span>
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0;"></span>
+        <span><strong>Live Rig Offline:</strong> No active ESP32 sensor input. Displaying cached data.</span>
       </div>
       <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="setViewMode('historic')">Switch to Historical Data</button>
     </div>
@@ -425,7 +582,7 @@ def generate_html(default_view='live'):
           </span>
         </div>
       </div>
-      <div class="canvas-container-box" style="height: 190px;">
+      <div class="canvas-container-box box-spline">
         <canvas id="spline-canvas"></canvas>
       </div>
     </div>
@@ -437,7 +594,7 @@ def generate_html(default_view='live'):
           <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
           <span class="card-sub-txt">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <div class="vibe-badges-container">
           <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
             Ax: <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
@@ -455,7 +612,7 @@ def generate_html(default_view='live'):
           </span>
         </div>
       </div>
-      <div class="canvas-container-box" style="height: 200px;">
+      <div class="canvas-container-box box-xyz">
         <canvas id="xyz-canvas"></canvas>
       </div>
     </div>
@@ -467,20 +624,20 @@ def generate_html(default_view='live'):
           <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
           <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="timeline-stats-container">
           <span class="axis-toggle-clean" style="color: var(--teal-accent);">
             Current: <strong id="timeline-head-rms">105.6</strong> RMS
           </span>
           <span class="axis-toggle-clean" style="color: var(--coral-accent);">
             Spike: <strong id="timeline-head-spike">1.0x</strong>
           </span>
-          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #fff;" id="lbl-curr-time">
-            00:00 / 35:54
+          <span class="time-readout-pill" id="lbl-curr-time">
+            LIVE (50 Hz)
           </span>
         </div>
       </div>
 
-      <div class="canvas-container-box" style="height: 165px;">
+      <div class="canvas-container-box box-timeline">
         <canvas id="area-canvas"></canvas>
       </div>
 
@@ -496,12 +653,14 @@ def generate_html(default_view='live'):
         <button class="btn-dark-primary" id="btn-primary-action" onclick="onPrimaryAction()">
           Pause Live Stream
         </button>
-        <button class="btn-dark-secondary" id="btn-secondary-switch" onclick="toggleViewMode()">
-          Switch to Historical: 11 Oct 2026, 10:19 AM
-        </button>
-        <button class="btn-dark-secondary" onclick="exportActiveCsv()">
-          Download CSV
-        </button>
+        <div class="secondary-btn-group">
+          <button class="btn-dark-secondary" id="btn-secondary-switch" onclick="toggleViewMode()">
+            Switch to Historical: 11 Oct 2026, 10:19 AM
+          </button>
+          <button class="btn-dark-secondary" onclick="exportActiveCsv()">
+            Download CSV
+          </button>
+        </div>
       </div>
     </div>
 
@@ -522,21 +681,27 @@ def generate_html(default_view='live'):
     let lastPacketArrivedAt = 0;
     let isRigOnline = false;
 
-    const axisVisible = {{ x: true, y: true, z: true }};
+    let axisVisible = {{ x: true, y: true, z: true }};
 
     const splineCvs = document.getElementById('spline-canvas');
-    const xyzCvs = document.getElementById('xyz-canvas');
-    const areaCvs = document.getElementById('area-canvas');
     const splineCtx = splineCvs.getContext('2d');
+    const xyzCvs = document.getElementById('xyz-canvas');
     const xyzCtx = xyzCvs.getContext('2d');
+    const areaCvs = document.getElementById('area-canvas');
     const areaCtx = areaCvs.getContext('2d');
 
     const timeSlider = document.getElementById('time-slider');
     const scrubLabel = document.getElementById('scrub-label');
     const lblCurrTime = document.getElementById('lbl-curr-time');
-    const lblStatusText = document.getElementById('lbl-status-text');
-    const statusDot = document.getElementById('status-dot-indicator');
+
     const statusBadge = document.getElementById('badge-live-tag');
+    const statusDot = document.getElementById('status-dot-indicator');
+    const lblStatusText = document.getElementById('lbl-status-text');
+
+    const statusBadgeMob = document.getElementById('badge-live-tag-mobile');
+    const statusDotMob = document.getElementById('status-dot-indicator-mobile');
+    const lblStatusTextMob = document.getElementById('lbl-status-text-mobile');
+
     const offlineBanner = document.getElementById('live-offline-banner');
 
     const btnToggleView = document.getElementById('btn-toggle-view');
@@ -595,10 +760,11 @@ def generate_html(default_view='live'):
     }}
 
     function drawPillBadge(ctx, x, y, text, color, align, dpr) {{
-      ctx.font = `700 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+      const fontSize = 8 * dpr;
+      ctx.font = `700 ${{fontSize}}px 'JetBrains Mono', monospace`;
       const tw = ctx.measureText(text).width;
-      const pw = tw + (12 * dpr);
-      const ph = 17 * dpr;
+      const pw = tw + (10 * dpr);
+      const ph = 16 * dpr;
       const px = align === 'right' ? x - pw : (align === 'center' ? x - (pw / 2) : x);
       const py = y - (ph / 2);
 
@@ -614,7 +780,7 @@ def generate_html(default_view='live'):
 
       ctx.fillStyle = color;
       ctx.textAlign = 'left';
-      ctx.fillText(text, px + (6 * dpr), py + (12 * dpr));
+      ctx.fillText(text, px + (5 * dpr), py + (11.5 * dpr));
     }}
 
     // Toggle between Live Rig page and Historical Data page
@@ -645,10 +811,7 @@ def generate_html(default_view='live'):
         btnSecondarySwitch.innerText = 'Switch to Live Rig (Real-Time)';
         titleTimeline.innerText = 'Wash Cycle Timeline \u2014 11 Oct 2026, 10:19 AM (35.9 Mins)';
         subTimeline.innerText = '35.9-min continuous acoustic waveform \u2022 Recorded 11 Oct 2026 at 10:19 AM';
-        statusBadge.className = 'status-badge';
-        statusDot.className = 'status-dot';
-        lblStatusText.innerText = '11 Oct 2026, 10:19 AM Archive';
-        offlineBanner.style.display = 'none';
+        updateRigStatusUI(true);
         applyRecord(WASH_DATA[currentIndex], false);
         drawSpline();
         drawXyz();
@@ -668,16 +831,38 @@ def generate_html(default_view='live'):
     function updateRigStatusUI(online) {{
       if (currentMode === 'live') {{
         if (online) {{
-          statusBadge.className = 'status-badge';
-          statusDot.className = 'status-dot';
-          lblStatusText.innerText = 'Live Rig Active (50 Hz)';
-          offlineBanner.style.display = 'none';
+          if (statusBadge) statusBadge.className = 'status-badge desktop-status-tag';
+          if (statusDot) statusDot.className = 'status-dot';
+          if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (50 Hz)';
+
+          if (statusBadgeMob) statusBadgeMob.className = 'status-badge mobile-status-tag';
+          if (statusDotMob) statusDotMob.className = 'status-dot';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = 'Live 50 Hz';
+
+          if (offlineBanner) offlineBanner.style.display = 'none';
         }} else {{
-          statusBadge.className = 'status-badge offline-badge';
-          statusDot.className = 'status-dot dot-offline';
-          lblStatusText.innerText = 'Live Rig Offline (No Input)';
-          offlineBanner.style.display = 'flex';
+          if (statusBadge) statusBadge.className = 'status-badge offline-badge desktop-status-tag';
+          if (statusDot) statusDot.className = 'status-dot dot-offline';
+          if (lblStatusText) lblStatusText.innerText = 'Live Rig Offline (No Input)';
+
+          if (statusBadgeMob) statusBadgeMob.className = 'status-badge offline-badge mobile-status-tag';
+          if (statusDotMob) statusDotMob.className = 'status-dot dot-offline';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = 'Offline';
+
+          if (offlineBanner) offlineBanner.style.display = 'flex';
         }}
+      }} else {{
+        if (statusBadge) {{
+          statusBadge.className = 'status-badge desktop-status-tag';
+          if (statusDot) statusDot.className = 'status-dot';
+          if (lblStatusText) lblStatusText.innerText = '11 Oct 2026, 10:19 AM Archive';
+        }}
+        if (statusBadgeMob) {{
+          statusBadgeMob.className = 'status-badge mobile-status-tag';
+          if (statusDotMob) statusDotMob.className = 'status-dot';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = '11 Oct Archive';
+        }}
+        if (offlineBanner) offlineBanner.style.display = 'none';
       }}
     }}
 
@@ -748,17 +933,18 @@ def generate_html(default_view='live'):
       }}
     }}
 
-    // Canvas 1: Dual-Modality Waveform (Screenshot 3)
+    // Canvas 1: Dual-Modality Waveform (Responsive gutters & crisp labels)
     function drawSpline() {{
       const w = splineCvs.width;
       const h = splineCvs.height;
       const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      const marginLeft = 58 * dpr;
-      const marginRight = 58 * dpr;
-      const marginTop = 18 * dpr;
-      const marginBottom = 18 * dpr;
+      const isMobile = (w / dpr) < 580;
+      const marginLeft = (isMobile ? 36 : 56) * dpr;
+      const marginRight = (isMobile ? 32 : 56) * dpr;
+      const marginTop = 16 * dpr;
+      const marginBottom = 16 * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
@@ -773,7 +959,7 @@ def generate_html(default_view='live'):
       splineCtx.stroke();
 
       // Right side: Sound RMS ticks
-      const soundTicks = [500, 375, 250, 125, 0];
+      const soundTicks = isMobile ? [500, 250, 0] : [500, 375, 250, 125, 0];
       soundTicks.forEach(val => {{
         const y = marginTop + plotH - ((val / 520.0) * plotH);
         splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
@@ -783,26 +969,26 @@ def generate_html(default_view='live'):
         splineCtx.stroke();
 
         splineCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
-        splineCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
         splineCtx.textAlign = 'left';
-        splineCtx.fillText(`${{val}}`, w - marginRight + (8 * dpr), y + (3 * dpr));
+        splineCtx.fillText(`${{val}}`, w - marginRight + (5 * dpr), y + (3 * dpr));
       }});
-      splineCtx.fillText('RMS', w - marginRight + (8 * dpr), marginTop - (4 * dpr));
+      splineCtx.fillText('RMS', w - marginRight + (5 * dpr), marginTop - (4 * dpr));
 
       // Left side: Vibration m/s^2 ticks
       const vibeTicks = [
         {{ val: 12.0, lbl: '12.0' }},
-        {{ val: 9.81, lbl: '9.81 (1g)' }},
+        {{ val: 9.81, lbl: isMobile ? '9.81' : '9.81 (1g)' }},
         {{ val: 8.0, lbl: '8.0' }}
       ];
       vibeTicks.forEach(t => {{
-        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * 25 * dpr);
+        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * (isMobile ? 20 : 25) * dpr);
         splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
-        splineCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
         splineCtx.textAlign = 'right';
-        splineCtx.fillText(t.lbl, marginLeft - (8 * dpr), y + (3 * dpr));
+        splineCtx.fillText(t.lbl, marginLeft - (5 * dpr), y + (3 * dpr));
       }});
-      splineCtx.fillText('m/s\u00B2', marginLeft - (8 * dpr), marginTop - (4 * dpr));
+      splineCtx.fillText('m/s\u00B2', marginLeft - (5 * dpr), marginTop - (4 * dpr));
       splineCtx.textAlign = 'left';
 
       // Select data source based on active mode
@@ -844,7 +1030,7 @@ def generate_html(default_view='live'):
 
       splineCtx.beginPath();
       splineCtx.strokeStyle = '#fb923c';
-      splineCtx.lineWidth = 2.2 * dpr;
+      splineCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const normRms = points[i][4] / 520.0;
@@ -863,7 +1049,7 @@ def generate_html(default_view='live'):
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * (isMobile ? 20 : 25) * dpr);
         splineCtx.lineTo(x, y);
       }}
       splineCtx.lineTo(w - marginRight, marginTop + plotH);
@@ -873,11 +1059,11 @@ def generate_html(default_view='live'):
 
       splineCtx.beginPath();
       splineCtx.strokeStyle = '#00f0d2';
-      splineCtx.lineWidth = 2.2 * dpr;
+      splineCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * (isMobile ? 20 : 25) * dpr);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }}
       splineCtx.stroke();
@@ -889,29 +1075,30 @@ def generate_html(default_view='live'):
         const cyRms = marginTop + plotH - (normRms * plotH);
         splineCtx.fillStyle = '#fb923c';
         splineCtx.beginPath();
-        splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
+        splineCtx.arc(cx, cyRms, 3.5 * dpr, 0, Math.PI * 2);
         splineCtx.fill();
       }}
     }}
 
-    // Canvas 2: Tri-Axial Vibration (Ax, Ay, Az) (Screenshot 2)
+    // Canvas 2: Tri-Axial Vibration (Zero collisions, Left-anchored baseline labels)
     function drawXyz() {{
       const w = xyzCvs.width;
       const h = xyzCvs.height;
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      const marginLeft = 68 * dpr;
-      const marginRight = 16 * dpr;
-      const marginTop = 16 * dpr;
-      const marginBottom = 16 * dpr;
+      const isMobile = (w / dpr) < 580;
+      const marginLeft = (isMobile ? 40 : 66) * dpr;
+      const marginRight = (isMobile ? 10 : 16) * dpr;
+      const marginTop = 14 * dpr;
+      const marginBottom = 14 * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
       const yZero = marginTop + (plotH * 0.32);
-      const scaleXY = 12 * dpr;
+      const scaleXY = (isMobile ? 10 : 12) * dpr;
       const yGravity = marginTop + (plotH * 0.78);
-      const scaleZ = 12 * dpr;
+      const scaleZ = (isMobile ? 10 : 12) * dpr;
 
       // Vertical separator line
       xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -922,7 +1109,13 @@ def generate_html(default_view='live'):
       xyzCtx.stroke();
 
       // Baseline grid lines
-      const hLines = [
+      const hLines = isMobile ? [
+        {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0', col: 'rgba(255, 255, 255, 0.25)' }},
+        {{ y: yZero, lbl: '0.0', col: 'rgba(255, 255, 255, 0.45)' }},
+        {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0', col: 'rgba(255, 255, 255, 0.25)' }},
+        {{ y: yGravity, lbl: '-9.81', col: 'rgba(167, 139, 250, 0.6)' }},
+        {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0', col: 'rgba(167, 139, 250, 0.3)' }}
+      ] : [
         {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
         {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
         {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
@@ -939,9 +1132,9 @@ def generate_html(default_view='live'):
         xyzCtx.stroke();
 
         xyzCtx.fillStyle = l.col;
-        xyzCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        xyzCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
         xyzCtx.textAlign = 'right';
-        xyzCtx.fillText(l.lbl, marginLeft - (8 * dpr), l.y + (3 * dpr));
+        xyzCtx.fillText(l.lbl, marginLeft - (5 * dpr), l.y + (3 * dpr));
       }});
       xyzCtx.textAlign = 'left';
 
@@ -961,8 +1154,9 @@ def generate_html(default_view='live'):
       xyzCtx.stroke();
       xyzCtx.setLineDash([]);
 
-      drawPillBadge(xyzCtx, w - marginRight, yZero, 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'right', dpr);
-      drawPillBadge(xyzCtx, w - marginRight, yGravity, 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', 'right', dpr);
+      // Baseline labels placed on the LEFT side to prevent ANY collision with active live dots on the right
+      drawPillBadge(xyzCtx, marginLeft + (6 * dpr), yZero - (10 * dpr), isMobile ? '0.0 Baseline' : 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'left', dpr);
+      drawPillBadge(xyzCtx, marginLeft + (6 * dpr), yGravity - (10 * dpr), isMobile ? 'Z 1g (-9.81)' : 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', 'left', dpr);
 
       let points;
       let curRelIdx = 0;
@@ -986,7 +1180,7 @@ def generate_html(default_view='live'):
       if (axisVisible.z) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#a78bfa';
-        xyzCtx.lineWidth = 2.2 * dpr;
+        xyzCtx.lineWidth = 2 * dpr;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const az = points[i][3];
@@ -1000,7 +1194,7 @@ def generate_html(default_view='live'):
       if (axisVisible.y) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#fb923c';
-        xyzCtx.lineWidth = 2.2 * dpr;
+        xyzCtx.lineWidth = 2 * dpr;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ay = points[i][2];
@@ -1014,7 +1208,7 @@ def generate_html(default_view='live'):
       if (axisVisible.x) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#00f0d2';
-        xyzCtx.lineWidth = 2.2 * dpr;
+        xyzCtx.lineWidth = 2 * dpr;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ax = points[i][1];
@@ -1031,37 +1225,38 @@ def generate_html(default_view='live'):
           const cyX = yZero - (points[curRelIdx][1] * scaleXY);
           xyzCtx.fillStyle = '#00f0d2';
           xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.arc(cx, cyX, 3.5 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
         }}
         if (axisVisible.y) {{
           const cyY = yZero - (points[curRelIdx][2] * scaleXY);
           xyzCtx.fillStyle = '#fb923c';
           xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.arc(cx, cyY, 3.5 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
         }}
         if (axisVisible.z) {{
           const cyZ = yGravity - ((points[curRelIdx][3] + 9.81) * scaleZ);
           xyzCtx.fillStyle = '#a78bfa';
           xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.arc(cx, cyZ, 3.5 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
         }}
       }}
     }}
 
-    // Canvas 3: Timeline & Controls (Screenshot 1)
+    // Canvas 3: Timeline & Controls (Zero overlapping badges, Clean Scrubber)
     function drawArea() {{
       const w = areaCvs.width;
       const h = areaCvs.height;
       const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      const marginLeft = 60 * dpr;
-      const marginRight = 16 * dpr;
-      const marginTop = 20 * dpr;
-      const marginBottom = 18 * dpr;
+      const isMobile = (w / dpr) < 580;
+      const marginLeft = (isMobile ? 36 : 58) * dpr;
+      const marginRight = (isMobile ? 10 : 16) * dpr;
+      const marginTop = 18 * dpr;
+      const marginBottom = 16 * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
@@ -1076,7 +1271,7 @@ def generate_html(default_view='live'):
       areaCtx.stroke();
 
       // Horizontal Y-Axis Numeric Rulers in Left Gutter
-      const yTicks = [500, 375, 250, 125, 0];
+      const yTicks = isMobile ? [500, 250, 0] : [500, 375, 250, 125, 0];
       yTicks.forEach(val => {{
         const yVal = getY(val);
         areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
@@ -1086,14 +1281,14 @@ def generate_html(default_view='live'):
         areaCtx.stroke();
 
         areaCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-        areaCtx.font = `600 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+        areaCtx.font = `600 ${{ (isMobile ? 7.5 : 8.5) * dpr }}px 'JetBrains Mono', monospace`;
         areaCtx.textAlign = 'right';
-        areaCtx.fillText(`${{val}}`, marginLeft - (8 * dpr), yVal + (3 * dpr));
+        areaCtx.fillText(`${{val}}`, marginLeft - (5 * dpr), yVal + (3 * dpr));
       }});
-      areaCtx.fillText('RMS', marginLeft - (8 * dpr), marginTop - (6 * dpr));
+      areaCtx.fillText('RMS', marginLeft - (5 * dpr), marginTop - (6 * dpr));
       areaCtx.textAlign = 'left';
 
-      // Peak & Baseline Markers
+      // Peak Spike Marker
       const yPeak = getY(511.2);
       areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
       areaCtx.lineWidth = 1.2 * dpr;
@@ -1103,8 +1298,9 @@ def generate_html(default_view='live'):
       areaCtx.lineTo(w - marginRight, yPeak);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      drawPillBadge(areaCtx, w - marginRight, yPeak, 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', 'right', dpr);
+      drawPillBadge(areaCtx, w - marginRight, yPeak, isMobile ? 'PEAK: 511.2 (24.2m)' : 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', 'right', dpr);
 
+      // Baseline Marker - Positioned on the LEFT to ensure ZERO collision with live cursor badge on the right
       const yBase = getY(120.0);
       areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
       areaCtx.lineWidth = 1 * dpr;
@@ -1114,7 +1310,7 @@ def generate_html(default_view='live'):
       areaCtx.lineTo(w - marginRight, yBase);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      drawPillBadge(areaCtx, w - marginRight, yBase, 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'right', dpr);
+      drawPillBadge(areaCtx, marginLeft + (6 * dpr), yBase - (10 * dpr), isMobile ? 'BASELINE: 120' : 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'left', dpr);
 
       // Data source based on mode
       let dataSeries;
@@ -1156,7 +1352,7 @@ def generate_html(default_view='live'):
       // Top curve stroke
       areaCtx.beginPath();
       areaCtx.strokeStyle = '#00f0d2';
-      areaCtx.lineWidth = 2 * dpr;
+      areaCtx.lineWidth = 1.8 * dpr;
       for (let i = 0; i < total; i++) {{
         const x = getX(i);
         const y = getY(dataSeries[i][4]);
@@ -1179,25 +1375,25 @@ def generate_html(default_view='live'):
       // Cursor dot
       areaCtx.fillStyle = '#00f0d2';
       areaCtx.beginPath();
-      areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
+      areaCtx.arc(curX, curY, 4 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
 
-      // Floating cursor badge
+      // Floating cursor badge (Cleanly bounded, flips if near edges)
       const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
       const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
-      const badgeText = `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x ${{spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'}})`;
+      const badgeText = isMobile ? `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x)` : `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x ${{spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'}})`;
 
-      areaCtx.font = `700 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+      areaCtx.font = `700 ${{ (isMobile ? 7.5 : 8.5) * dpr }}px 'JetBrains Mono', monospace`;
       const tw = areaCtx.measureText(badgeText).width;
-      const bw = tw + (14 * dpr);
-      const bh = 20 * dpr;
+      const bw = tw + (10 * dpr);
+      const bh = (isMobile ? 17 : 20) * dpr;
 
       let bx = curX - (bw / 2);
       if (bx < marginLeft + (4 * dpr)) bx = marginLeft + (4 * dpr);
       if (bx + bw > w - marginRight - (4 * dpr)) bx = w - marginRight - bw - (4 * dpr);
 
-      let by = curY - (26 * dpr);
-      if (by < marginTop + (4 * dpr)) by = curY + (12 * dpr);
+      let by = curY - ((isMobile ? 22 : 26) * dpr);
+      if (by < marginTop + (4 * dpr)) by = curY + (10 * dpr);
 
       const badgeCol = curRms > 250 ? '#fb923c' : '#00f0d2';
       areaCtx.fillStyle = 'rgba(20, 24, 33, 0.94)';
@@ -1212,7 +1408,7 @@ def generate_html(default_view='live'):
 
       areaCtx.fillStyle = badgeCol;
       areaCtx.textAlign = 'center';
-      areaCtx.fillText(badgeText, bx + (bw / 2), by + (13.5 * dpr));
+      areaCtx.fillText(badgeText, bx + (bw / 2), by + ((isMobile ? 11.5 : 13.5) * dpr));
       areaCtx.textAlign = 'left';
     }}
 
@@ -1253,7 +1449,7 @@ def generate_html(default_view='live'):
         const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'live_rig_stream.csv';
+        a.download = 'live_telemetry_stream.csv';
         a.click();
       }} else {{
         let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\\n';
@@ -1268,47 +1464,31 @@ def generate_html(default_view='live'):
       }}
     }}
 
-    // Initialize: default to requested view
-    setTimeout(() => {{
+    // Initial boot setup
+    setViewMode('{default_view}');
+    window.addEventListener('load', () => {{
       resizeCanvases();
-      // Check query parameter or hash if user navigated directly
-      const urlParams = new URLSearchParams(window.location.search);
-      const isHistoricalUrl = window.location.pathname.includes('historical') || window.location.hash.includes('historical') || urlParams.get('mode') === 'historical';
-      if (isHistoricalUrl) {{
-        setViewMode('historic');
-      }} else {{
-        setViewMode('{default_view}');
-      }}
+      setInterval(checkRigHeartbeat, 1000);
       checkRigHeartbeat();
-      setInterval(checkRigHeartbeat, 2500);
-    }}, 100);
+    }});
   </script>
 </body>
-</html>
-'''
+</html>'''
 
-# Generate default Live Rig view for index.html
-html_live = generate_html(default_view='live')
-# Generate default Historical Data view for historical.html
-html_historical = generate_html(default_view='historic')
+if __name__ == '__main__':
+    # 1. index.html defaults to Live Rig View
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(generate_html(default_view='live'))
 
-with open('index.html', 'w', encoding='utf-8') as f:
-    f.write(html_live)
+    # 2. historical.html defaults to Historical Data View
+    with open('historical.html', 'w', encoding='utf-8') as f:
+        f.write(generate_html(default_view='historic'))
 
-with open('historical.html', 'w', encoding='utf-8') as f:
-    f.write(html_historical)
+    # Also sync dashboard.html and cloud_dashboard.html
+    with open('dashboard.html', 'w', encoding='utf-8') as f:
+        f.write(generate_html(default_view='live'))
 
-with open('dashboard.html', 'w', encoding='utf-8') as f:
-    f.write(html_live)
+    with open('cloud_dashboard.html', 'w', encoding='utf-8') as f:
+        f.write(generate_html(default_view='live'))
 
-with open('cloud_dashboard.html', 'w', encoding='utf-8') as f:
-    f.write(html_live)
-
-brain_path = r'C:\Users\adamd\.gemini\antigravity\brain\eaf1a310-7f2a-46d6-b3a7-72b474df813e\dashboard.html'
-try:
-    with open(brain_path, 'w', encoding='utf-8') as f:
-        f.write(html_live)
-except Exception as e:
-    print('Brain artifact write note:', e)
-
-print('Successfully generated streamlined website with ONLY the 3 cards, Live Rig default, and Historical toggle!')
+    print("Successfully built clean responsive mobile-optimized dashboards!")
