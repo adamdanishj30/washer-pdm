@@ -9,200 +9,201 @@ $templatePart1 = @'
   <title>Samsung Washer PdM — Multimodal Cloud Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-body: #0d1124;
-      --bg-sidebar: #13172e;
-      --bg-card: #181d38;
-      --bg-card-inner: #12162d;
-      --border-card: rgba(255, 255, 255, 0.08);
-      --border-glow: rgba(255, 45, 117, 0.4);
-      --text-main: #f8fafc;
-      --text-sub: #8e9bb5;
-      --text-dim: #5a6682;
-      --neon-pink: #ff2d75;
-      --neon-pink-glow: rgba(255, 45, 117, 0.35);
-      --neon-cyan: #00f0ff;
-      --neon-cyan-glow: rgba(0, 240, 255, 0.35);
-      --neon-purple: #8b5cf6;
-      --neon-purple-glow: rgba(139, 92, 246, 0.35);
-      --neon-amber: #f59e0b;
-      --neon-emerald: #10b981;
+      --bg-body: #f4f7fc;
+      --bg-card: #ffffff;
+      --bg-card-sub: #f8fafc;
+      --border-card: #e8edf5;
+      --border-sub: #f1f5f9;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --primary-blue: #2563eb;
+      --primary-blue-light: #eff6ff;
+      --primary-blue-border: #dbeafe;
+      --accent-coral: #f97316;
+      --accent-coral-light: #fff7ed;
+      --accent-emerald: #10b981;
+      --accent-emerald-light: #ecfdf5;
+      --accent-purple: #8b5cf6;
+      --accent-purple-light: #f5f3ff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
+      --shadow-card: 0 4px 20px -2px rgba(50, 60, 90, 0.05), 0 2px 6px -1px rgba(50, 60, 90, 0.03);
+      --shadow-card-hover: 0 10px 25px -4px rgba(50, 60, 90, 0.08), 0 4px 10px -2px rgba(50, 60, 90, 0.04);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    
+
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-body);
-      background-image: 
-        radial-gradient(circle at 10% 10%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 10%, rgba(255, 45, 117, 0.06) 0%, transparent 40%),
-        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.05) 0%, transparent 45%);
       color: var(--text-main);
       min-height: 100vh;
-      overflow-x: hidden;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     /* Top Navigation Bar */
     .top-nav {
-      background: rgba(19, 23, 46, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: #ffffff;
       border-bottom: 1px solid var(--border-card);
-      padding: 12px 24px;
+      padding: 12px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 50;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.02);
     }
 
     .nav-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
     }
 
     .brand-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       text-decoration: none;
     }
 
-    .brand-badge {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #ff2d75, #ec4899);
-      box-shadow: 0 0 20px var(--neon-pink-glow);
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary-blue);
+      letter-spacing: -0.5px;
+    }
+
+    .search-box {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 800;
-      font-size: 18px;
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-    .brand-text h1 {
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: #fff;
-    }
-    .brand-text span {
-      font-size: 11px;
-      color: var(--text-sub);
-    }
-
-    /* Nav Center Tabs */
-    .nav-tabs {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .nav-tab {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
-      text-decoration: none;
-      padding: 6px 2px;
-      position: relative;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-
-    .nav-tab:hover {
-      color: #fff;
-    }
-
-    .nav-tab.active {
-      color: #fff;
-    }
-
-    .nav-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -13px;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: var(--neon-cyan);
-      box-shadow: 0 0 10px var(--neon-cyan);
+      gap: 8px;
+      background: #f1f5f9;
+      border: 1px solid transparent;
       border-radius: 999px;
+      padding: 8px 16px;
+      width: 280px;
+      transition: all 0.2s;
+    }
+    .search-box:focus-within {
+      background: #ffffff;
+      border-color: var(--primary-blue-border);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .search-box input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13px;
+      color: var(--text-main);
+      width: 100%;
+      font-family: inherit;
+    }
+    .search-box input::placeholder {
+      color: var(--text-dim);
     }
 
-    /* Nav Right */
     .nav-right {
       display: flex;
       align-items: center;
       gap: 16px;
     }
 
-    .btn-icon {
+    .badge-live-tag {
+      background: var(--accent-emerald-light);
+      color: #059669;
+      border: 1px solid #bbf7d0;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .btn-icon-light {
       width: 36px;
       height: 36px;
-      border-radius: 10px;
-      background: var(--bg-card-inner);
+      border-radius: 50%;
+      background: #f8fafc;
       border: 1px solid var(--border-card);
-      color: var(--text-sub);
+      color: var(--text-muted);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      font-size: 14px;
       position: relative;
       transition: all 0.2s;
     }
-    .btn-icon:hover {
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.2);
+    .btn-icon-light:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
     }
 
-    .badge-count {
+    .notif-bubble {
       position: absolute;
-      top: -4px;
-      right: -4px;
-      background: var(--neon-pink);
+      top: -2px;
+      right: -2px;
+      background: var(--accent-coral);
       color: #fff;
       font-size: 9px;
       font-weight: 800;
-      border-radius: 999px;
-      padding: 2px 5px;
-      box-shadow: 0 0 8px var(--neon-pink);
-    }
-
-    .user-avatar {
-      width: 36px;
-      height: 36px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      border: 2px solid #ffffff;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .user-avatar-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: #ffffff;
       font-weight: 700;
-      color: #fff;
-      border: 2px solid rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .user-profile-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
     }
 
     .hamburger-btn {
       display: none;
       background: none;
       border: none;
-      color: #fff;
-      font-size: 24px;
+      color: var(--text-main);
+      font-size: 22px;
       cursor: pointer;
-      padding: 4px;
     }
 
     /* App Layout */
@@ -212,34 +213,32 @@ $templatePart1 = @'
       max-width: 1560px;
       margin: 0 auto;
       width: 100%;
-      padding: 20px;
-      gap: 20px;
+      padding: 24px;
+      gap: 24px;
     }
 
-    /* Sidebar */
+    /* Clean White Sidebar */
     .sidebar {
-      width: 230px;
+      width: 220px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 20px;
     }
 
     .sidebar-menu {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .sidebar-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      border-radius: 14px;
-      background: transparent;
-      color: var(--text-sub);
+      padding: 10px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
       text-decoration: none;
       font-size: 13px;
       font-weight: 600;
@@ -247,50 +246,49 @@ $templatePart1 = @'
       cursor: pointer;
     }
     .sidebar-item:hover {
-      background: rgba(24, 29, 56, 0.6);
-      color: #fff;
+      background: #f1f5f9;
+      color: var(--text-main);
     }
     .sidebar-item.active {
-      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(139, 92, 246, 0.1));
-      color: #fff;
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.1);
+      background: var(--primary-blue-light);
+      color: var(--primary-blue);
+      font-weight: 700;
     }
 
     .sidebar-card {
-      background: var(--bg-card);
+      background: #ffffff;
       border: 1px solid var(--border-card);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
     }
     .sidebar-card h4 {
       font-size: 13px;
       font-weight: 700;
+      color: var(--text-main);
       margin-bottom: 4px;
     }
     .sidebar-card p {
-      font-size: 11px;
-      color: var(--text-sub);
-      margin-bottom: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
       line-height: 1.4;
+      margin-bottom: 14px;
     }
-    .btn-gradient {
+    .btn-side-action {
       width: 100%;
-      padding: 10px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #00f0ff, #3b82f6);
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--primary-blue);
+      color: #ffffff;
       border: none;
-      color: #0b0f19;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 12px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
       transition: all 0.2s;
     }
-    .btn-gradient:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+    .btn-side-action:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
 
     /* Main Dashboard View */
@@ -302,287 +300,134 @@ $templatePart1 = @'
       min-width: 0;
     }
 
+    /* Section Title */
+    .dashboard-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: -4px;
+    }
+    .page-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
     /* Card Styling */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 20px;
+      border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      position: relative;
-      transition: border-color 0.2s;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-card-hover);
     }
 
-    /* Row 1: Donut Gauges & Stat Panels */
-    .row-top {
+    /* Row 1: 4 Metric Cards (Matching tdlr style) */
+    .row-metrics {
       display: grid;
-      grid-template-columns: auto auto 1.4fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
     }
 
-    /* Donut Gauge Card */
-    .card-donut {
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+    }
+    .kpi-info {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-width: 140px;
-      padding: 16px;
-      text-align: center;
+      gap: 4px;
+    }
+    .kpi-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+    .kpi-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
-    .donut-circle-wrap {
-      position: relative;
-      width: 86px;
-      height: 86px;
-      margin-bottom: 10px;
-    }
-
-    .donut-svg {
-      transform: rotate(-90deg);
-      width: 100%;
-      height: 100%;
-    }
-    .donut-bg {
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 8;
-    }
-    .donut-fill-pink {
-      fill: none;
-      stroke: var(--neon-pink);
-      stroke-width: 8;
-      stroke-linecap: round;
-      stroke-dasharray: 226;
-      stroke-dashoffset: 60;
-      filter: drop-shadow(0 0 6px var(--neon-pink));
-      transition: stroke-dashoffset 0.5s ease;
-    }
-    .donut-val-text {
-      position: absolute;
-      inset: 0;
+    .kpi-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-      color: #fff;
     }
-    .donut-label {
-      font-size: 11px;
-      color: var(--text-sub);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .icon-blue { background: var(--primary-blue-light); color: var(--primary-blue); }
+    .icon-coral { background: var(--accent-coral-light); color: var(--accent-coral); }
+    .icon-purple { background: var(--accent-purple-light); color: var(--accent-purple); }
+    .icon-emerald { background: var(--accent-emerald-light); color: var(--accent-emerald); }
+
+    /* Row 2: Dual Waveform Spline & Multi-Segment Donut Ring */
+    .row-charts-mid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
     }
 
-    /* Middle Stats Block */
-    .card-stats-block {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .stats-header {
+    .card-header-clean {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
-    .stats-header-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-sub);
+    .card-title-clean {
+      font-size: 14px;
       font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .badge-status {
-      padding: 4px 10px;
-      border-radius: 999px;
+
+    .legend-clean-row {
+      display: flex;
+      gap: 14px;
       font-size: 11px;
-      font-weight: 700;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .legend-dot-item {
       display: inline-flex;
       align-items: center;
       gap: 6px;
     }
+    .dot-blue { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-blue); }
+    .dot-coral { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-coral); }
+    .dot-emerald { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); }
 
-    .kpi-four-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-    .kpi-item {
-      background: var(--bg-card-inner);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .kpi-item-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .kpi-item-lbl {
-      font-size: 11px;
-      color: var(--text-sub);
-    }
-
-    /* Right Pill Progress Bars */
-    .card-pills {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 16px;
-    }
-    .pill-progress-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .pill-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-    }
-    .pill-label {
-      color: var(--text-sub);
-      font-weight: 600;
-    }
-    .pill-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 800;
-      font-size: 14px;
-    }
-    .pill-track {
-      width: 100%;
-      height: 12px;
-      background: var(--bg-card-inner);
-      border-radius: 999px;
-      padding: 2px;
-      border: 1px solid var(--border-card);
-      overflow: hidden;
-    }
-    .pill-fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.4s ease;
-    }
-    .fill-purple {
-      background: linear-gradient(90deg, #7c3aed, #ec4899);
-      box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
-    }
-    .fill-cyan {
-      background: linear-gradient(90deg, #0284c7, #00f0ff);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-    }
-
-    /* Row 2: Capsule Bars, Filter Pills & Dual Oscilloscopes */
-    .row-mid {
-      display: grid;
-      grid-template-columns: 220px 1fr 1fr;
-      gap: 16px;
-    }
-
-    /* 3-Axis Capsule Bar Card */
-    .card-capsules {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 14px;
-    }
-    .capsule-bars-container {
-      display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      height: 110px;
-      padding: 8px 0;
-    }
-    .capsule-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-    .capsule-num {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .capsule-pill {
-      width: 26px;
-      height: 75px;
-      background: var(--bg-card-inner);
-      border-radius: 999px;
-      border: 1px solid var(--border-card);
-      display: flex;
-      align-items: flex-end;
-      padding: 2px;
-      overflow: hidden;
-    }
-    .capsule-fill {
-      width: 100%;
-      border-radius: 999px;
-      transition: height 0.3s ease;
-    }
-    .cap-cyan { background: linear-gradient(to top, #0284c7, #00f0ff); box-shadow: 0 0 10px var(--neon-cyan-glow); }
-    .cap-amber { background: linear-gradient(to top, #ea580c, #f59e0b); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-    .cap-emerald { background: linear-gradient(to top, #059669, #10b981); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-
-    /* Filter dropdown pills */
-    .filter-pills-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 4px;
-    }
-    .pill-select-btn {
-      background: var(--bg-card-inner);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 8px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-sub);
-      cursor: pointer;
-    }
-    .pill-select-btn:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    /* Oscilloscope Cards */
-    .card-osc {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .chart-title {
-      font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .canvas-container {
+    .canvas-box-mid {
       position: relative;
       width: 100%;
-      height: 160px;
+      height: 190px;
     }
     canvas {
       width: 100%;
@@ -590,137 +435,239 @@ $templatePart1 = @'
       display: block;
     }
 
-    /* Interactive Axis Toggles */
-    .axis-toggle-pill {
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 6px;
-      user-select: none;
-      transition: opacity 0.2s;
+    /* Donut Ring Card (Right Column) */
+    .card-donut-clean {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
-    .axis-toggle-pill.dimmed {
+    .donut-ring-wrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      margin: 6px auto;
+    }
+    .donut-svg-clean {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+    .donut-bg-clean {
+      fill: none;
+      stroke: #f1f5f9;
+      stroke-width: 12;
+    }
+    .donut-seg-blue {
+      fill: none;
+      stroke: var(--primary-blue);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 326;
+      stroke-dashoffset: 70;
+      transition: stroke-dashoffset 0.4s;
+    }
+    .donut-seg-coral {
+      fill: none;
+      stroke: var(--accent-coral);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 326;
+      stroke-dashoffset: 240;
+    }
+    .donut-center-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .donut-big-num {
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+    }
+    .donut-sub-lbl {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    .donut-legend-list {
+      display: flex;
+      justify-content: space-around;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-sub);
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) Card */
+    .row-xyz-dedicated {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .axis-pill-toggle {
+      background: #f8fafc;
+      border: 1px solid var(--border-card);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .axis-pill-toggle:hover {
+      background: #f1f5f9;
+    }
+    .axis-pill-toggle.dimmed {
       opacity: 0.35;
       text-decoration: line-through;
     }
 
-    /* Row 3: Neon Area Chart, Grouped Bars & Action Controls */
-    .row-bottom {
+    /* Row 4: Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown */
+    .row-bottom-split {
       display: grid;
-      grid-template-columns: 1.5fr 1fr;
+      grid-template-columns: 1.4fr 1fr;
       gap: 16px;
     }
 
-    .bottom-right-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 1200px) {
-      .bottom-right-grid { grid-template-columns: 1fr; }
-    }
-
-    /* Timeline scrubber card */
-    .timeline-scrubber-box {
-      margin-top: 10px;
+    /* Scrubber Slider */
+    .timeline-clean-box {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: var(--bg-card-inner);
-      padding: 8px 14px;
-      border-radius: 12px;
+      gap: 14px;
+      background: var(--bg-card-sub);
       border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin-top: 12px;
     }
-    .timeline-scrubber-box input[type="range"] {
+    .timeline-clean-box input[type="range"] {
       flex: 1;
-      accent-color: var(--neon-pink);
+      accent-color: var(--primary-blue);
       cursor: pointer;
     }
-    .scrub-time-label {
+    .timeline-tag-time {
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
       font-weight: 700;
-      color: var(--neon-pink);
-      min-width: 55px;
+      color: var(--primary-blue);
+      min-width: 60px;
     }
 
-    /* Grouped Bar Chart */
-    .grouped-bars-box {
+    /* Action Control Row */
+    .actions-clean-row {
       display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      height: 140px;
-      padding: 10px 0;
+      gap: 10px;
+      margin-top: 14px;
     }
-    .bar-group {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
+    .btn-clean-primary {
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: var(--primary-blue);
+      color: #ffffff;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
     }
-    .v-bar {
-      width: 12px;
-      border-radius: 4px 4px 0 0;
-      transition: height 0.3s ease;
+    .btn-clean-primary:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
-    .v-bar-cyan { background: #00f0ff; }
-    .v-bar-pink { background: #ff2d75; }
-    .v-bar-purple { background: #8b5cf6; }
+    .btn-clean-secondary {
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-clean-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
 
-    /* Action Buttons */
-    .actions-box {
+    /* Phase List Items ("Projects" list style) */
+    .phase-list {
       display: flex;
       flex-direction: column;
-      justify-content: center;
       gap: 10px;
     }
-    .btn-pill-pink {
-      padding: 12px 18px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #ff2d75, #ec4899);
-      box-shadow: 0 4px 20px var(--neon-pink-glow);
-      border: none;
-      color: #fff;
+    .phase-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border-sub);
+      transition: all 0.2s;
+    }
+    .phase-item:hover {
+      border-color: var(--primary-blue-border);
+      background: #ffffff;
+    }
+    .phase-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .phase-badge-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--primary-blue-light);
+      color: var(--primary-blue);
       font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
     }
-    .btn-pill-pink:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px var(--neon-pink-glow);
-    }
-
-    .btn-pill-blue {
-      padding: 12px 18px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #0284c7, #3b82f6);
-      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-      border: none;
-      color: #fff;
-      font-weight: 700;
+    .phase-title {
       font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
+      font-weight: 700;
+      color: var(--text-main);
     }
-    .btn-pill-blue:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(59, 130, 246, 0.6);
+    .phase-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .phase-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
     }
 
-    /* Mobile Drawer */
+    /* Mobile Drawer Overlay */
     .mobile-drawer-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
       z-index: 99;
     }
     .mobile-drawer {
@@ -729,7 +676,7 @@ $templatePart1 = @'
       bottom: 0;
       left: -280px;
       width: 260px;
-      background: var(--bg-sidebar);
+      background: #ffffff;
       border-right: 1px solid var(--border-card);
       z-index: 100;
       padding: 24px;
@@ -737,6 +684,7 @@ $templatePart1 = @'
       flex-direction: column;
       justify-content: space-between;
       transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
     .mobile-drawer.open {
       left: 0;
@@ -744,13 +692,13 @@ $templatePart1 = @'
 
     /* Responsive Breakpoints */
     @media (max-width: 1200px) {
-      .row-top {
+      .row-metrics {
         grid-template-columns: repeat(2, 1fr);
       }
-      .row-mid {
+      .row-charts-mid {
         grid-template-columns: 1fr;
       }
-      .row-bottom {
+      .row-bottom-split {
         grid-template-columns: 1fr;
       }
     }
@@ -759,7 +707,7 @@ $templatePart1 = @'
       .top-nav {
         padding: 10px 16px;
       }
-      .nav-tabs {
+      .search-box {
         display: none;
       }
       .sidebar {
@@ -769,21 +717,13 @@ $templatePart1 = @'
         display: block;
       }
       .app-layout {
-        padding: 12px;
+        padding: 14px;
       }
-      .row-top {
+      .row-metrics {
         grid-template-columns: 1fr;
-      }
-      .kpi-four-grid {
-        grid-template-columns: 1fr;
-      }
-      .donut-dual-box {
-        display: flex;
-        justify-content: space-around;
       }
       .card {
         padding: 16px;
-        border-radius: 16px;
       }
     }
   </style>
@@ -795,30 +735,32 @@ $templatePart1 = @'
     <div class="nav-left">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
       <a href="#" class="brand-logo">
-        <div class="brand-badge">S</div>
-        <div class="brand-text">
-          <h1>SAMSUNG PdM</h1>
-          <span>WW10TP44DSX/FQ • 10kg Washer</span>
-        </div>
+        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
       </a>
+      <div class="search-box">
+        <span style="color: var(--text-dim); font-size: 14px;">🔍</span>
+        <input type="text" placeholder="Search machine telemetry, ISO 10816...">
+      </div>
     </div>
 
-    <nav class="nav-tabs">
-      <a class="nav-tab active" onclick="setMode('historic')">Wash 1019 Analysis</a>
-      <a class="nav-tab" onclick="setMode('live')">Real-Time Sensor</a>
-      <a class="nav-tab" onclick="toggleFft()">Acoustic FFT</a>
-      <a class="nav-tab" onclick="toggleHealth()">Machinery Health</a>
-    </nav>
-
     <div class="nav-right">
-      <div class="btn-icon" onclick="downloadWashCsv()" title="Download CSV">
+      <div class="badge-live-tag" id="badge-live">
+        <span class="badge-dot"></span>
+        <span id="lbl-live-text">wash_1019 Active</span>
+      </div>
+
+      <div class="btn-icon-light" onclick="downloadWashCsv()" title="Download CSV">
         📥
       </div>
-      <div class="btn-icon" title="Machine Notifications">
+      <div class="btn-icon-light" title="Notifications">
         🔔
-        <span class="badge-count">1</span>
+        <span class="notif-bubble">1</span>
       </div>
-      <div class="user-avatar">AD</div>
+
+      <div class="user-profile">
+        <div class="user-avatar-circle">AD</div>
+        <span class="user-profile-name">Adam D.</span>
+      </div>
     </div>
   </header>
 
@@ -827,307 +769,301 @@ $templatePart1 = @'
   <aside class="mobile-drawer" id="mobile-drawer">
     <div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <div class="brand-logo">
-          <div class="brand-badge">S</div>
-          <div class="brand-text">
-            <h1>SAMSUNG PdM</h1>
-            <span>Mobile Monitor</span>
-          </div>
-        </div>
-        <button onclick="toggleMobileMenu()" style="background:none; border:none; color:#fff; font-size:20px;">✕</button>
+        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
+        <button onclick="toggleMobileMenu()" style="background:none; border:none; font-size:20px; cursor:pointer;">✕</button>
       </div>
       <div class="sidebar-menu">
-        <a class="sidebar-item active" onclick="setMode('historic'); toggleMobileMenu()">🌀 Wash 1019 Run</a>
+        <a class="sidebar-item active" onclick="setMode('historic'); toggleMobileMenu()">📊 Wash 1019 Run</a>
         <a class="sidebar-item" onclick="setMode('live'); toggleMobileMenu()">📡 Live ESP32 Stream</a>
         <a class="sidebar-item" onclick="downloadWashCsv()">💾 Download wash_1019.csv</a>
-        <a class="sidebar-item" onclick="toggleMobileMenu()">🛡️ ISO 10816 Specs</a>
+        <a class="sidebar-item" onclick="toggleMobileMenu()">🛡️ ISO 10816 Standards</a>
       </div>
     </div>
     <div class="sidebar-card">
       <h4>Firebase Cloud</h4>
-      <p>Autonomous 50 Hz cloud telemetry synced.</p>
-      <button class="btn-gradient" onclick="syncFirebase()">⚡ Force Cloud Sync</button>
+      <p>422 multimodal records synced over Asia-SE1.</p>
+      <button class="btn-side-action" onclick="downloadWashCsv()">📥 Export CSV</button>
     </div>
   </aside>
 
   <!-- App Layout -->
   <div class="app-layout">
     
-    <!-- Left Sidebar (Desktop) -->
+    <!-- Clean Minimalist Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-menu">
         <div class="sidebar-item active" id="side-item-1" onclick="setMode('historic')">
-          <span>🌀</span> Wash 1019 Cycle
+          <span>📊</span> Dashboard
         </div>
         <div class="sidebar-item" id="side-item-2" onclick="setMode('live')">
-          <span>📡</span> Live Firebase Rig
+          <span>📡</span> Live Telemetry
         </div>
         <div class="sidebar-item" onclick="toggleAxis('x')">
-          <span>📳</span> 3-Axis IMU (MPU)
+          <span>📳</span> Tri-Axial IMU
         </div>
-        <div class="sidebar-item" onclick="toggleFft()">
-          <span>🎙️</span> I2S Audio (INMP)
+        <div class="sidebar-item" onclick="openPdfDoc()">
+          <span>📑</span> Setup Guide
         </div>
-        <div class="sidebar-item" onclick="openDoc()">
-          <span>📄</span> Academic Specs
+        <div class="sidebar-item" onclick="openPdfDoc()">
+          <span>⚙️</span> Settings
         </div>
       </div>
 
       <div class="sidebar-card">
-        <h4>Firebase Cloud Asia-SE1</h4>
-        <p>422 wash records archived (~35.9 minutes).</p>
-        <button class="btn-gradient" onclick="downloadWashCsv()">📥 Download CSV</button>
+        <h4>Samsung Washer PdM</h4>
+        <p>WW10TP44DSX/FQ front-load rotating machine diagnostics.</p>
+        <button class="btn-side-action" onclick="downloadWashCsv()">📥 Export CSV</button>
       </div>
     </aside>
 
     <!-- Main Content Area -->
     <main class="main-view">
 
-      <!-- Row 1: Dual Donut Gauges, Stats Grid, & Capsule Progress -->
-      <section class="row-top">
+      <!-- Header Title Row -->
+      <div class="dashboard-header-row">
+        <div>
+          <h2 class="page-title">Dashboard</h2>
+          <p class="page-subtitle">Multimodal Machine Learning PdM • ESP32 DevKit V1 (MPU-6050 + INMP441)</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-clean-secondary" style="padding: 6px 14px; font-size: 12px;" onclick="setMode(currentMode === 'live' ? 'historic' : 'live')">
+            <span id="btn-mode-toggle-text">Mode: Wash 1019 Cycle</span> ⇄
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 1: 4 Clean KPI Cards -->
+      <section class="row-metrics">
         
-        <!-- Donut 1: Machine Health -->
-        <div class="card card-donut">
-          <div class="donut-circle-wrap">
-            <svg class="donut-svg" viewBox="0 0 86 86">
-              <circle class="donut-bg" cx="43" cy="43" r="36"></circle>
-              <circle class="donut-fill-pink" id="donut-health-fill" cx="43" cy="43" r="36" style="stroke-dashoffset: 14;"></circle>
-            </svg>
-            <div class="donut-val-text" id="donut-health-text">94%</div>
+        <!-- Card 1: Resultant Vibration -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Avg Vibration</span>
+            <div class="kpi-val" style="color: var(--primary-blue);" id="kpi-avg-vibe">
+              9.58 <span class="kpi-sub">m/s²</span>
+            </div>
+            <span class="kpi-sub">Static Gravity: 1.0g</span>
           </div>
-          <span class="donut-label">Health Score</span>
-          <span style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">ISO 10816 Class I</span>
+          <div class="kpi-icon-circle icon-blue">📳</div>
         </div>
 
-        <!-- Donut 2: Vibration Severity -->
-        <div class="card card-donut">
-          <div class="donut-circle-wrap">
-            <svg class="donut-svg" viewBox="0 0 86 86">
-              <circle class="donut-bg" cx="43" cy="43" r="36"></circle>
-              <circle class="donut-fill-pink" id="donut-vibe-fill" cx="43" cy="43" r="36" style="stroke-dashoffset: 145;"></circle>
-            </svg>
-            <div class="donut-val-text" id="donut-vibe-text">38%</div>
+        <!-- Card 2: Peak Vibration -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Peak Vibration</span>
+            <div class="kpi-val" style="color: var(--accent-coral);" id="kpi-peak-vibe">
+              10.14 <span class="kpi-sub">m/s²</span>
+            </div>
+            <span class="kpi-sub" style="color: #ea580c;">Spin Extraction</span>
           </div>
-          <span class="donut-label">Vibe Severity</span>
-          <span style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">Equilibrium Normal</span>
+          <div class="kpi-icon-circle icon-coral">📈</div>
         </div>
 
-        <!-- Middle Stats Block -->
-        <div class="card card-stats-block">
-          <div class="stats-header">
-            <span class="stats-header-title">Cycle Telemetry Summary</span>
-            <div class="badge-status" id="badge-mode">
-              <span>●</span> <span id="lbl-status-text">WASH 1019 COMPLETED</span>
+        <!-- Card 3: Acoustic Noise -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Acoustic Energy</span>
+            <div class="kpi-val" style="color: var(--accent-purple);" id="kpi-avg-rms">
+              146.9 <span class="kpi-sub">RMS</span>
             </div>
+            <span class="kpi-sub">Peak: 511.2 RMS</span>
           </div>
-          <div class="kpi-four-grid">
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Avg Resultant</span>
-              <span class="kpi-item-val" style="color: var(--neon-cyan);" id="kpi-avg-vibe">9.58 <span style="font-size:11px;">m/s²</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Peak Vibration</span>
-              <span class="kpi-item-val" style="color: var(--neon-pink);" id="kpi-peak-vibe">10.14 <span style="font-size:11px;">m/s²</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Avg Acoustic</span>
-              <span class="kpi-item-val" style="color: var(--neon-purple);" id="kpi-avg-rms">146.9 <span style="font-size:11px;">RMS</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Peak Sound Energy</span>
-              <span class="kpi-item-val" style="color: #ff2d75;" id="kpi-peak-rms">511.2 <span style="font-size:11px;">RMS</span></span>
-            </div>
-          </div>
+          <div class="kpi-icon-circle icon-purple">🎙️</div>
         </div>
 
-        <!-- Right Horizontal Pill Progress Bars -->
-        <div class="card card-pills">
-          <div class="pill-progress-group">
-            <div class="pill-header">
-              <span class="pill-label">Spin Cycle Energy</span>
-              <span class="pill-val" style="color: #ec4899;" id="pill-spin-val">68%</span>
+        <!-- Card 4: Machine Health -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Health Score</span>
+            <div class="kpi-val" style="color: var(--accent-emerald);" id="kpi-health-score">
+              94%
             </div>
-            <div class="pill-track">
-              <div class="pill-fill fill-purple" id="pill-spin-fill" style="width: 68%;"></div>
-            </div>
+            <span class="kpi-sub" style="color: #059669;">ISO 10816 Class I</span>
           </div>
-          <div class="pill-progress-group">
-            <div class="pill-header">
-              <span class="pill-label">Dynamic Equilibrium</span>
-              <span class="pill-val" style="color: #00f0ff;" id="pill-stab-val">82%</span>
-            </div>
-            <div class="pill-track">
-              <div class="pill-fill fill-cyan" id="pill-stab-fill" style="width: 82%;"></div>
-            </div>
-          </div>
+          <div class="kpi-icon-circle icon-emerald">🛡️</div>
         </div>
+
       </section>
 
-      <!-- Row 2: Capsule 3-Axis Bars, DEDICATED Tri-Axial Vibration (X, Y, Z) Graph, & Dual-Line Spline Waveform -->
-      <section class="row-mid">
+      <!-- Row 2: Conversions Spline Waveform & Traffic Channels Donut -->
+      <section class="row-charts-mid">
         
-        <!-- 1. 3-Axis Dynamic Vectors & Filter Pills -->
-        <div class="card card-capsules">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-sub);">
-            3-Axis Dynamic Vectors
-          </div>
-          <div class="capsule-bars-container">
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #00f0ff;" id="cap-val-x">-0.72</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-cyan" id="cap-fill-x" style="height: 45%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Ax</span>
+        <!-- Spline Dual-Modality Waveform (Conversions Style) -->
+        <div class="card">
+          <div class="card-header-clean">
+            <div>
+              <h3 class="card-title-clean">Dual-Modality Spline Waveform</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Synchronized vibration acceleration vs. acoustic sound pressure</p>
             </div>
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #f59e0b;" id="cap-val-y">+1.41</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-amber" id="cap-fill-y" style="height: 60%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Ay</span>
-            </div>
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #10b981;" id="cap-val-z">-9.44</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-emerald" id="cap-fill-z" style="height: 85%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Az</span>
+            <div class="legend-clean-row">
+              <span class="legend-dot-item"><span class="dot-blue"></span> Vibration |a|</span>
+              <span class="legend-dot-item"><span class="dot-coral"></span> Acoustic RMS</span>
             </div>
           </div>
 
-          <div class="filter-pills-box">
-            <div class="pill-select-btn" onclick="togglePlayPause()">
-              <span id="btn-playback-status">▶ Playback Wash 1019</span>
-              <span>▼</span>
-            </div>
-            <div class="pill-select-btn" onclick="setMode(currentMode === 'live' ? 'historic' : 'live')">
-              <span id="lbl-source-toggle">Source: Historic 1019</span>
-              <span>⇄</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. NEW DEDICATED GRAPH: Tri-Axial Vibration Only (Ax, Ay, Az) -->
-        <div class="card card-osc">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>Tri-Axial Vibration (Ax, Ay, Az)</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">[MPU-6050 Direct]</span>
-            </div>
-            <div style="display: flex; gap: 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
-              <span class="axis-toggle-pill" id="pill-tog-x" style="color: #00f0ff;" onclick="toggleAxis('x')" title="Toggle Ax">
-                ● Ax: <span id="vibe-leg-x">-0.72</span>
-              </span>
-              <span class="axis-toggle-pill" id="pill-tog-y" style="color: #f59e0b;" onclick="toggleAxis('y')" title="Toggle Ay">
-                ● Ay: <span id="vibe-leg-y">+1.41</span>
-              </span>
-              <span class="axis-toggle-pill" id="pill-tog-z" style="color: #10b981;" onclick="toggleAxis('z')" title="Toggle Az">
-                ● Az: <span id="vibe-leg-z">-9.44</span>
-              </span>
-            </div>
-          </div>
-          <div class="canvas-container">
-            <canvas id="xyz-canvas"></canvas>
-          </div>
-        </div>
-
-        <!-- 3. Dual-Line Spline Oscilloscope (Resultant Vibe & Acoustic RMS) -->
-        <div class="card card-osc">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>Dual-Modality Spline Waveform</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">(|a| & RMS)</span>
-            </div>
-            <div style="display: flex; gap: 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
-              <span style="color: #00f0ff;">● Vibe |a|</span>
-              <span style="color: #ff2d75;">● Sound RMS</span>
-            </div>
-          </div>
-          <div class="canvas-container">
+          <div class="canvas-box-mid">
             <canvas id="spline-canvas"></canvas>
           </div>
         </div>
+
+        <!-- Clean Donut Multi-Segment Ring (Traffic Channels Style) -->
+        <div class="card card-donut-clean">
+          <div class="card-header-clean" style="margin-bottom: 0;">
+            <h3 class="card-title-clean">Machinery Status</h3>
+            <span style="font-size: 11px; color: var(--text-dim);">Real-Time</span>
+          </div>
+
+          <div class="donut-ring-wrap">
+            <svg class="donut-svg-clean" viewBox="0 0 130 130">
+              <circle class="donut-bg-clean" cx="65" cy="65" r="52"></circle>
+              <circle class="donut-seg-blue" id="donut-fill-seg" cx="65" cy="65" r="52"></circle>
+              <circle class="donut-seg-coral" cx="65" cy="65" r="52"></circle>
+            </svg>
+            <div class="donut-center-text">
+              <span class="donut-big-num" id="donut-center-num">94%</span>
+              <span class="donut-sub-lbl">Health</span>
+            </div>
+          </div>
+
+          <div class="donut-legend-list">
+            <span class="legend-dot-item"><span class="dot-blue"></span> Normal</span>
+            <span class="legend-dot-item"><span class="dot-coral"></span> Dynamic</span>
+            <span class="legend-dot-item"><span class="dot-emerald"></span> Stable</span>
+          </div>
+        </div>
+
       </section>
 
-      <!-- Row 3: Full 35.9-min Area Chart, Grouped Bars & Action Controls -->
-      <section class="row-bottom">
-        
-        <!-- Large Glowing Area Chart: Full Wash 1019 Run -->
+      <!-- Row 3: DEDICATED Tri-Axial Vibration (Ax, Ay, Az) Graph -->
+      <section class="row-xyz-dedicated">
         <div class="card">
-          <div class="chart-header">
+          <div class="card-header-clean">
             <div>
-              <div class="chart-title">Wash Cycle 1019 Full Timeline (35.9 Minutes)</div>
-              <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                Complete real machine run from drum fill through wash agitation to final high-speed extraction spin
-              </div>
+              <h3 class="card-title-clean">Tri-Axial Vibration (Ax, Ay, Az)</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">MPU-6050 direct ±16g accelerometer register burst reading</p>
             </div>
-            <span style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--neon-pink);" id="lbl-curr-time">
+            <div style="display: flex; gap: 8px;">
+              <span class="axis-pill-toggle" id="pill-tog-x" style="color: var(--primary-blue);" onclick="toggleAxis('x')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--primary-blue);"></span>
+                Ax: <strong id="vibe-leg-x">-0.72</strong> m/s²
+              </span>
+              <span class="axis-pill-toggle" id="pill-tog-y" style="color: var(--accent-coral);" onclick="toggleAxis('y')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-coral);"></span>
+                Ay: <strong id="vibe-leg-y">+1.41</strong> m/s²
+              </span>
+              <span class="axis-pill-toggle" id="pill-tog-z" style="color: var(--accent-emerald);" onclick="toggleAxis('z')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);"></span>
+                Az: <strong id="vibe-leg-z">-9.44</strong> m/s²
+              </span>
+            </div>
+          </div>
+
+          <div class="canvas-box-mid" style="height: 180px;">
+            <canvas id="xyz-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 4: Full 35.9-min Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown -->
+      <section class="row-bottom-split">
+        
+        <!-- Full Timeline & Controls -->
+        <div class="card">
+          <div class="card-header-clean">
+            <div>
+              <h3 class="card-title-clean">Wash Cycle 1019 Full Timeline (35.9 Minutes)</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">422 real recorded time-series frames from Samsung front-load washer</p>
+            </div>
+            <span style="font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary-blue);" id="lbl-curr-time">
               00:00 / 35:54
             </span>
           </div>
 
-          <div class="canvas-container" style="height: 180px;">
+          <div class="canvas-box-mid" style="height: 160px;">
             <canvas id="area-canvas"></canvas>
           </div>
 
           <!-- Timeline Scrubber -->
-          <div class="timeline-scrubber-box">
-            <span style="font-size: 11px; color: var(--text-sub);">Scrub:</span>
+          <div class="timeline-clean-box">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Scrub Timeline:</span>
             <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
-            <span class="scrub-time-label" id="scrub-label">0.0m</span>
-          </div>
-        </div>
-
-        <!-- Bottom Right Grid: Grouped Bars & Actions -->
-        <div class="bottom-right-grid">
-          
-          <!-- Operation Phase Energy Bars -->
-          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-            <div class="chart-title" style="font-size: 12px;">Phase Distribution</div>
-            <div class="grouped-bars-box">
-              <div class="bar-group" title="Wash Agitation">
-                <div class="v-bar v-bar-cyan" style="height: 45px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 30px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 60px;"></div>
-              </div>
-              <div class="bar-group" title="Intermediate Drain">
-                <div class="v-bar v-bar-cyan" style="height: 65px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 50px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 85px;"></div>
-              </div>
-              <div class="bar-group" title="High Spin Extraction">
-                <div class="v-bar v-bar-cyan" style="height: 110px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 125px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 95px;"></div>
-              </div>
-            </div>
-            <div style="display: flex; justify-content: space-around; font-size: 10px; color: var(--text-sub); text-align: center;">
-              <span>Agitation</span>
-              <span>Drain</span>
-              <span>High Spin</span>
-            </div>
+            <span class="timeline-tag-time" id="scrub-label">0.0m</span>
           </div>
 
-          <!-- Action Buttons Box -->
-          <div class="card actions-box">
-            <button class="btn-pill-pink" onclick="togglePlayPause()" id="btn-play-wash">
+          <!-- Action Buttons -->
+          <div class="actions-clean-row">
+            <button class="btn-clean-primary" onclick="togglePlayPause()" id="btn-play-wash">
               ▶ Replay Wash 1019
             </button>
-            <button class="btn-pill-blue" onclick="downloadWashCsv()">
+            <button class="btn-clean-secondary" onclick="downloadWashCsv()">
               📥 Download wash_1019.csv
             </button>
-            <button class="pill-select-btn" style="text-align: center; justify-content: center;" onclick="setMode('live')">
+            <button class="btn-clean-secondary" onclick="setMode('live')">
               ⚡ Connect Live Firebase
             </button>
           </div>
-
         </div>
+
+        <!-- Phase List ("Projects" style list from reference image) -->
+        <div class="card">
+          <div class="card-header-clean">
+            <h3 class="card-title-clean">Wash Phases & Cycle Breakdown</h3>
+            <span style="font-size: 12px; color: var(--primary-blue); font-weight: 600; cursor: pointer;">Samsung WW10T</span>
+          </div>
+
+          <div class="phase-list">
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">1</div>
+                <div>
+                  <div class="phase-title">Drum Fill & Soak</div>
+                  <div class="phase-desc">0 - 8 mins • Water inlet valve</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--primary-blue);">44.7 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">2</div>
+                <div>
+                  <div class="phase-title">Agitation & Wash Tumble</div>
+                  <div class="phase-desc">8 - 22 mins • Direct drive motor 50 RPM</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--primary-blue);">146.9 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">3</div>
+                <div>
+                  <div class="phase-title">Intermediate Drain & Rinse</div>
+                  <div class="phase-desc">22 - 30 mins • Drain pump active</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--accent-coral);">227.0 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">4</div>
+                <div>
+                  <div class="phase-title">High-Speed Spin Extraction</div>
+                  <div class="phase-desc">30 - 35.9 mins • 1400 RPM spin</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: #dc2626;">511.2 RMS</span>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </main>
   </div>
 
-  <!-- Embedded Real Wash 1019 Dataset & Logic -->
+  <!-- Embedded Wash 1019 Dataset & Logic -->
   <script>
 '@
 
@@ -1140,55 +1076,40 @@ $templatePart2 = @'
     let playInterval = null;
     let liveTimer = null;
 
-    // Axis visibility state
+    // Axis visibility
     const axisVisible = { x: true, y: true, z: true };
 
-    // DOM Elements
+    // Canvas Elements
     const splineCvs = document.getElementById('spline-canvas');
     const xyzCvs = document.getElementById('xyz-canvas');
     const areaCvs = document.getElementById('area-canvas');
-    const timeSlider = document.getElementById('time-slider');
-    const scrubLabel = document.getElementById('scrub-label');
-    const lblCurrTime = document.getElementById('lbl-curr-time');
-    const btnPlayWash = document.getElementById('btn-play-wash');
-    const btnPlaybackStatus = document.getElementById('btn-playback-status');
-    const lblSourceToggle = document.getElementById('lbl-source-toggle');
-    const badgeMode = document.getElementById('badge-mode');
-    const lblStatusText = document.getElementById('lbl-status-text');
-
-    // Gauges & Metric DOM
-    const donutHealthText = document.getElementById('donut-health-text');
-    const donutHealthFill = document.getElementById('donut-health-fill');
-    const donutVibeText = document.getElementById('donut-vibe-text');
-    const donutVibeFill = document.getElementById('donut-vibe-fill');
-    const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
-    const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
-    const kpiAvgRms = document.getElementById('kpi-avg-rms');
-    const kpiPeakRms = document.getElementById('kpi-peak-rms');
-    const pillSpinVal = document.getElementById('pill-spin-val');
-    const pillSpinFill = document.getElementById('pill-spin-fill');
-    const pillStabVal = document.getElementById('pill-stab-val');
-    const pillStabFill = document.getElementById('pill-stab-fill');
-    const capValX = document.getElementById('cap-val-x');
-    const capValY = document.getElementById('cap-val-y');
-    const capValZ = document.getElementById('cap-val-z');
-    const capFillX = document.getElementById('cap-fill-x');
-    const capFillY = document.getElementById('cap-fill-y');
-    const capFillZ = document.getElementById('cap-fill-z');
-
-    // XYZ Legend DOM
-    const vibeLegX = document.getElementById('vibe-leg-x');
-    const vibeLegY = document.getElementById('vibe-leg-y');
-    const vibeLegZ = document.getElementById('vibe-leg-z');
-
-    // Canvas Contexts
     const splineCtx = splineCvs.getContext('2d');
     const xyzCtx = xyzCvs.getContext('2d');
     const areaCtx = areaCvs.getContext('2d');
 
+    // DOM Controls
+    const timeSlider = document.getElementById('time-slider');
+    const scrubLabel = document.getElementById('scrub-label');
+    const lblCurrTime = document.getElementById('lbl-curr-time');
+    const btnPlayWash = document.getElementById('btn-play-wash');
+    const btnModeToggleText = document.getElementById('btn-mode-toggle-text');
+    const lblLiveText = document.getElementById('lbl-live-text');
+
+    // KPI & Legend DOM
+    const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
+    const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
+    const kpiAvgRms = document.getElementById('kpi-avg-rms');
+    const kpiHealthScore = document.getElementById('kpi-health-score');
+    const donutCenterNum = document.getElementById('donut-center-num');
+    const donutFillSeg = document.getElementById('donut-fill-seg');
+
+    const vibeLegX = document.getElementById('vibe-leg-x');
+    const vibeLegY = document.getElementById('vibe-leg-y');
+    const vibeLegZ = document.getElementById('vibe-leg-z');
+
     function resizeCanvases() {
       const dpr = window.devicePixelRatio || 1;
-      
+
       const sRect = splineCvs.parentElement.getBoundingClientRect();
       splineCvs.width = sRect.width * dpr;
       splineCvs.height = sRect.height * dpr;
@@ -1207,7 +1128,6 @@ $templatePart2 = @'
     }
     window.addEventListener('resize', resizeCanvases);
 
-    // Format milliseconds to mm:ss
     function formatMs(ms) {
       const totalSec = Math.floor(ms / 1000);
       const m = Math.floor(totalSec / 60);
@@ -1215,7 +1135,6 @@ $templatePart2 = @'
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
-    // Toggle specific axis trace in XYZ graph
     function toggleAxis(axis) {
       axisVisible[axis] = !axisVisible[axis];
       const pill = document.getElementById(`pill-tog-${axis}`);
@@ -1226,71 +1145,46 @@ $templatePart2 = @'
       drawXyz();
     }
 
-    // Update Dashboard Display with specific record
     function applyRecord(rec) {
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
       const dg = Math.abs(vibe - 9.81);
 
-      // Donut Health Score (100 - penalties)
       let health = 100;
       if (dg > 0.5) health -= (dg * 12);
       if (rms > 200) health -= ((rms - 200) * 0.08);
       health = Math.min(100, Math.max(40, Math.round(health)));
 
-      donutHealthText.innerText = `${health}%`;
-      const healthOffset = 226 - (226 * (health / 100));
-      donutHealthFill.style.strokeDashoffset = healthOffset;
+      kpiHealthScore.innerText = `${health}%`;
+      donutCenterNum.innerText = `${health}%`;
 
-      // Donut Vibe Severity
-      const vibePct = Math.min(100, Math.round((vibe / 14.0) * 100));
-      donutVibeText.innerText = `${vibePct}%`;
-      const vibeOffset = 226 - (226 * (vibePct / 100));
-      donutVibeFill.style.strokeDashoffset = vibeOffset;
+      // Circumference = 2 * PI * 52 ~= 326
+      const offset = 326 - (326 * (health / 100));
+      donutFillSeg.style.strokeDashoffset = offset;
 
-      // 3-Axis Capsules & XYZ Legend Values
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
       const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
-
-      capValX.innerText = strX;
-      capValY.innerText = strY;
-      capValZ.innerText = strZ;
 
       vibeLegX.innerText = strX;
       vibeLegY.innerText = strY;
       vibeLegZ.innerText = strZ;
 
-      capFillX.style.height = `${Math.min(100, Math.abs(ax) * 40)}%`;
-      capFillY.style.height = `${Math.min(100, Math.abs(ay) * 40)}%`;
-      capFillZ.style.height = `${Math.min(100, Math.abs(az) * 8)}%`;
-
-      // Horizontal Pills
-      const spinIntensity = Math.min(100, Math.round((rms / 511.0) * 100));
-      pillSpinVal.innerText = `${spinIntensity}%`;
-      pillSpinFill.style.width = `${spinIntensity}%`;
-
-      const stability = Math.min(100, Math.max(30, Math.round(100 - (dg * 25))));
-      pillStabVal.innerText = `${stability}%`;
-      pillStabFill.style.width = `${stability}%`;
-
-      // Live / Scrubbed timestamp
       const maxT = WASH_DATA[WASH_DATA.length - 1][0];
       lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
     }
 
-    // DRAW DEDICATED TRI-AXIAL VIBRATION GRAPH (Ax, Ay, Az ONLY)
+    // DRAW DEDICATED TRI-AXIAL VIBRATION (AX, AY, AZ)
     function drawXyz() {
       const w = xyzCvs.width;
       const h = xyzCvs.height;
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      // Grid Lines
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      xyzCtx.setLineDash([4, 6]);
+      // Light grid lines
+      xyzCtx.strokeStyle = '#f1f5f9';
       xyzCtx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
         xyzCtx.beginPath();
         xyzCtx.moveTo(0, y);
@@ -1298,31 +1192,31 @@ $templatePart2 = @'
         xyzCtx.stroke();
       }
 
-      // Zero Baseline (for lateral Ax & Ay) - at 35% height
+      // Zero baseline (Ax & Ay) at 35% height
       const yZero = h * 0.35;
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      xyzCtx.strokeStyle = '#e2e8f0';
+      xyzCtx.setLineDash([4, 4]);
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yZero);
       xyzCtx.lineTo(w, yZero);
       xyzCtx.stroke();
 
-      // Gravity Baseline (for Az at -9.81 m/s^2) - at 78% height
+      // Gravity baseline (Az at -9.81) at 78% height
       const yGravity = h * 0.78;
-      xyzCtx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+      xyzCtx.strokeStyle = '#bbf7d0';
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yGravity);
       xyzCtx.lineTo(w, yGravity);
       xyzCtx.stroke();
       xyzCtx.setLineDash([]);
 
-      // Baseline Text Labels
-      xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      xyzCtx.font = `${9 * dpr}px 'JetBrains Mono', monospace`;
+      // Baseline labels
+      xyzCtx.fillStyle = '#94a3b8';
+      xyzCtx.font = `600 ${9 * dpr}px 'JetBrains Mono', monospace`;
       xyzCtx.fillText('0.0 (X/Y)', 6 * dpr, yZero - (4 * dpr));
-      xyzCtx.fillStyle = 'rgba(16, 185, 129, 0.4)';
+      xyzCtx.fillStyle = '#10b981';
       xyzCtx.fillText('-9.81g (Z)', 6 * dpr, yGravity - (4 * dpr));
 
-      // Window around current index
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
       const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
@@ -1330,10 +1224,10 @@ $templatePart2 = @'
 
       if (points.length < 2) return;
 
-      const scaleXY = 14 * dpr; // 1 m/s^2 = 14px
-      const scaleZ = 16 * dpr;  // 1 m/s^2 delta from 9.81 = 16px
+      const scaleXY = 14 * dpr;
+      const scaleZ = 16 * dpr;
 
-      // 1. Plot Az (Vertical / Gravity Vector) in Emerald (#10b981)
+      // 1. Plot Az (Emerald)
       if (axisVisible.z) {
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#10b981';
@@ -1347,10 +1241,10 @@ $templatePart2 = @'
         xyzCtx.stroke();
       }
 
-      // 2. Plot Ay (Fore-Aft / Pitch Vector) in Amber (#f59e0b)
+      // 2. Plot Ay (Coral)
       if (axisVisible.y) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#f59e0b';
+        xyzCtx.strokeStyle = '#f97316';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1361,10 +1255,10 @@ $templatePart2 = @'
         xyzCtx.stroke();
       }
 
-      // 3. Plot Ax (Lateral / Roll Vector) in Cyan (#00f0ff)
+      // 3. Plot Ax (Royal Blue)
       if (axisVisible.x) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#00f0ff';
+        xyzCtx.strokeStyle = '#2563eb';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1375,63 +1269,52 @@ $templatePart2 = @'
         xyzCtx.stroke();
       }
 
-      // Draw Cursor Points on Active Axes
+      // Current point dots
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {
         const cx = (curRel / (points.length - 1)) * w;
-        
         if (axisVisible.x) {
           const cyX = yZero - (points[curRel][1] * scaleXY);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#2563eb';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#00f0ff';
-          xyzCtx.stroke();
         }
-
         if (axisVisible.y) {
           const cyY = yZero - (points[curRel][2] * scaleXY);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#f97316';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#f59e0b';
-          xyzCtx.stroke();
         }
-
         if (axisVisible.z) {
           const cyZ = yGravity - ((points[curRel][3] + 9.81) * scaleZ);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#10b981';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#10b981';
-          xyzCtx.stroke();
         }
       }
     }
 
-    // Draw Spline Waveform (Middle Chart)
+    // DRAW DUAL-MODALITY SPLINE WAVEFORM (Conversions Style)
     function drawSpline() {
       const w = splineCvs.width;
       const h = splineCvs.height;
+      const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      // Dotted horizontal grid lines
-      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-      splineCtx.setLineDash([4, 6]);
+      // Light horizontal grid
+      splineCtx.strokeStyle = '#f1f5f9';
       splineCtx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
         splineCtx.beginPath();
         splineCtx.moveTo(0, y);
         splineCtx.lineTo(w, y);
         splineCtx.stroke();
       }
-      splineCtx.setLineDash([]);
 
-      // Window around current index
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
       const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
@@ -1439,54 +1322,86 @@ $templatePart2 = @'
 
       if (points.length < 2) return;
 
-      // 1. Draw Acoustic Wave (Pink)
+      // 1. Draw Acoustic Wave (Coral with Soft Gradient Fill)
+      const gradCoral = splineCtx.createLinearGradient(0, 0, 0, h);
+      gradCoral.addColorStop(0, 'rgba(249, 115, 22, 0.18)');
+      gradCoral.addColorStop(1, 'rgba(249, 115, 22, 0.0)');
+
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#ff2d75';
-      splineCtx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
+      splineCtx.moveTo(0, h);
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const normRms = points[i][4] / 520.0;
-        const y = h - (normRms * h * 0.8) - 10;
+        const y = h - (normRms * h * 0.75) - 10;
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w, h);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradCoral;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#f97316';
+      splineCtx.lineWidth = 2.5 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = (i / (points.length - 1)) * w;
+        const normRms = points[i][4] / 520.0;
+        const y = h - (normRms * h * 0.75) - 10;
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
 
-      // 2. Draw Vibration Wave (Cyan)
+      // 2. Draw Vibration Wave (Royal Blue with Soft Gradient Fill)
+      const gradBlue = splineCtx.createLinearGradient(0, 0, 0, h);
+      gradBlue.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
+      gradBlue.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#00f0ff';
-      splineCtx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
+      splineCtx.moveTo(0, h);
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        // Centered around 9.81
-        const y = (h * 0.5) - ((v - 9.81) * 25 * (window.devicePixelRatio || 1));
+        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w, h);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradBlue;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#2563eb';
+      splineCtx.lineWidth = 2.5 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = (i / (points.length - 1)) * w;
+        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
 
-      // Peak dots with marker callouts
-      const curRelative = currentIndex - startIdx;
-      if (curRelative >= 0 && curRelative < points.length) {
-        const cx = (curRelative / (points.length - 1)) * w;
-        const cyRms = h - ((points[curRelative][4] / 520.0) * h * 0.8) - 10;
-
-        splineCtx.fillStyle = '#fff';
+      // Current dot marker
+      const curRel = currentIndex - startIdx;
+      if (curRel >= 0 && curRel < points.length) {
+        const cx = (curRel / (points.length - 1)) * w;
+        const normRms = points[curRel][4] / 520.0;
+        const cyRms = h - (normRms * h * 0.75) - 10;
+        splineCtx.fillStyle = '#f97316';
         splineCtx.beginPath();
-        splineCtx.arc(cx, cyRms, 4 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+        splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
         splineCtx.fill();
-        splineCtx.strokeStyle = '#ff2d75';
-        splineCtx.stroke();
       }
     }
 
-    // Draw Full Area Chart (Bottom Chart)
+    // DRAW FULL AREA & TIMELINE BARS (Sales Style)
     function drawArea() {
       const w = areaCvs.width;
       const h = areaCvs.height;
+      const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      // Grid
-      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      // Light grid
+      areaCtx.strokeStyle = '#f1f5f9';
       areaCtx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
@@ -1499,19 +1414,18 @@ $templatePart2 = @'
       const total = WASH_DATA.length;
       if (total < 2) return;
 
-      // Area gradient
+      // Area gradient in light royal blue
       const grad = areaCtx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(255, 45, 117, 0.4)');
-      grad.addColorStop(0.7, 'rgba(255, 45, 117, 0.08)');
-      grad.addColorStop(1, 'rgba(255, 45, 117, 0.0)');
+      grad.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
+      grad.addColorStop(0.8, 'rgba(37, 99, 235, 0.04)');
+      grad.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
-      // Draw area
       areaCtx.beginPath();
       areaCtx.moveTo(0, h);
       for (let i = 0; i < total; i++) {
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 10;
+        const y = h - ((rms / 520.0) * (h - 20)) - 8;
         areaCtx.lineTo(x, y);
       }
       areaCtx.lineTo(w, h);
@@ -1519,37 +1433,39 @@ $templatePart2 = @'
       areaCtx.fillStyle = grad;
       areaCtx.fill();
 
-      // Top stroke
+      // Top curve stroke
       areaCtx.beginPath();
-      areaCtx.strokeStyle = '#ff2d75';
-      areaCtx.lineWidth = 2 * (window.devicePixelRatio || 1);
+      areaCtx.strokeStyle = '#2563eb';
+      areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 10;
+        const y = h - ((rms / 520.0) * (h - 20)) - 8;
         if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
       }
       areaCtx.stroke();
 
-      // Draw scrubber vertical line
+      // Scrubber cursor line
       const curX = (currentIndex / (total - 1)) * w;
-      areaCtx.strokeStyle = '#00f0ff';
+      areaCtx.strokeStyle = '#2563eb';
       areaCtx.lineWidth = 2;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, 0);
       areaCtx.lineTo(curX, h);
       areaCtx.stroke();
 
-      // Scrubber point marker
+      // Scrubber circle
       const curRms = WASH_DATA[currentIndex][4];
-      const curY = h - ((curRms / 520.0) * (h - 20)) - 10;
-      areaCtx.fillStyle = '#00f0ff';
+      const curY = h - ((curRms / 520.0) * (h - 20)) - 8;
+      areaCtx.fillStyle = '#2563eb';
       areaCtx.beginPath();
-      areaCtx.arc(curX, curY, 5 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+      areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
+      areaCtx.strokeStyle = '#ffffff';
+      areaCtx.lineWidth = 2 * dpr;
+      areaCtx.stroke();
     }
 
-    // Scrubber Interaction
     function onScrub(val) {
       currentIndex = parseInt(val, 10);
       const minutes = ((WASH_DATA[currentIndex][0] / 60000)).toFixed(1);
@@ -1560,12 +1476,10 @@ $templatePart2 = @'
       drawArea();
     }
 
-    // Playback Loop
     function togglePlayPause() {
       isPlaying = !isPlaying;
       if (isPlaying) {
         btnPlayWash.innerText = '⏸ Pause Playback';
-        btnPlaybackStatus.innerText = '⏸ Pause Wash 1019';
         playInterval = setInterval(() => {
           currentIndex++;
           if (currentIndex >= WASH_DATA.length) currentIndex = 0;
@@ -1574,31 +1488,23 @@ $templatePart2 = @'
         }, 80);
       } else {
         btnPlayWash.innerText = '▶ Replay Wash 1019';
-        btnPlaybackStatus.innerText = '▶ Playback Wash 1019';
         if (playInterval) clearInterval(playInterval);
       }
     }
 
-    // Mode Switching: Historic vs Live Firebase
     function setMode(mode) {
       currentMode = mode;
       if (mode === 'live') {
         if (isPlaying) togglePlayPause();
-        lblSourceToggle.innerText = 'Source: Live Firebase';
-        lblStatusText.innerText = 'LIVE STREAMING';
-        badgeMode.style.background = 'rgba(0, 240, 255, 0.15)';
-        badgeMode.style.color = '#00f0ff';
-        badgeMode.style.borderColor = 'rgba(0, 240, 255, 0.4)';
+        btnModeToggleText.innerText = 'Mode: Live Firebase Rig';
+        lblLiveText.innerText = 'Live Streaming (50 Hz)';
         document.getElementById('side-item-1').classList.remove('active');
         document.getElementById('side-item-2').classList.add('active');
         startLivePolling();
       } else {
         if (liveTimer) clearInterval(liveTimer);
-        lblSourceToggle.innerText = 'Source: Historic 1019';
-        lblStatusText.innerText = 'WASH 1019 COMPLETED';
-        badgeMode.style.background = 'rgba(16, 185, 129, 0.15)';
-        badgeMode.style.color = '#34d399';
-        badgeMode.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        btnModeToggleText.innerText = 'Mode: Wash 1019 Cycle';
+        lblLiveText.innerText = 'wash_1019 Active';
         document.getElementById('side-item-2').classList.remove('active');
         document.getElementById('side-item-1').classList.add('active');
         applyRecord(WASH_DATA[currentIndex]);
@@ -1608,7 +1514,6 @@ $templatePart2 = @'
       }
     }
 
-    // Live Firebase Polling
     async function startLivePolling() {
       const fetchLive = async () => {
         try {
@@ -1625,7 +1530,6 @@ $templatePart2 = @'
       liveTimer = setInterval(fetchLive, 2000);
     }
 
-    // CSV Download
     function downloadWashCsv() {
       let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n';
       WASH_DATA.forEach(r => {
@@ -1645,16 +1549,7 @@ $templatePart2 = @'
       overlay.style.display = drawer.classList.contains('open') ? 'block' : 'none';
     }
 
-    function syncFirebase() {
-      alert('Firebase Asia-SE1 synced: 422 batches confirmed!');
-    }
-    function toggleFft() {
-      alert('Acoustic FFT: Peak harmonic at 23.3 Hz (1400 RPM spin) confirmed normal.');
-    }
-    function toggleHealth() {
-      alert('Machinery Health: ISO 10816 vibration severity evaluated as Class I (Good).');
-    }
-    function openDoc() {
+    function openPdfDoc() {
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
 
@@ -1677,4 +1572,4 @@ $fullHtml = $templatePart1 + "`n" + $embeddedJs + "`n" + $templatePart2
 $brainArtifact = "C:\Users\adamd\.gemini\antigravity\brain\eaf1a310-7f2a-46d6-b3a7-72b474df813e\dashboard.html"
 [System.IO.File]::WriteAllText($brainArtifact, $fullHtml, [System.Text.Encoding]::UTF8)
 
-Write-Output "Complete! Updated dashboard with dedicated vibration X, Y, Z graph written to all targets."
+Write-Output "Complete! Light aesthetic dashboard generated and written to all targets."

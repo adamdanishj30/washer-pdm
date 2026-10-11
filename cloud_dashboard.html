@@ -6,200 +6,201 @@
   <title>Samsung Washer PdM â€” Multimodal Cloud Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-body: #0d1124;
-      --bg-sidebar: #13172e;
-      --bg-card: #181d38;
-      --bg-card-inner: #12162d;
-      --border-card: rgba(255, 255, 255, 0.08);
-      --border-glow: rgba(255, 45, 117, 0.4);
-      --text-main: #f8fafc;
-      --text-sub: #8e9bb5;
-      --text-dim: #5a6682;
-      --neon-pink: #ff2d75;
-      --neon-pink-glow: rgba(255, 45, 117, 0.35);
-      --neon-cyan: #00f0ff;
-      --neon-cyan-glow: rgba(0, 240, 255, 0.35);
-      --neon-purple: #8b5cf6;
-      --neon-purple-glow: rgba(139, 92, 246, 0.35);
-      --neon-amber: #f59e0b;
-      --neon-emerald: #10b981;
+      --bg-body: #f4f7fc;
+      --bg-card: #ffffff;
+      --bg-card-sub: #f8fafc;
+      --border-card: #e8edf5;
+      --border-sub: #f1f5f9;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --primary-blue: #2563eb;
+      --primary-blue-light: #eff6ff;
+      --primary-blue-border: #dbeafe;
+      --accent-coral: #f97316;
+      --accent-coral-light: #fff7ed;
+      --accent-emerald: #10b981;
+      --accent-emerald-light: #ecfdf5;
+      --accent-purple: #8b5cf6;
+      --accent-purple-light: #f5f3ff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
+      --shadow-card: 0 4px 20px -2px rgba(50, 60, 90, 0.05), 0 2px 6px -1px rgba(50, 60, 90, 0.03);
+      --shadow-card-hover: 0 10px 25px -4px rgba(50, 60, 90, 0.08), 0 4px 10px -2px rgba(50, 60, 90, 0.04);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    
+
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-body);
-      background-image: 
-        radial-gradient(circle at 10% 10%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 10%, rgba(255, 45, 117, 0.06) 0%, transparent 40%),
-        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.05) 0%, transparent 45%);
       color: var(--text-main);
       min-height: 100vh;
-      overflow-x: hidden;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     /* Top Navigation Bar */
     .top-nav {
-      background: rgba(19, 23, 46, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: #ffffff;
       border-bottom: 1px solid var(--border-card);
-      padding: 12px 24px;
+      padding: 12px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 50;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.02);
     }
 
     .nav-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
     }
 
     .brand-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       text-decoration: none;
     }
 
-    .brand-badge {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #ff2d75, #ec4899);
-      box-shadow: 0 0 20px var(--neon-pink-glow);
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary-blue);
+      letter-spacing: -0.5px;
+    }
+
+    .search-box {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 800;
-      font-size: 18px;
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-    .brand-text h1 {
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: #fff;
-    }
-    .brand-text span {
-      font-size: 11px;
-      color: var(--text-sub);
-    }
-
-    /* Nav Center Tabs */
-    .nav-tabs {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .nav-tab {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
-      text-decoration: none;
-      padding: 6px 2px;
-      position: relative;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-
-    .nav-tab:hover {
-      color: #fff;
-    }
-
-    .nav-tab.active {
-      color: #fff;
-    }
-
-    .nav-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -13px;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: var(--neon-cyan);
-      box-shadow: 0 0 10px var(--neon-cyan);
+      gap: 8px;
+      background: #f1f5f9;
+      border: 1px solid transparent;
       border-radius: 999px;
+      padding: 8px 16px;
+      width: 280px;
+      transition: all 0.2s;
+    }
+    .search-box:focus-within {
+      background: #ffffff;
+      border-color: var(--primary-blue-border);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .search-box input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13px;
+      color: var(--text-main);
+      width: 100%;
+      font-family: inherit;
+    }
+    .search-box input::placeholder {
+      color: var(--text-dim);
     }
 
-    /* Nav Right */
     .nav-right {
       display: flex;
       align-items: center;
       gap: 16px;
     }
 
-    .btn-icon {
+    .badge-live-tag {
+      background: var(--accent-emerald-light);
+      color: #059669;
+      border: 1px solid #bbf7d0;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .btn-icon-light {
       width: 36px;
       height: 36px;
-      border-radius: 10px;
-      background: var(--bg-card-inner);
+      border-radius: 50%;
+      background: #f8fafc;
       border: 1px solid var(--border-card);
-      color: var(--text-sub);
+      color: var(--text-muted);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      font-size: 14px;
       position: relative;
       transition: all 0.2s;
     }
-    .btn-icon:hover {
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.2);
+    .btn-icon-light:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
     }
 
-    .badge-count {
+    .notif-bubble {
       position: absolute;
-      top: -4px;
-      right: -4px;
-      background: var(--neon-pink);
+      top: -2px;
+      right: -2px;
+      background: var(--accent-coral);
       color: #fff;
       font-size: 9px;
       font-weight: 800;
-      border-radius: 999px;
-      padding: 2px 5px;
-      box-shadow: 0 0 8px var(--neon-pink);
-    }
-
-    .user-avatar {
-      width: 36px;
-      height: 36px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      border: 2px solid #ffffff;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .user-avatar-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: #ffffff;
       font-weight: 700;
-      color: #fff;
-      border: 2px solid rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .user-profile-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
     }
 
     .hamburger-btn {
       display: none;
       background: none;
       border: none;
-      color: #fff;
-      font-size: 24px;
+      color: var(--text-main);
+      font-size: 22px;
       cursor: pointer;
-      padding: 4px;
     }
 
     /* App Layout */
@@ -209,34 +210,32 @@
       max-width: 1560px;
       margin: 0 auto;
       width: 100%;
-      padding: 20px;
-      gap: 20px;
+      padding: 24px;
+      gap: 24px;
     }
 
-    /* Sidebar */
+    /* Clean White Sidebar */
     .sidebar {
-      width: 230px;
+      width: 220px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 20px;
     }
 
     .sidebar-menu {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .sidebar-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      border-radius: 14px;
-      background: transparent;
-      color: var(--text-sub);
+      padding: 10px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
       text-decoration: none;
       font-size: 13px;
       font-weight: 600;
@@ -244,50 +243,49 @@
       cursor: pointer;
     }
     .sidebar-item:hover {
-      background: rgba(24, 29, 56, 0.6);
-      color: #fff;
+      background: #f1f5f9;
+      color: var(--text-main);
     }
     .sidebar-item.active {
-      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(139, 92, 246, 0.1));
-      color: #fff;
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.1);
+      background: var(--primary-blue-light);
+      color: var(--primary-blue);
+      font-weight: 700;
     }
 
     .sidebar-card {
-      background: var(--bg-card);
+      background: #ffffff;
       border: 1px solid var(--border-card);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
     }
     .sidebar-card h4 {
       font-size: 13px;
       font-weight: 700;
+      color: var(--text-main);
       margin-bottom: 4px;
     }
     .sidebar-card p {
-      font-size: 11px;
-      color: var(--text-sub);
-      margin-bottom: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
       line-height: 1.4;
+      margin-bottom: 14px;
     }
-    .btn-gradient {
+    .btn-side-action {
       width: 100%;
-      padding: 10px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #00f0ff, #3b82f6);
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--primary-blue);
+      color: #ffffff;
       border: none;
-      color: #0b0f19;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 12px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
       transition: all 0.2s;
     }
-    .btn-gradient:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+    .btn-side-action:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
 
     /* Main Dashboard View */
@@ -299,287 +297,134 @@
       min-width: 0;
     }
 
+    /* Section Title */
+    .dashboard-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: -4px;
+    }
+    .page-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
     /* Card Styling */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 20px;
+      border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      position: relative;
-      transition: border-color 0.2s;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-card-hover);
     }
 
-    /* Row 1: Donut Gauges & Stat Panels */
-    .row-top {
+    /* Row 1: 4 Metric Cards (Matching tdlr style) */
+    .row-metrics {
       display: grid;
-      grid-template-columns: auto auto 1.4fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
     }
 
-    /* Donut Gauge Card */
-    .card-donut {
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+    }
+    .kpi-info {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-width: 140px;
-      padding: 16px;
-      text-align: center;
+      gap: 4px;
+    }
+    .kpi-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+    .kpi-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
-    .donut-circle-wrap {
-      position: relative;
-      width: 86px;
-      height: 86px;
-      margin-bottom: 10px;
-    }
-
-    .donut-svg {
-      transform: rotate(-90deg);
-      width: 100%;
-      height: 100%;
-    }
-    .donut-bg {
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 8;
-    }
-    .donut-fill-pink {
-      fill: none;
-      stroke: var(--neon-pink);
-      stroke-width: 8;
-      stroke-linecap: round;
-      stroke-dasharray: 226;
-      stroke-dashoffset: 60;
-      filter: drop-shadow(0 0 6px var(--neon-pink));
-      transition: stroke-dashoffset 0.5s ease;
-    }
-    .donut-val-text {
-      position: absolute;
-      inset: 0;
+    .kpi-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-      color: #fff;
     }
-    .donut-label {
-      font-size: 11px;
-      color: var(--text-sub);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .icon-blue { background: var(--primary-blue-light); color: var(--primary-blue); }
+    .icon-coral { background: var(--accent-coral-light); color: var(--accent-coral); }
+    .icon-purple { background: var(--accent-purple-light); color: var(--accent-purple); }
+    .icon-emerald { background: var(--accent-emerald-light); color: var(--accent-emerald); }
+
+    /* Row 2: Dual Waveform Spline & Multi-Segment Donut Ring */
+    .row-charts-mid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
     }
 
-    /* Middle Stats Block */
-    .card-stats-block {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .stats-header {
+    .card-header-clean {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
-    .stats-header-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-sub);
+    .card-title-clean {
+      font-size: 14px;
       font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .badge-status {
-      padding: 4px 10px;
-      border-radius: 999px;
+
+    .legend-clean-row {
+      display: flex;
+      gap: 14px;
       font-size: 11px;
-      font-weight: 700;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .legend-dot-item {
       display: inline-flex;
       align-items: center;
       gap: 6px;
     }
+    .dot-blue { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-blue); }
+    .dot-coral { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-coral); }
+    .dot-emerald { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); }
 
-    .kpi-four-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-    .kpi-item {
-      background: var(--bg-card-inner);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .kpi-item-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .kpi-item-lbl {
-      font-size: 11px;
-      color: var(--text-sub);
-    }
-
-    /* Right Pill Progress Bars */
-    .card-pills {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 16px;
-    }
-    .pill-progress-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .pill-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-    }
-    .pill-label {
-      color: var(--text-sub);
-      font-weight: 600;
-    }
-    .pill-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 800;
-      font-size: 14px;
-    }
-    .pill-track {
-      width: 100%;
-      height: 12px;
-      background: var(--bg-card-inner);
-      border-radius: 999px;
-      padding: 2px;
-      border: 1px solid var(--border-card);
-      overflow: hidden;
-    }
-    .pill-fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.4s ease;
-    }
-    .fill-purple {
-      background: linear-gradient(90deg, #7c3aed, #ec4899);
-      box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
-    }
-    .fill-cyan {
-      background: linear-gradient(90deg, #0284c7, #00f0ff);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-    }
-
-    /* Row 2: Capsule Bars, Filter Pills & Dual Oscilloscopes */
-    .row-mid {
-      display: grid;
-      grid-template-columns: 220px 1fr 1fr;
-      gap: 16px;
-    }
-
-    /* 3-Axis Capsule Bar Card */
-    .card-capsules {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 14px;
-    }
-    .capsule-bars-container {
-      display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      height: 110px;
-      padding: 8px 0;
-    }
-    .capsule-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-    .capsule-num {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .capsule-pill {
-      width: 26px;
-      height: 75px;
-      background: var(--bg-card-inner);
-      border-radius: 999px;
-      border: 1px solid var(--border-card);
-      display: flex;
-      align-items: flex-end;
-      padding: 2px;
-      overflow: hidden;
-    }
-    .capsule-fill {
-      width: 100%;
-      border-radius: 999px;
-      transition: height 0.3s ease;
-    }
-    .cap-cyan { background: linear-gradient(to top, #0284c7, #00f0ff); box-shadow: 0 0 10px var(--neon-cyan-glow); }
-    .cap-amber { background: linear-gradient(to top, #ea580c, #f59e0b); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-    .cap-emerald { background: linear-gradient(to top, #059669, #10b981); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-
-    /* Filter dropdown pills */
-    .filter-pills-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 4px;
-    }
-    .pill-select-btn {
-      background: var(--bg-card-inner);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 8px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-sub);
-      cursor: pointer;
-    }
-    .pill-select-btn:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    /* Oscilloscope Cards */
-    .card-osc {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .chart-title {
-      font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .canvas-container {
+    .canvas-box-mid {
       position: relative;
       width: 100%;
-      height: 160px;
+      height: 190px;
     }
     canvas {
       width: 100%;
@@ -587,137 +432,239 @@
       display: block;
     }
 
-    /* Interactive Axis Toggles */
-    .axis-toggle-pill {
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 6px;
-      user-select: none;
-      transition: opacity 0.2s;
+    /* Donut Ring Card (Right Column) */
+    .card-donut-clean {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
-    .axis-toggle-pill.dimmed {
+    .donut-ring-wrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      margin: 6px auto;
+    }
+    .donut-svg-clean {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+    .donut-bg-clean {
+      fill: none;
+      stroke: #f1f5f9;
+      stroke-width: 12;
+    }
+    .donut-seg-blue {
+      fill: none;
+      stroke: var(--primary-blue);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 326;
+      stroke-dashoffset: 70;
+      transition: stroke-dashoffset 0.4s;
+    }
+    .donut-seg-coral {
+      fill: none;
+      stroke: var(--accent-coral);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 326;
+      stroke-dashoffset: 240;
+    }
+    .donut-center-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .donut-big-num {
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+    }
+    .donut-sub-lbl {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    .donut-legend-list {
+      display: flex;
+      justify-content: space-around;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-sub);
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) Card */
+    .row-xyz-dedicated {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .axis-pill-toggle {
+      background: #f8fafc;
+      border: 1px solid var(--border-card);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .axis-pill-toggle:hover {
+      background: #f1f5f9;
+    }
+    .axis-pill-toggle.dimmed {
       opacity: 0.35;
       text-decoration: line-through;
     }
 
-    /* Row 3: Neon Area Chart, Grouped Bars & Action Controls */
-    .row-bottom {
+    /* Row 4: Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown */
+    .row-bottom-split {
       display: grid;
-      grid-template-columns: 1.5fr 1fr;
+      grid-template-columns: 1.4fr 1fr;
       gap: 16px;
     }
 
-    .bottom-right-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 1200px) {
-      .bottom-right-grid { grid-template-columns: 1fr; }
-    }
-
-    /* Timeline scrubber card */
-    .timeline-scrubber-box {
-      margin-top: 10px;
+    /* Scrubber Slider */
+    .timeline-clean-box {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: var(--bg-card-inner);
-      padding: 8px 14px;
-      border-radius: 12px;
+      gap: 14px;
+      background: var(--bg-card-sub);
       border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin-top: 12px;
     }
-    .timeline-scrubber-box input[type="range"] {
+    .timeline-clean-box input[type="range"] {
       flex: 1;
-      accent-color: var(--neon-pink);
+      accent-color: var(--primary-blue);
       cursor: pointer;
     }
-    .scrub-time-label {
+    .timeline-tag-time {
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
       font-weight: 700;
-      color: var(--neon-pink);
-      min-width: 55px;
+      color: var(--primary-blue);
+      min-width: 60px;
     }
 
-    /* Grouped Bar Chart */
-    .grouped-bars-box {
+    /* Action Control Row */
+    .actions-clean-row {
       display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      height: 140px;
-      padding: 10px 0;
+      gap: 10px;
+      margin-top: 14px;
     }
-    .bar-group {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
+    .btn-clean-primary {
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: var(--primary-blue);
+      color: #ffffff;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
     }
-    .v-bar {
-      width: 12px;
-      border-radius: 4px 4px 0 0;
-      transition: height 0.3s ease;
+    .btn-clean-primary:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
-    .v-bar-cyan { background: #00f0ff; }
-    .v-bar-pink { background: #ff2d75; }
-    .v-bar-purple { background: #8b5cf6; }
+    .btn-clean-secondary {
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-clean-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
 
-    /* Action Buttons */
-    .actions-box {
+    /* Phase List Items ("Projects" list style) */
+    .phase-list {
       display: flex;
       flex-direction: column;
-      justify-content: center;
       gap: 10px;
     }
-    .btn-pill-pink {
-      padding: 12px 18px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #ff2d75, #ec4899);
-      box-shadow: 0 4px 20px var(--neon-pink-glow);
-      border: none;
-      color: #fff;
+    .phase-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border-sub);
+      transition: all 0.2s;
+    }
+    .phase-item:hover {
+      border-color: var(--primary-blue-border);
+      background: #ffffff;
+    }
+    .phase-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .phase-badge-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--primary-blue-light);
+      color: var(--primary-blue);
       font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
     }
-    .btn-pill-pink:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px var(--neon-pink-glow);
-    }
-
-    .btn-pill-blue {
-      padding: 12px 18px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #0284c7, #3b82f6);
-      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-      border: none;
-      color: #fff;
-      font-weight: 700;
+    .phase-title {
       font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
+      font-weight: 700;
+      color: var(--text-main);
     }
-    .btn-pill-blue:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(59, 130, 246, 0.6);
+    .phase-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .phase-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
     }
 
-    /* Mobile Drawer */
+    /* Mobile Drawer Overlay */
     .mobile-drawer-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
       z-index: 99;
     }
     .mobile-drawer {
@@ -726,7 +673,7 @@
       bottom: 0;
       left: -280px;
       width: 260px;
-      background: var(--bg-sidebar);
+      background: #ffffff;
       border-right: 1px solid var(--border-card);
       z-index: 100;
       padding: 24px;
@@ -734,6 +681,7 @@
       flex-direction: column;
       justify-content: space-between;
       transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
     .mobile-drawer.open {
       left: 0;
@@ -741,13 +689,13 @@
 
     /* Responsive Breakpoints */
     @media (max-width: 1200px) {
-      .row-top {
+      .row-metrics {
         grid-template-columns: repeat(2, 1fr);
       }
-      .row-mid {
+      .row-charts-mid {
         grid-template-columns: 1fr;
       }
-      .row-bottom {
+      .row-bottom-split {
         grid-template-columns: 1fr;
       }
     }
@@ -756,7 +704,7 @@
       .top-nav {
         padding: 10px 16px;
       }
-      .nav-tabs {
+      .search-box {
         display: none;
       }
       .sidebar {
@@ -766,21 +714,13 @@
         display: block;
       }
       .app-layout {
-        padding: 12px;
+        padding: 14px;
       }
-      .row-top {
+      .row-metrics {
         grid-template-columns: 1fr;
-      }
-      .kpi-four-grid {
-        grid-template-columns: 1fr;
-      }
-      .donut-dual-box {
-        display: flex;
-        justify-content: space-around;
       }
       .card {
         padding: 16px;
-        border-radius: 16px;
       }
     }
   </style>
@@ -792,30 +732,32 @@
     <div class="nav-left">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">â˜°</button>
       <a href="#" class="brand-logo">
-        <div class="brand-badge">S</div>
-        <div class="brand-text">
-          <h1>SAMSUNG PdM</h1>
-          <span>WW10TP44DSX/FQ â€¢ 10kg Washer</span>
-        </div>
+        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
       </a>
+      <div class="search-box">
+        <span style="color: var(--text-dim); font-size: 14px;">ðŸ”</span>
+        <input type="text" placeholder="Search machine telemetry, ISO 10816...">
+      </div>
     </div>
 
-    <nav class="nav-tabs">
-      <a class="nav-tab active" onclick="setMode('historic')">Wash 1019 Analysis</a>
-      <a class="nav-tab" onclick="setMode('live')">Real-Time Sensor</a>
-      <a class="nav-tab" onclick="toggleFft()">Acoustic FFT</a>
-      <a class="nav-tab" onclick="toggleHealth()">Machinery Health</a>
-    </nav>
-
     <div class="nav-right">
-      <div class="btn-icon" onclick="downloadWashCsv()" title="Download CSV">
+      <div class="badge-live-tag" id="badge-live">
+        <span class="badge-dot"></span>
+        <span id="lbl-live-text">wash_1019 Active</span>
+      </div>
+
+      <div class="btn-icon-light" onclick="downloadWashCsv()" title="Download CSV">
         ðŸ“¥
       </div>
-      <div class="btn-icon" title="Machine Notifications">
+      <div class="btn-icon-light" title="Notifications">
         ðŸ””
-        <span class="badge-count">1</span>
+        <span class="notif-bubble">1</span>
       </div>
-      <div class="user-avatar">AD</div>
+
+      <div class="user-profile">
+        <div class="user-avatar-circle">AD</div>
+        <span class="user-profile-name">Adam D.</span>
+      </div>
     </div>
   </header>
 
@@ -824,307 +766,301 @@
   <aside class="mobile-drawer" id="mobile-drawer">
     <div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <div class="brand-logo">
-          <div class="brand-badge">S</div>
-          <div class="brand-text">
-            <h1>SAMSUNG PdM</h1>
-            <span>Mobile Monitor</span>
-          </div>
-        </div>
-        <button onclick="toggleMobileMenu()" style="background:none; border:none; color:#fff; font-size:20px;">âœ•</button>
+        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
+        <button onclick="toggleMobileMenu()" style="background:none; border:none; font-size:20px; cursor:pointer;">âœ•</button>
       </div>
       <div class="sidebar-menu">
-        <a class="sidebar-item active" onclick="setMode('historic'); toggleMobileMenu()">ðŸŒ€ Wash 1019 Run</a>
+        <a class="sidebar-item active" onclick="setMode('historic'); toggleMobileMenu()">ðŸ“Š Wash 1019 Run</a>
         <a class="sidebar-item" onclick="setMode('live'); toggleMobileMenu()">ðŸ“¡ Live ESP32 Stream</a>
         <a class="sidebar-item" onclick="downloadWashCsv()">ðŸ’¾ Download wash_1019.csv</a>
-        <a class="sidebar-item" onclick="toggleMobileMenu()">ðŸ›¡ï¸ ISO 10816 Specs</a>
+        <a class="sidebar-item" onclick="toggleMobileMenu()">ðŸ›¡ï¸ ISO 10816 Standards</a>
       </div>
     </div>
     <div class="sidebar-card">
       <h4>Firebase Cloud</h4>
-      <p>Autonomous 50 Hz cloud telemetry synced.</p>
-      <button class="btn-gradient" onclick="syncFirebase()">âš¡ Force Cloud Sync</button>
+      <p>422 multimodal records synced over Asia-SE1.</p>
+      <button class="btn-side-action" onclick="downloadWashCsv()">ðŸ“¥ Export CSV</button>
     </div>
   </aside>
 
   <!-- App Layout -->
   <div class="app-layout">
     
-    <!-- Left Sidebar (Desktop) -->
+    <!-- Clean Minimalist Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-menu">
         <div class="sidebar-item active" id="side-item-1" onclick="setMode('historic')">
-          <span>ðŸŒ€</span> Wash 1019 Cycle
+          <span>ðŸ“Š</span> Dashboard
         </div>
         <div class="sidebar-item" id="side-item-2" onclick="setMode('live')">
-          <span>ðŸ“¡</span> Live Firebase Rig
+          <span>ðŸ“¡</span> Live Telemetry
         </div>
         <div class="sidebar-item" onclick="toggleAxis('x')">
-          <span>ðŸ“³</span> 3-Axis IMU (MPU)
+          <span>ðŸ“³</span> Tri-Axial IMU
         </div>
-        <div class="sidebar-item" onclick="toggleFft()">
-          <span>ðŸŽ™ï¸</span> I2S Audio (INMP)
+        <div class="sidebar-item" onclick="openPdfDoc()">
+          <span>ðŸ“‘</span> Setup Guide
         </div>
-        <div class="sidebar-item" onclick="openDoc()">
-          <span>ðŸ“„</span> Academic Specs
+        <div class="sidebar-item" onclick="openPdfDoc()">
+          <span>âš™ï¸</span> Settings
         </div>
       </div>
 
       <div class="sidebar-card">
-        <h4>Firebase Cloud Asia-SE1</h4>
-        <p>422 wash records archived (~35.9 minutes).</p>
-        <button class="btn-gradient" onclick="downloadWashCsv()">ðŸ“¥ Download CSV</button>
+        <h4>Samsung Washer PdM</h4>
+        <p>WW10TP44DSX/FQ front-load rotating machine diagnostics.</p>
+        <button class="btn-side-action" onclick="downloadWashCsv()">ðŸ“¥ Export CSV</button>
       </div>
     </aside>
 
     <!-- Main Content Area -->
     <main class="main-view">
 
-      <!-- Row 1: Dual Donut Gauges, Stats Grid, & Capsule Progress -->
-      <section class="row-top">
+      <!-- Header Title Row -->
+      <div class="dashboard-header-row">
+        <div>
+          <h2 class="page-title">Dashboard</h2>
+          <p class="page-subtitle">Multimodal Machine Learning PdM â€¢ ESP32 DevKit V1 (MPU-6050 + INMP441)</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-clean-secondary" style="padding: 6px 14px; font-size: 12px;" onclick="setMode(currentMode === 'live' ? 'historic' : 'live')">
+            <span id="btn-mode-toggle-text">Mode: Wash 1019 Cycle</span> â‡„
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 1: 4 Clean KPI Cards -->
+      <section class="row-metrics">
         
-        <!-- Donut 1: Machine Health -->
-        <div class="card card-donut">
-          <div class="donut-circle-wrap">
-            <svg class="donut-svg" viewBox="0 0 86 86">
-              <circle class="donut-bg" cx="43" cy="43" r="36"></circle>
-              <circle class="donut-fill-pink" id="donut-health-fill" cx="43" cy="43" r="36" style="stroke-dashoffset: 14;"></circle>
-            </svg>
-            <div class="donut-val-text" id="donut-health-text">94%</div>
+        <!-- Card 1: Resultant Vibration -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Avg Vibration</span>
+            <div class="kpi-val" style="color: var(--primary-blue);" id="kpi-avg-vibe">
+              9.58 <span class="kpi-sub">m/sÂ²</span>
+            </div>
+            <span class="kpi-sub">Static Gravity: 1.0g</span>
           </div>
-          <span class="donut-label">Health Score</span>
-          <span style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">ISO 10816 Class I</span>
+          <div class="kpi-icon-circle icon-blue">ðŸ“³</div>
         </div>
 
-        <!-- Donut 2: Vibration Severity -->
-        <div class="card card-donut">
-          <div class="donut-circle-wrap">
-            <svg class="donut-svg" viewBox="0 0 86 86">
-              <circle class="donut-bg" cx="43" cy="43" r="36"></circle>
-              <circle class="donut-fill-pink" id="donut-vibe-fill" cx="43" cy="43" r="36" style="stroke-dashoffset: 145;"></circle>
-            </svg>
-            <div class="donut-val-text" id="donut-vibe-text">38%</div>
+        <!-- Card 2: Peak Vibration -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Peak Vibration</span>
+            <div class="kpi-val" style="color: var(--accent-coral);" id="kpi-peak-vibe">
+              10.14 <span class="kpi-sub">m/sÂ²</span>
+            </div>
+            <span class="kpi-sub" style="color: #ea580c;">Spin Extraction</span>
           </div>
-          <span class="donut-label">Vibe Severity</span>
-          <span style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">Equilibrium Normal</span>
+          <div class="kpi-icon-circle icon-coral">ðŸ“ˆ</div>
         </div>
 
-        <!-- Middle Stats Block -->
-        <div class="card card-stats-block">
-          <div class="stats-header">
-            <span class="stats-header-title">Cycle Telemetry Summary</span>
-            <div class="badge-status" id="badge-mode">
-              <span>â—</span> <span id="lbl-status-text">WASH 1019 COMPLETED</span>
+        <!-- Card 3: Acoustic Noise -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Acoustic Energy</span>
+            <div class="kpi-val" style="color: var(--accent-purple);" id="kpi-avg-rms">
+              146.9 <span class="kpi-sub">RMS</span>
             </div>
+            <span class="kpi-sub">Peak: 511.2 RMS</span>
           </div>
-          <div class="kpi-four-grid">
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Avg Resultant</span>
-              <span class="kpi-item-val" style="color: var(--neon-cyan);" id="kpi-avg-vibe">9.58 <span style="font-size:11px;">m/sÂ²</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Peak Vibration</span>
-              <span class="kpi-item-val" style="color: var(--neon-pink);" id="kpi-peak-vibe">10.14 <span style="font-size:11px;">m/sÂ²</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Avg Acoustic</span>
-              <span class="kpi-item-val" style="color: var(--neon-purple);" id="kpi-avg-rms">146.9 <span style="font-size:11px;">RMS</span></span>
-            </div>
-            <div class="kpi-item">
-              <span class="kpi-item-lbl">Peak Sound Energy</span>
-              <span class="kpi-item-val" style="color: #ff2d75;" id="kpi-peak-rms">511.2 <span style="font-size:11px;">RMS</span></span>
-            </div>
-          </div>
+          <div class="kpi-icon-circle icon-purple">ðŸŽ™ï¸</div>
         </div>
 
-        <!-- Right Horizontal Pill Progress Bars -->
-        <div class="card card-pills">
-          <div class="pill-progress-group">
-            <div class="pill-header">
-              <span class="pill-label">Spin Cycle Energy</span>
-              <span class="pill-val" style="color: #ec4899;" id="pill-spin-val">68%</span>
+        <!-- Card 4: Machine Health -->
+        <div class="card kpi-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Health Score</span>
+            <div class="kpi-val" style="color: var(--accent-emerald);" id="kpi-health-score">
+              94%
             </div>
-            <div class="pill-track">
-              <div class="pill-fill fill-purple" id="pill-spin-fill" style="width: 68%;"></div>
-            </div>
+            <span class="kpi-sub" style="color: #059669;">ISO 10816 Class I</span>
           </div>
-          <div class="pill-progress-group">
-            <div class="pill-header">
-              <span class="pill-label">Dynamic Equilibrium</span>
-              <span class="pill-val" style="color: #00f0ff;" id="pill-stab-val">82%</span>
-            </div>
-            <div class="pill-track">
-              <div class="pill-fill fill-cyan" id="pill-stab-fill" style="width: 82%;"></div>
-            </div>
-          </div>
+          <div class="kpi-icon-circle icon-emerald">ðŸ›¡ï¸</div>
         </div>
+
       </section>
 
-      <!-- Row 2: Capsule 3-Axis Bars, DEDICATED Tri-Axial Vibration (X, Y, Z) Graph, & Dual-Line Spline Waveform -->
-      <section class="row-mid">
+      <!-- Row 2: Conversions Spline Waveform & Traffic Channels Donut -->
+      <section class="row-charts-mid">
         
-        <!-- 1. 3-Axis Dynamic Vectors & Filter Pills -->
-        <div class="card card-capsules">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-sub);">
-            3-Axis Dynamic Vectors
-          </div>
-          <div class="capsule-bars-container">
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #00f0ff;" id="cap-val-x">-0.72</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-cyan" id="cap-fill-x" style="height: 45%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Ax</span>
+        <!-- Spline Dual-Modality Waveform (Conversions Style) -->
+        <div class="card">
+          <div class="card-header-clean">
+            <div>
+              <h3 class="card-title-clean">Dual-Modality Spline Waveform</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Synchronized vibration acceleration vs. acoustic sound pressure</p>
             </div>
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #f59e0b;" id="cap-val-y">+1.41</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-amber" id="cap-fill-y" style="height: 60%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Ay</span>
-            </div>
-            <div class="capsule-col">
-              <span class="capsule-num" style="color: #10b981;" id="cap-val-z">-9.44</span>
-              <div class="capsule-pill">
-                <div class="capsule-fill cap-emerald" id="cap-fill-z" style="height: 85%;"></div>
-              </div>
-              <span style="font-size: 10px; color: var(--text-sub);">Az</span>
+            <div class="legend-clean-row">
+              <span class="legend-dot-item"><span class="dot-blue"></span> Vibration |a|</span>
+              <span class="legend-dot-item"><span class="dot-coral"></span> Acoustic RMS</span>
             </div>
           </div>
 
-          <div class="filter-pills-box">
-            <div class="pill-select-btn" onclick="togglePlayPause()">
-              <span id="btn-playback-status">â–¶ Playback Wash 1019</span>
-              <span>â–¼</span>
-            </div>
-            <div class="pill-select-btn" onclick="setMode(currentMode === 'live' ? 'historic' : 'live')">
-              <span id="lbl-source-toggle">Source: Historic 1019</span>
-              <span>â‡„</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. NEW DEDICATED GRAPH: Tri-Axial Vibration Only (Ax, Ay, Az) -->
-        <div class="card card-osc">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>Tri-Axial Vibration (Ax, Ay, Az)</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">[MPU-6050 Direct]</span>
-            </div>
-            <div style="display: flex; gap: 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
-              <span class="axis-toggle-pill" id="pill-tog-x" style="color: #00f0ff;" onclick="toggleAxis('x')" title="Toggle Ax">
-                â— Ax: <span id="vibe-leg-x">-0.72</span>
-              </span>
-              <span class="axis-toggle-pill" id="pill-tog-y" style="color: #f59e0b;" onclick="toggleAxis('y')" title="Toggle Ay">
-                â— Ay: <span id="vibe-leg-y">+1.41</span>
-              </span>
-              <span class="axis-toggle-pill" id="pill-tog-z" style="color: #10b981;" onclick="toggleAxis('z')" title="Toggle Az">
-                â— Az: <span id="vibe-leg-z">-9.44</span>
-              </span>
-            </div>
-          </div>
-          <div class="canvas-container">
-            <canvas id="xyz-canvas"></canvas>
-          </div>
-        </div>
-
-        <!-- 3. Dual-Line Spline Oscilloscope (Resultant Vibe & Acoustic RMS) -->
-        <div class="card card-osc">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>Dual-Modality Spline Waveform</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">(|a| & RMS)</span>
-            </div>
-            <div style="display: flex; gap: 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
-              <span style="color: #00f0ff;">â— Vibe |a|</span>
-              <span style="color: #ff2d75;">â— Sound RMS</span>
-            </div>
-          </div>
-          <div class="canvas-container">
+          <div class="canvas-box-mid">
             <canvas id="spline-canvas"></canvas>
           </div>
         </div>
+
+        <!-- Clean Donut Multi-Segment Ring (Traffic Channels Style) -->
+        <div class="card card-donut-clean">
+          <div class="card-header-clean" style="margin-bottom: 0;">
+            <h3 class="card-title-clean">Machinery Status</h3>
+            <span style="font-size: 11px; color: var(--text-dim);">Real-Time</span>
+          </div>
+
+          <div class="donut-ring-wrap">
+            <svg class="donut-svg-clean" viewBox="0 0 130 130">
+              <circle class="donut-bg-clean" cx="65" cy="65" r="52"></circle>
+              <circle class="donut-seg-blue" id="donut-fill-seg" cx="65" cy="65" r="52"></circle>
+              <circle class="donut-seg-coral" cx="65" cy="65" r="52"></circle>
+            </svg>
+            <div class="donut-center-text">
+              <span class="donut-big-num" id="donut-center-num">94%</span>
+              <span class="donut-sub-lbl">Health</span>
+            </div>
+          </div>
+
+          <div class="donut-legend-list">
+            <span class="legend-dot-item"><span class="dot-blue"></span> Normal</span>
+            <span class="legend-dot-item"><span class="dot-coral"></span> Dynamic</span>
+            <span class="legend-dot-item"><span class="dot-emerald"></span> Stable</span>
+          </div>
+        </div>
+
       </section>
 
-      <!-- Row 3: Full 35.9-min Area Chart, Grouped Bars & Action Controls -->
-      <section class="row-bottom">
-        
-        <!-- Large Glowing Area Chart: Full Wash 1019 Run -->
+      <!-- Row 3: DEDICATED Tri-Axial Vibration (Ax, Ay, Az) Graph -->
+      <section class="row-xyz-dedicated">
         <div class="card">
-          <div class="chart-header">
+          <div class="card-header-clean">
             <div>
-              <div class="chart-title">Wash Cycle 1019 Full Timeline (35.9 Minutes)</div>
-              <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                Complete real machine run from drum fill through wash agitation to final high-speed extraction spin
-              </div>
+              <h3 class="card-title-clean">Tri-Axial Vibration (Ax, Ay, Az)</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">MPU-6050 direct Â±16g accelerometer register burst reading</p>
             </div>
-            <span style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--neon-pink);" id="lbl-curr-time">
+            <div style="display: flex; gap: 8px;">
+              <span class="axis-pill-toggle" id="pill-tog-x" style="color: var(--primary-blue);" onclick="toggleAxis('x')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--primary-blue);"></span>
+                Ax: <strong id="vibe-leg-x">-0.72</strong> m/sÂ²
+              </span>
+              <span class="axis-pill-toggle" id="pill-tog-y" style="color: var(--accent-coral);" onclick="toggleAxis('y')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-coral);"></span>
+                Ay: <strong id="vibe-leg-y">+1.41</strong> m/sÂ²
+              </span>
+              <span class="axis-pill-toggle" id="pill-tog-z" style="color: var(--accent-emerald);" onclick="toggleAxis('z')">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);"></span>
+                Az: <strong id="vibe-leg-z">-9.44</strong> m/sÂ²
+              </span>
+            </div>
+          </div>
+
+          <div class="canvas-box-mid" style="height: 180px;">
+            <canvas id="xyz-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 4: Full 35.9-min Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown -->
+      <section class="row-bottom-split">
+        
+        <!-- Full Timeline & Controls -->
+        <div class="card">
+          <div class="card-header-clean">
+            <div>
+              <h3 class="card-title-clean">Wash Cycle 1019 Full Timeline (35.9 Minutes)</h3>
+              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">422 real recorded time-series frames from Samsung front-load washer</p>
+            </div>
+            <span style="font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary-blue);" id="lbl-curr-time">
               00:00 / 35:54
             </span>
           </div>
 
-          <div class="canvas-container" style="height: 180px;">
+          <div class="canvas-box-mid" style="height: 160px;">
             <canvas id="area-canvas"></canvas>
           </div>
 
           <!-- Timeline Scrubber -->
-          <div class="timeline-scrubber-box">
-            <span style="font-size: 11px; color: var(--text-sub);">Scrub:</span>
+          <div class="timeline-clean-box">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Scrub Timeline:</span>
             <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
-            <span class="scrub-time-label" id="scrub-label">0.0m</span>
-          </div>
-        </div>
-
-        <!-- Bottom Right Grid: Grouped Bars & Actions -->
-        <div class="bottom-right-grid">
-          
-          <!-- Operation Phase Energy Bars -->
-          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-            <div class="chart-title" style="font-size: 12px;">Phase Distribution</div>
-            <div class="grouped-bars-box">
-              <div class="bar-group" title="Wash Agitation">
-                <div class="v-bar v-bar-cyan" style="height: 45px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 30px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 60px;"></div>
-              </div>
-              <div class="bar-group" title="Intermediate Drain">
-                <div class="v-bar v-bar-cyan" style="height: 65px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 50px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 85px;"></div>
-              </div>
-              <div class="bar-group" title="High Spin Extraction">
-                <div class="v-bar v-bar-cyan" style="height: 110px;"></div>
-                <div class="v-bar v-bar-pink" style="height: 125px;"></div>
-                <div class="v-bar v-bar-purple" style="height: 95px;"></div>
-              </div>
-            </div>
-            <div style="display: flex; justify-content: space-around; font-size: 10px; color: var(--text-sub); text-align: center;">
-              <span>Agitation</span>
-              <span>Drain</span>
-              <span>High Spin</span>
-            </div>
+            <span class="timeline-tag-time" id="scrub-label">0.0m</span>
           </div>
 
-          <!-- Action Buttons Box -->
-          <div class="card actions-box">
-            <button class="btn-pill-pink" onclick="togglePlayPause()" id="btn-play-wash">
+          <!-- Action Buttons -->
+          <div class="actions-clean-row">
+            <button class="btn-clean-primary" onclick="togglePlayPause()" id="btn-play-wash">
               â–¶ Replay Wash 1019
             </button>
-            <button class="btn-pill-blue" onclick="downloadWashCsv()">
+            <button class="btn-clean-secondary" onclick="downloadWashCsv()">
               ðŸ“¥ Download wash_1019.csv
             </button>
-            <button class="pill-select-btn" style="text-align: center; justify-content: center;" onclick="setMode('live')">
+            <button class="btn-clean-secondary" onclick="setMode('live')">
               âš¡ Connect Live Firebase
             </button>
           </div>
-
         </div>
+
+        <!-- Phase List ("Projects" style list from reference image) -->
+        <div class="card">
+          <div class="card-header-clean">
+            <h3 class="card-title-clean">Wash Phases & Cycle Breakdown</h3>
+            <span style="font-size: 12px; color: var(--primary-blue); font-weight: 600; cursor: pointer;">Samsung WW10T</span>
+          </div>
+
+          <div class="phase-list">
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">1</div>
+                <div>
+                  <div class="phase-title">Drum Fill & Soak</div>
+                  <div class="phase-desc">0 - 8 mins â€¢ Water inlet valve</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--primary-blue);">44.7 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">2</div>
+                <div>
+                  <div class="phase-title">Agitation & Wash Tumble</div>
+                  <div class="phase-desc">8 - 22 mins â€¢ Direct drive motor 50 RPM</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--primary-blue);">146.9 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">3</div>
+                <div>
+                  <div class="phase-title">Intermediate Drain & Rinse</div>
+                  <div class="phase-desc">22 - 30 mins â€¢ Drain pump active</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: var(--accent-coral);">227.0 RMS</span>
+            </div>
+
+            <div class="phase-item">
+              <div class="phase-left">
+                <div class="phase-badge-num">4</div>
+                <div>
+                  <div class="phase-title">High-Speed Spin Extraction</div>
+                  <div class="phase-desc">30 - 35.9 mins â€¢ 1400 RPM spin</div>
+                </div>
+              </div>
+              <span class="phase-val" style="color: #dc2626;">511.2 RMS</span>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </main>
   </div>
 
-  <!-- Embedded Real Wash 1019 Dataset & Logic -->
+  <!-- Embedded Wash 1019 Dataset & Logic -->
   <script>
 const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.0],[15099,-0.62,1.51,-9.82,157.0],[20116,-0.78,1.5,-9.62,113.6],[25164,-0.58,1.4,-9.33,232.7],[30174,-0.64,1.38,-9.43,103.8],[35291,-0.75,1.42,-9.4,21.2],[40318,-0.72,1.41,-9.38,115.7],[45370,-0.77,1.39,-9.5,70.2],[50374,-0.72,1.42,-9.41,162.8],[55414,-0.72,1.41,-9.46,94.8],[60428,-0.73,1.47,-9.5,102.6],[65476,-0.71,1.4,-9.32,73.1],[70528,-0.69,1.39,-9.46,102.9],[75565,-0.76,1.44,-9.47,97.8],[80667,-0.75,1.39,-9.45,58.8],[85669,-0.7,1.42,-9.55,45.3],[90727,-0.69,1.39,-9.47,48.4],[95743,-0.74,1.4,-9.48,106.6],[100950,-0.77,1.41,-9.36,79.2],[105964,-0.78,1.42,-9.46,57.7],[111008,-0.72,1.42,-9.47,44.1],[116016,-0.76,1.4,-9.47,42.7],[121148,-0.76,1.41,-9.44,63.4],[126178,-0.7,1.44,-9.45,96.0],[131357,-0.74,1.42,-9.47,20.2],[136393,-0.72,1.38,-9.42,23.1],[141396,-0.71,1.37,-9.41,78.6],[146399,-0.72,1.45,-9.43,65.6],[151520,-0.74,1.41,-9.33,263.7],[156520,-0.7,1.32,-9.43,76.0],[161663,-0.73,1.38,-9.43,100.0],[166693,-0.71,1.4,-9.4,64.1],[171916,-0.74,1.42,-9.53,54.1],[176935,-0.79,1.31,-9.35,145.9],[181977,-0.71,1.4,-9.25,227.5],[187014,-0.71,1.36,-9.43,114.5],[192179,-0.76,1.37,-9.46,71.4],[197229,-0.69,1.43,-9.47,39.5],[202331,-0.71,1.45,-9.46,56.8],[207377,-0.7,1.43,-9.54,193.2],[212496,-0.74,1.44,-9.44,221.0],[217537,-0.72,1.42,-9.44,60.8],[222589,-0.74,1.42,-9.41,227.0],[227613,-0.71,1.42,-9.38,76.4],[232769,-0.71,1.42,-9.41,141.7],[237818,-0.77,1.4,-9.37,85.2],[242905,-0.72,1.43,-9.46,151.3],[247936,-0.75,1.42,-9.44,98.4],[252986,-0.72,1.42,-9.45,47.7],[258020,-0.75,1.43,-9.53,146.2],[263108,-0.73,1.43,-9.5,96.2],[268148,-0.71,1.38,-9.45,20.9],[273378,-0.75,1.44,-9.4,82.9],[278413,-0.76,1.4,-9.36,82.9],[283434,-0.8,1.44,-9.53,213.6],[288453,-0.7,1.32,-9.34,71.3],[293515,-0.7,1.32,-9.33,95.2],[298518,-0.64,1.38,-9.24,184.5],[303703,-0.7,1.24,-9.44,101.7],[308725,-0.73,1.23,-9.64,97.3],[313825,-0.71,1.41,-9.32,142.4],[318829,-0.68,1.33,-9.62,148.3],[323904,-0.73,1.37,-9.49,174.7],[328946,-0.74,1.42,-9.52,86.8],[334015,-0.73,1.4,-9.55,185.7],[339030,-0.74,1.38,-9.35,109.3],[344191,-0.74,1.39,-9.48,254.7],[349231,-0.8,1.46,-9.47,131.5],[354305,-0.8,1.44,-9.31,155.8],[359310,-0.72,1.49,-9.39,80.9],[364425,-0.77,1.42,-9.48,259.0],[369444,-0.72,1.42,-9.46,148.2],[374517,-0.76,1.43,-9.39,117.8],[379544,-0.7,1.4,-9.35,109.9],[384683,-0.74,1.41,-9.45,176.3],[389703,-0.74,1.39,-9.4,61.5],[394738,-0.74,1.35,-9.55,90.1],[400111,-0.67,1.38,-9.35,305.2],[405126,-0.73,1.38,-9.43,211.0],[410253,-0.8,1.37,-9.6,229.4],[415290,-0.66,1.28,-9.3,144.1],[420416,-0.72,1.33,-9.57,220.3],[425436,-0.87,1.48,-9.43,127.9],[430561,-0.78,1.48,-9.37,223.3],[435570,-0.67,1.47,-9.47,87.8],[440701,-0.73,1.43,-9.43,196.9],[445707,-0.74,1.3,-9.78,88.9],[450798,-0.73,1.59,-9.19,137.1],[455818,-0.64,1.33,-9.77,150.0],[461229,-0.71,1.44,-9.23,241.2],[466270,-0.78,1.39,-9.43,61.2],[471371,-0.74,1.41,-9.37,169.7],[476400,-0.71,1.36,-9.45,139.0],[481532,-0.77,1.38,-9.46,151.9],[486578,-0.8,1.31,-9.38,89.4],[491624,-0.77,1.45,-9.42,200.6],[496674,-0.68,1.41,-9.43,120.4],[501699,-0.68,1.44,-9.39,93.5],[506704,-0.75,1.4,-9.44,123.9],[511782,-0.74,1.42,-9.7,185.1],[516794,-0.73,1.41,-9.46,109.5],[521990,-0.73,1.36,-9.59,164.1],[527000,-0.78,1.37,-9.41,114.7],[532127,-0.79,1.4,-9.24,173.1],[537169,-0.8,1.49,-9.48,154.3],[542247,-0.79,1.52,-9.25,138.1],[547281,-0.83,1.51,-9.39,68.7],[552371,-0.58,1.42,-9.14,188.4],[557413,-0.71,1.41,-9.59,66.4],[562564,-0.83,1.42,-9.3,150.0],[567613,-0.71,1.57,-9.48,71.1],[572707,-0.78,1.33,-9.39,180.1],[577709,-0.49,1.31,-9.3,71.5],[582982,-0.84,1.53,-9.56,234.2],[587999,-0.67,1.25,-9.11,107.0],[593090,-0.52,1.35,-9.25,179.8],[598102,-0.8,1.62,-9.36,63.4],[603213,-0.72,1.46,-9.46,93.6],[608238,-0.7,1.41,-9.43,178.5],[613254,-0.74,1.49,-9.54,208.1],[618298,-0.75,1.42,-9.4,78.1],[623433,-0.77,1.38,-9.36,219.0],[628464,-0.72,1.42,-9.53,99.1],[633582,-0.66,1.38,-9.43,186.0],[638621,-0.71,1.38,-9.49,105.3],[643674,-0.74,1.47,-9.64,269.6],[648683,-0.72,1.43,-9.37,62.9],[653789,-0.63,1.42,-9.47,230.5],[658825,-0.77,1.37,-9.42,84.8],[663898,-0.68,1.37,-9.36,164.6],[668910,-0.79,1.45,-9.43,82.7],[674063,-0.73,1.45,-9.24,196.9],[679063,-0.8,1.51,-9.38,101.3],[684112,-0.64,1.34,-9.22,186.5],[689130,-0.67,1.43,-9.5,69.5],[694384,-0.7,1.4,-9.35,142.0],[699390,-0.74,1.38,-9.46,46.2],[704628,-0.81,1.41,-9.56,226.4],[709678,-0.73,1.44,-9.42,95.0],[714690,-0.72,1.33,-9.52,242.3],[719695,-0.71,1.3,-9.66,118.7],[724829,-0.74,1.13,-9.53,234.8],[729855,-0.76,1.3,-9.51,108.7],[734957,-0.64,1.42,-9.69,169.6],[740005,-0.72,1.39,-9.58,114.4],[745054,-0.74,1.43,-9.47,225.9],[750059,-0.76,1.44,-9.51,95.4],[755484,-0.77,1.44,-9.43,113.0],[760494,-0.66,1.38,-9.4,86.2],[765528,-0.75,1.36,-9.39,190.4],[770554,-0.73,1.4,-9.41,31.0],[775634,-0.73,1.39,-9.45,148.8],[780663,-0.73,1.39,-9.53,91.7],[785669,-0.71,1.41,-9.36,173.1],[790688,-0.72,1.45,-9.44,119.3],[795806,-0.74,1.43,-9.55,136.1],[800808,-0.75,1.46,-9.55,230.8],[805970,-0.7,1.43,-9.45,186.8],[811013,-0.74,1.46,-9.45,108.6],[816132,-0.71,1.41,-9.48,233.2],[821133,-0.76,1.47,-9.49,92.0],[826268,-0.78,1.4,-9.46,206.9],[831315,-0.76,1.44,-9.34,219.5],[836396,-0.74,1.43,-9.34,181.6],[841413,-0.54,1.37,-9.09,92.0],[846487,-0.58,1.47,-9.32,140.7],[851522,-0.72,1.39,-9.83,183.2],[856697,-0.73,1.44,-9.4,220.9],[861731,-0.61,1.44,-9.14,37.3],[866871,-0.8,1.41,-9.81,198.2],[871914,-0.81,1.37,-9.32,155.7],[877046,-0.66,1.42,-9.19,150.6],[882076,-0.79,1.48,-9.7,115.6],[887199,-0.84,1.37,-9.51,206.1],[892236,-0.77,1.57,-9.53,103.8],[897379,-0.52,1.36,-9.24,186.9],[902411,-0.71,1.42,-9.45,34.5],[907460,-0.6,1.18,-9.35,267.8],[912486,-0.55,1.46,-9.1,99.7],[917535,-0.8,1.52,-9.4,110.4],[922547,-0.68,1.39,-9.0,108.8],[927575,-0.78,1.35,-9.39,195.3],[932594,-0.88,1.37,-9.52,127.2],[937672,-0.61,1.5,-9.58,154.9],[942709,-0.72,1.51,-9.67,98.0],[947854,-0.7,1.37,-9.63,203.8],[952902,-0.75,1.45,-9.26,109.8],[957968,-0.62,1.4,-9.26,244.4],[962993,-0.7,1.38,-9.64,159.3],[968067,-0.7,1.38,-9.24,172.2],[973104,-0.74,1.4,-9.87,189.7],[978114,-0.96,1.29,-9.47,252.4],[983135,-0.72,1.4,-9.58,89.8],[988195,-0.92,1.48,-9.7,94.2],[993240,-0.63,1.4,-9.46,219.7],[998287,-0.51,1.45,-9.12,125.9],[1003363,-0.79,1.38,-9.39,94.7],[1008377,-0.63,1.24,-9.91,73.8],[1013501,-0.74,1.49,-9.22,167.4],[1018517,-0.67,1.35,-8.9,152.6],[1023521,-0.56,1.25,-9.32,165.3],[1028567,-0.71,1.36,-9.52,128.3],[1033645,-0.74,1.28,-9.54,226.3],[1038646,-0.76,1.29,-9.45,97.0],[1043739,-0.76,1.57,-9.81,168.1],[1048757,-0.7,1.39,-9.35,41.9],[1053879,-0.93,1.45,-9.57,151.6],[1058888,-0.67,1.56,-9.55,183.2],[1064001,-0.97,1.35,-9.6,136.1],[1069004,-0.75,1.45,-9.85,114.9],[1074108,-0.71,1.55,-9.56,209.7],[1079158,-0.65,1.44,-8.62,176.1],[1084264,-0.76,1.23,-9.65,305.2],[1089309,-0.78,1.5,-9.5,316.7],[1094390,-0.63,1.26,-9.77,234.1],[1099390,-0.92,1.43,-9.53,218.9],[1104538,-0.62,1.18,-9.73,177.4],[1109567,-1.03,1.34,-9.78,206.9],[1114691,-0.64,1.28,-8.41,369.2],[1119737,-0.33,1.38,-9.39,315.0],[1124830,-1.19,1.47,-9.44,191.3],[1129867,-0.63,1.24,-9.36,270.5],[1134933,-0.48,1.32,-8.99,401.4],[1139937,-0.6,1.28,-9.52,247.2],[1145069,-1.04,1.44,-9.49,305.2],[1150081,-0.8,1.46,-9.03,345.5],[1155153,-1.11,1.56,-9.63,291.2],[1160167,-1.04,1.34,-9.7,353.3],[1165292,-0.69,1.48,-9.58,289.7],[1170312,-0.66,1.51,-9.24,351.4],[1175432,-0.8,1.55,-9.5,511.2],[1180442,-0.8,1.41,-9.08,235.9],[1185570,-0.55,1.3,-9.67,213.4],[1190583,-0.67,1.39,-8.69,277.8],[1195698,-0.31,1.24,-9.26,284.5],[1200726,-0.58,1.33,-9.72,466.7],[1205806,-0.48,1.26,-9.17,165.4],[1210852,-0.91,1.5,-9.59,372.0],[1215951,-0.84,1.43,-8.9,389.0],[1220987,-0.88,1.37,-9.79,210.1],[1226060,-0.38,1.29,-9.2,253.6],[1231082,-0.49,1.34,-10.01,296.3],[1236157,-1.07,1.42,-9.8,313.5],[1241179,-0.94,1.45,-9.18,348.4],[1246317,-0.28,1.25,-8.74,402.3],[1251339,-1.03,1.46,-9.54,377.9],[1256420,-0.86,1.14,-9.52,254.2],[1261456,-0.64,1.37,-9.74,176.2],[1266558,-0.51,1.22,-9.06,115.8],[1271603,-0.58,1.35,-8.81,167.7],[1276836,-0.95,1.41,-9.36,82.8],[1281866,-0.68,1.56,-9.49,141.6],[1286879,-0.94,1.49,-9.99,224.9],[1291903,-0.54,1.24,-9.38,168.0],[1296904,-0.69,1.37,-9.26,217.5],[1301909,-0.78,1.46,-9.47,76.3],[1307025,-0.73,1.39,-9.53,104.6],[1312032,-0.75,1.44,-9.43,174.8],[1317221,-0.73,1.43,-9.49,178.1],[1322250,-0.72,1.41,-9.46,64.6],[1327329,-0.76,1.43,-9.41,208.8],[1332354,-0.74,1.41,-9.4,78.1],[1337482,-0.71,1.45,-9.45,209.2],[1342497,-0.75,1.42,-9.43,44.8],[1347619,-0.74,1.42,-9.52,210.2],[1352621,-0.8,1.38,-9.44,47.7],[1357856,-0.76,1.41,-9.42,222.1],[1362865,-0.71,1.4,-9.42,149.3],[1367956,-0.74,1.42,-9.42,209.2],[1372966,-0.74,1.41,-9.36,19.4],[1378095,-0.74,1.43,-9.42,197.5],[1383099,-0.75,1.39,-9.46,69.0],[1388228,-0.76,1.4,-9.43,249.1],[1393231,-0.73,1.41,-9.46,20.8],[1398336,-0.78,1.42,-9.42,204.6],[1403368,-0.77,1.41,-9.48,12.4],[1408459,-0.75,1.42,-9.47,188.9],[1413466,-0.78,1.43,-9.44,36.7],[1418579,-0.74,1.45,-9.47,229.9],[1423616,-0.77,1.4,-9.37,34.9],[1428679,-0.76,1.43,-9.5,213.6],[1433715,-0.74,1.37,-9.45,102.2],[1438797,-0.74,1.42,-9.45,130.3],[1443818,-0.75,1.41,-9.38,119.9],[1448872,-0.75,1.39,-9.49,217.0],[1453896,-0.72,1.4,-9.42,77.5],[1458952,-0.74,1.44,-9.47,248.0],[1463991,-0.75,1.43,-9.42,58.1],[1469109,-0.72,1.42,-9.4,80.9],[1474150,-0.75,1.44,-9.46,61.5],[1479217,-0.75,1.33,-9.43,204.4],[1484264,-0.77,1.41,-9.38,37.3],[1489302,-0.73,1.4,-9.44,177.0],[1494309,-0.78,1.42,-9.4,33.1],[1499470,-0.75,1.42,-9.48,173.8],[1504493,-0.73,1.42,-9.47,26.0],[1509511,-0.74,1.41,-9.47,174.3],[1514542,-0.76,1.42,-9.42,95.1],[1519670,-0.78,1.44,-9.4,276.8],[1524681,-0.8,1.43,-9.45,67.9],[1529812,-0.74,1.43,-9.43,217.7],[1534859,-0.76,1.45,-9.44,94.0],[1539956,-0.72,1.4,-9.5,142.5],[1544991,-0.72,1.43,-9.43,130.9],[1550042,-0.73,1.44,-9.43,156.8],[1555073,-0.74,1.44,-9.51,144.4],[1561300,-0.77,1.39,-9.48,243.6],[1566499,-0.75,1.45,-9.5,43.6],[1571505,-0.71,1.43,-9.47,50.4],[1576954,-0.75,1.42,-9.46,120.9],[1581979,-0.76,1.43,-9.4,24.9],[1587103,-0.69,1.4,-9.48,149.2],[1592114,-0.72,1.45,-9.42,12.7],[1597163,-0.73,1.42,-9.47,220.8],[1602208,-0.7,1.42,-9.49,73.5],[1607259,-0.75,1.46,-9.47,129.0],[1612281,-0.73,1.44,-9.39,89.7],[1617373,-0.76,1.42,-9.42,175.6],[1622395,-0.74,1.4,-9.47,51.9],[1627545,-0.77,1.41,-9.5,193.8],[1632588,-0.77,1.45,-9.44,46.8],[1637665,-0.79,1.4,-9.49,234.2],[1642697,-0.73,1.44,-9.46,85.1],[1647818,-0.77,1.43,-9.51,200.9],[1652862,-0.76,1.41,-9.53,132.2],[1657870,-0.75,1.41,-9.48,259.8],[1662894,-0.72,1.44,-9.5,108.4],[1667985,-0.76,1.4,-9.55,125.8],[1672997,-0.8,1.42,-9.43,121.2],[1678129,-0.75,1.38,-9.48,149.1],[1683171,-0.73,1.42,-9.51,183.3],[1688254,-0.73,1.44,-9.4,166.4],[1693286,-0.74,1.41,-9.45,143.0],[1698397,-0.81,1.39,-9.45,149.0],[1703447,-0.75,1.41,-9.46,52.4],[1708489,-0.76,1.43,-9.47,89.7],[1713489,-0.7,1.42,-9.43,29.1],[1718584,-0.78,1.43,-9.4,226.1],[1723631,-0.75,1.45,-9.48,154.1],[1728770,-0.74,1.41,-9.47,242.8],[1733789,-0.75,1.38,-9.44,13.0],[1738940,-0.76,1.43,-9.46,189.1],[1743971,-0.79,1.45,-9.47,116.9],[1749076,-0.76,1.43,-9.47,205.3],[1754091,-0.75,1.38,-9.46,193.0],[1759249,-0.75,1.42,-9.4,262.7],[1764275,-0.71,1.42,-9.5,59.0],[1769459,-0.74,1.42,-9.42,219.8],[1774472,-0.76,1.44,-9.51,175.0],[1779717,-0.73,1.42,-9.49,94.4],[1784721,-0.74,1.39,-9.43,93.9],[1789749,-0.72,1.44,-9.47,236.8],[1794792,-0.75,1.42,-9.44,85.3],[1799814,-0.75,1.41,-9.47,208.8],[1804838,-0.73,1.45,-9.43,23.0],[1809972,-0.77,1.42,-9.43,238.9],[1814975,-0.73,1.44,-9.47,32.2],[1820108,-0.77,1.44,-9.47,46.0],[1825109,-0.73,1.41,-9.46,53.9],[1830244,-0.75,1.42,-9.54,289.6],[1835270,-0.72,1.44,-9.44,59.4],[1840420,-0.77,1.39,-9.4,173.4],[1845450,-0.8,1.42,-9.48,8.7],[1850532,-0.75,1.43,-9.48,226.9],[1855564,-0.74,1.43,-9.5,157.1],[1860690,-0.78,1.43,-9.38,261.3],[1865708,-0.77,1.39,-9.46,77.2],[1870959,-0.76,1.41,-9.47,230.0],[1875967,-0.78,1.42,-9.46,78.3],[1880982,-0.77,1.45,-9.5,170.2],[1885997,-0.78,1.4,-9.47,61.9],[1891036,-0.77,1.38,-9.44,148.8],[1896036,-0.7,1.41,-9.47,131.6],[1901168,-0.73,1.43,-9.49,176.8],[1906174,-0.75,1.43,-9.52,66.3],[1911326,-0.74,1.44,-9.49,209.9],[1916358,-0.76,1.45,-9.46,106.0],[1921471,-0.77,1.41,-9.52,113.6],[1926477,-0.75,1.45,-9.45,50.4],[1931602,-0.79,1.39,-9.41,165.9],[1936613,-0.76,1.47,-9.47,163.4],[1941618,-0.73,1.45,-9.5,266.1],[1946650,-0.81,1.43,-9.46,97.4],[1960539,-0.77,1.4,-9.5,208.1],[1965957,-0.77,1.44,-9.5,62.5],[1970958,-0.76,1.39,-9.42,118.3],[1976322,-0.75,1.39,-9.42,197.0],[1981371,-0.69,1.44,-9.46,65.3],[1989421,-0.77,1.45,-9.44,72.6],[1994526,-0.69,1.42,-9.47,52.9],[1999549,-0.79,1.41,-9.45,74.6],[2004903,-0.72,1.4,-9.46,115.1],[2009923,-0.77,1.39,-9.46,87.4],[2015247,-0.76,1.44,-9.47,54.3],[2023526,-0.73,1.44,-9.52,74.2],[2028697,-0.75,1.42,-9.42,146.6],[2033704,-0.74,1.42,-9.52,133.9],[2039829,-0.77,1.39,-9.44,277.5],[2044857,-0.76,1.43,-9.45,84.5],[2049879,-0.73,1.41,-9.45,16.1],[2054914,-0.78,1.41,-9.45,67.5],[2060265,-0.74,1.46,-9.45,233.0],[2065301,-0.78,1.38,-9.44,108.9],[2070748,-0.79,1.39,-9.45,298.6],[2075752,-0.73,1.41,-9.38,206.7],[2081576,-0.77,1.43,-9.44,241.6],[2086581,-0.72,1.43,-9.46,76.7],[2092222,-0.71,1.44,-9.46,39.3],[2097289,-0.77,1.41,-9.47,44.5],[2102529,-0.73,1.42,-9.41,148.8],[2107576,-0.71,1.43,-9.5,13.5],[2113319,-0.73,1.41,-9.45,133.7],[2119226,-0.73,1.45,-9.43,20.2],[2124229,-0.72,1.43,-9.49,116.7],[2129277,-0.73,1.39,-9.45,33.1],[2134740,-0.79,1.43,-9.53,113.7],[2139741,-0.78,1.42,-9.47,179.1],[2144851,-0.73,1.43,-9.43,50.2],[2149865,-0.77,1.44,-9.5,53.3],[2155262,-0.73,1.41,-9.5,138.1],[2160308,-0.72,1.41,-9.44,105.4]];
     // State Variables
@@ -1135,55 +1071,40 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
     let playInterval = null;
     let liveTimer = null;
 
-    // Axis visibility state
+    // Axis visibility
     const axisVisible = { x: true, y: true, z: true };
 
-    // DOM Elements
+    // Canvas Elements
     const splineCvs = document.getElementById('spline-canvas');
     const xyzCvs = document.getElementById('xyz-canvas');
     const areaCvs = document.getElementById('area-canvas');
-    const timeSlider = document.getElementById('time-slider');
-    const scrubLabel = document.getElementById('scrub-label');
-    const lblCurrTime = document.getElementById('lbl-curr-time');
-    const btnPlayWash = document.getElementById('btn-play-wash');
-    const btnPlaybackStatus = document.getElementById('btn-playback-status');
-    const lblSourceToggle = document.getElementById('lbl-source-toggle');
-    const badgeMode = document.getElementById('badge-mode');
-    const lblStatusText = document.getElementById('lbl-status-text');
-
-    // Gauges & Metric DOM
-    const donutHealthText = document.getElementById('donut-health-text');
-    const donutHealthFill = document.getElementById('donut-health-fill');
-    const donutVibeText = document.getElementById('donut-vibe-text');
-    const donutVibeFill = document.getElementById('donut-vibe-fill');
-    const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
-    const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
-    const kpiAvgRms = document.getElementById('kpi-avg-rms');
-    const kpiPeakRms = document.getElementById('kpi-peak-rms');
-    const pillSpinVal = document.getElementById('pill-spin-val');
-    const pillSpinFill = document.getElementById('pill-spin-fill');
-    const pillStabVal = document.getElementById('pill-stab-val');
-    const pillStabFill = document.getElementById('pill-stab-fill');
-    const capValX = document.getElementById('cap-val-x');
-    const capValY = document.getElementById('cap-val-y');
-    const capValZ = document.getElementById('cap-val-z');
-    const capFillX = document.getElementById('cap-fill-x');
-    const capFillY = document.getElementById('cap-fill-y');
-    const capFillZ = document.getElementById('cap-fill-z');
-
-    // XYZ Legend DOM
-    const vibeLegX = document.getElementById('vibe-leg-x');
-    const vibeLegY = document.getElementById('vibe-leg-y');
-    const vibeLegZ = document.getElementById('vibe-leg-z');
-
-    // Canvas Contexts
     const splineCtx = splineCvs.getContext('2d');
     const xyzCtx = xyzCvs.getContext('2d');
     const areaCtx = areaCvs.getContext('2d');
 
+    // DOM Controls
+    const timeSlider = document.getElementById('time-slider');
+    const scrubLabel = document.getElementById('scrub-label');
+    const lblCurrTime = document.getElementById('lbl-curr-time');
+    const btnPlayWash = document.getElementById('btn-play-wash');
+    const btnModeToggleText = document.getElementById('btn-mode-toggle-text');
+    const lblLiveText = document.getElementById('lbl-live-text');
+
+    // KPI & Legend DOM
+    const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
+    const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
+    const kpiAvgRms = document.getElementById('kpi-avg-rms');
+    const kpiHealthScore = document.getElementById('kpi-health-score');
+    const donutCenterNum = document.getElementById('donut-center-num');
+    const donutFillSeg = document.getElementById('donut-fill-seg');
+
+    const vibeLegX = document.getElementById('vibe-leg-x');
+    const vibeLegY = document.getElementById('vibe-leg-y');
+    const vibeLegZ = document.getElementById('vibe-leg-z');
+
     function resizeCanvases() {
       const dpr = window.devicePixelRatio || 1;
-      
+
       const sRect = splineCvs.parentElement.getBoundingClientRect();
       splineCvs.width = sRect.width * dpr;
       splineCvs.height = sRect.height * dpr;
@@ -1202,7 +1123,6 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
     }
     window.addEventListener('resize', resizeCanvases);
 
-    // Format milliseconds to mm:ss
     function formatMs(ms) {
       const totalSec = Math.floor(ms / 1000);
       const m = Math.floor(totalSec / 60);
@@ -1210,7 +1130,6 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
-    // Toggle specific axis trace in XYZ graph
     function toggleAxis(axis) {
       axisVisible[axis] = !axisVisible[axis];
       const pill = document.getElementById(`pill-tog-${axis}`);
@@ -1221,71 +1140,46 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       drawXyz();
     }
 
-    // Update Dashboard Display with specific record
     function applyRecord(rec) {
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
       const dg = Math.abs(vibe - 9.81);
 
-      // Donut Health Score (100 - penalties)
       let health = 100;
       if (dg > 0.5) health -= (dg * 12);
       if (rms > 200) health -= ((rms - 200) * 0.08);
       health = Math.min(100, Math.max(40, Math.round(health)));
 
-      donutHealthText.innerText = `${health}%`;
-      const healthOffset = 226 - (226 * (health / 100));
-      donutHealthFill.style.strokeDashoffset = healthOffset;
+      kpiHealthScore.innerText = `${health}%`;
+      donutCenterNum.innerText = `${health}%`;
 
-      // Donut Vibe Severity
-      const vibePct = Math.min(100, Math.round((vibe / 14.0) * 100));
-      donutVibeText.innerText = `${vibePct}%`;
-      const vibeOffset = 226 - (226 * (vibePct / 100));
-      donutVibeFill.style.strokeDashoffset = vibeOffset;
+      // Circumference = 2 * PI * 52 ~= 326
+      const offset = 326 - (326 * (health / 100));
+      donutFillSeg.style.strokeDashoffset = offset;
 
-      // 3-Axis Capsules & XYZ Legend Values
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
       const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
-
-      capValX.innerText = strX;
-      capValY.innerText = strY;
-      capValZ.innerText = strZ;
 
       vibeLegX.innerText = strX;
       vibeLegY.innerText = strY;
       vibeLegZ.innerText = strZ;
 
-      capFillX.style.height = `${Math.min(100, Math.abs(ax) * 40)}%`;
-      capFillY.style.height = `${Math.min(100, Math.abs(ay) * 40)}%`;
-      capFillZ.style.height = `${Math.min(100, Math.abs(az) * 8)}%`;
-
-      // Horizontal Pills
-      const spinIntensity = Math.min(100, Math.round((rms / 511.0) * 100));
-      pillSpinVal.innerText = `${spinIntensity}%`;
-      pillSpinFill.style.width = `${spinIntensity}%`;
-
-      const stability = Math.min(100, Math.max(30, Math.round(100 - (dg * 25))));
-      pillStabVal.innerText = `${stability}%`;
-      pillStabFill.style.width = `${stability}%`;
-
-      // Live / Scrubbed timestamp
       const maxT = WASH_DATA[WASH_DATA.length - 1][0];
       lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
     }
 
-    // DRAW DEDICATED TRI-AXIAL VIBRATION GRAPH (Ax, Ay, Az ONLY)
+    // DRAW DEDICATED TRI-AXIAL VIBRATION (AX, AY, AZ)
     function drawXyz() {
       const w = xyzCvs.width;
       const h = xyzCvs.height;
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      // Grid Lines
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      xyzCtx.setLineDash([4, 6]);
+      // Light grid lines
+      xyzCtx.strokeStyle = '#f1f5f9';
       xyzCtx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
         xyzCtx.beginPath();
         xyzCtx.moveTo(0, y);
@@ -1293,31 +1187,31 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
         xyzCtx.stroke();
       }
 
-      // Zero Baseline (for lateral Ax & Ay) - at 35% height
+      // Zero baseline (Ax & Ay) at 35% height
       const yZero = h * 0.35;
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      xyzCtx.strokeStyle = '#e2e8f0';
+      xyzCtx.setLineDash([4, 4]);
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yZero);
       xyzCtx.lineTo(w, yZero);
       xyzCtx.stroke();
 
-      // Gravity Baseline (for Az at -9.81 m/s^2) - at 78% height
+      // Gravity baseline (Az at -9.81) at 78% height
       const yGravity = h * 0.78;
-      xyzCtx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+      xyzCtx.strokeStyle = '#bbf7d0';
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yGravity);
       xyzCtx.lineTo(w, yGravity);
       xyzCtx.stroke();
       xyzCtx.setLineDash([]);
 
-      // Baseline Text Labels
-      xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      xyzCtx.font = `${9 * dpr}px 'JetBrains Mono', monospace`;
+      // Baseline labels
+      xyzCtx.fillStyle = '#94a3b8';
+      xyzCtx.font = `600 ${9 * dpr}px 'JetBrains Mono', monospace`;
       xyzCtx.fillText('0.0 (X/Y)', 6 * dpr, yZero - (4 * dpr));
-      xyzCtx.fillStyle = 'rgba(16, 185, 129, 0.4)';
+      xyzCtx.fillStyle = '#10b981';
       xyzCtx.fillText('-9.81g (Z)', 6 * dpr, yGravity - (4 * dpr));
 
-      // Window around current index
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
       const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
@@ -1325,10 +1219,10 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
 
       if (points.length < 2) return;
 
-      const scaleXY = 14 * dpr; // 1 m/s^2 = 14px
-      const scaleZ = 16 * dpr;  // 1 m/s^2 delta from 9.81 = 16px
+      const scaleXY = 14 * dpr;
+      const scaleZ = 16 * dpr;
 
-      // 1. Plot Az (Vertical / Gravity Vector) in Emerald (#10b981)
+      // 1. Plot Az (Emerald)
       if (axisVisible.z) {
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#10b981';
@@ -1342,10 +1236,10 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
         xyzCtx.stroke();
       }
 
-      // 2. Plot Ay (Fore-Aft / Pitch Vector) in Amber (#f59e0b)
+      // 2. Plot Ay (Coral)
       if (axisVisible.y) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#f59e0b';
+        xyzCtx.strokeStyle = '#f97316';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1356,10 +1250,10 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
         xyzCtx.stroke();
       }
 
-      // 3. Plot Ax (Lateral / Roll Vector) in Cyan (#00f0ff)
+      // 3. Plot Ax (Royal Blue)
       if (axisVisible.x) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#00f0ff';
+        xyzCtx.strokeStyle = '#2563eb';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1370,63 +1264,52 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
         xyzCtx.stroke();
       }
 
-      // Draw Cursor Points on Active Axes
+      // Current point dots
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {
         const cx = (curRel / (points.length - 1)) * w;
-        
         if (axisVisible.x) {
           const cyX = yZero - (points[curRel][1] * scaleXY);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#2563eb';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#00f0ff';
-          xyzCtx.stroke();
         }
-
         if (axisVisible.y) {
           const cyY = yZero - (points[curRel][2] * scaleXY);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#f97316';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#f59e0b';
-          xyzCtx.stroke();
         }
-
         if (axisVisible.z) {
           const cyZ = yGravity - ((points[curRel][3] + 9.81) * scaleZ);
-          xyzCtx.fillStyle = '#fff';
+          xyzCtx.fillStyle = '#10b981';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
-          xyzCtx.strokeStyle = '#10b981';
-          xyzCtx.stroke();
         }
       }
     }
 
-    // Draw Spline Waveform (Middle Chart)
+    // DRAW DUAL-MODALITY SPLINE WAVEFORM (Conversions Style)
     function drawSpline() {
       const w = splineCvs.width;
       const h = splineCvs.height;
+      const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      // Dotted horizontal grid lines
-      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-      splineCtx.setLineDash([4, 6]);
+      // Light horizontal grid
+      splineCtx.strokeStyle = '#f1f5f9';
       splineCtx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
         splineCtx.beginPath();
         splineCtx.moveTo(0, y);
         splineCtx.lineTo(w, y);
         splineCtx.stroke();
       }
-      splineCtx.setLineDash([]);
 
-      // Window around current index
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
       const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
@@ -1434,54 +1317,86 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
 
       if (points.length < 2) return;
 
-      // 1. Draw Acoustic Wave (Pink)
+      // 1. Draw Acoustic Wave (Coral with Soft Gradient Fill)
+      const gradCoral = splineCtx.createLinearGradient(0, 0, 0, h);
+      gradCoral.addColorStop(0, 'rgba(249, 115, 22, 0.18)');
+      gradCoral.addColorStop(1, 'rgba(249, 115, 22, 0.0)');
+
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#ff2d75';
-      splineCtx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
+      splineCtx.moveTo(0, h);
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const normRms = points[i][4] / 520.0;
-        const y = h - (normRms * h * 0.8) - 10;
+        const y = h - (normRms * h * 0.75) - 10;
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w, h);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradCoral;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#f97316';
+      splineCtx.lineWidth = 2.5 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = (i / (points.length - 1)) * w;
+        const normRms = points[i][4] / 520.0;
+        const y = h - (normRms * h * 0.75) - 10;
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
 
-      // 2. Draw Vibration Wave (Cyan)
+      // 2. Draw Vibration Wave (Royal Blue with Soft Gradient Fill)
+      const gradBlue = splineCtx.createLinearGradient(0, 0, 0, h);
+      gradBlue.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
+      gradBlue.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#00f0ff';
-      splineCtx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
+      splineCtx.moveTo(0, h);
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        // Centered around 9.81
-        const y = (h * 0.5) - ((v - 9.81) * 25 * (window.devicePixelRatio || 1));
+        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
+        splineCtx.lineTo(x, y);
+      }
+      splineCtx.lineTo(w, h);
+      splineCtx.closePath();
+      splineCtx.fillStyle = gradBlue;
+      splineCtx.fill();
+
+      splineCtx.beginPath();
+      splineCtx.strokeStyle = '#2563eb';
+      splineCtx.lineWidth = 2.5 * dpr;
+      for (let i = 0; i < points.length; i++) {
+        const x = (i / (points.length - 1)) * w;
+        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
 
-      // Peak dots with marker callouts
-      const curRelative = currentIndex - startIdx;
-      if (curRelative >= 0 && curRelative < points.length) {
-        const cx = (curRelative / (points.length - 1)) * w;
-        const cyRms = h - ((points[curRelative][4] / 520.0) * h * 0.8) - 10;
-
-        splineCtx.fillStyle = '#fff';
+      // Current dot marker
+      const curRel = currentIndex - startIdx;
+      if (curRel >= 0 && curRel < points.length) {
+        const cx = (curRel / (points.length - 1)) * w;
+        const normRms = points[curRel][4] / 520.0;
+        const cyRms = h - (normRms * h * 0.75) - 10;
+        splineCtx.fillStyle = '#f97316';
         splineCtx.beginPath();
-        splineCtx.arc(cx, cyRms, 4 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+        splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
         splineCtx.fill();
-        splineCtx.strokeStyle = '#ff2d75';
-        splineCtx.stroke();
       }
     }
 
-    // Draw Full Area Chart (Bottom Chart)
+    // DRAW FULL AREA & TIMELINE BARS (Sales Style)
     function drawArea() {
       const w = areaCvs.width;
       const h = areaCvs.height;
+      const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      // Grid
-      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      // Light grid
+      areaCtx.strokeStyle = '#f1f5f9';
       areaCtx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
@@ -1494,19 +1409,18 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       const total = WASH_DATA.length;
       if (total < 2) return;
 
-      // Area gradient
+      // Area gradient in light royal blue
       const grad = areaCtx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(255, 45, 117, 0.4)');
-      grad.addColorStop(0.7, 'rgba(255, 45, 117, 0.08)');
-      grad.addColorStop(1, 'rgba(255, 45, 117, 0.0)');
+      grad.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
+      grad.addColorStop(0.8, 'rgba(37, 99, 235, 0.04)');
+      grad.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
-      // Draw area
       areaCtx.beginPath();
       areaCtx.moveTo(0, h);
       for (let i = 0; i < total; i++) {
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 10;
+        const y = h - ((rms / 520.0) * (h - 20)) - 8;
         areaCtx.lineTo(x, y);
       }
       areaCtx.lineTo(w, h);
@@ -1514,37 +1428,39 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       areaCtx.fillStyle = grad;
       areaCtx.fill();
 
-      // Top stroke
+      // Top curve stroke
       areaCtx.beginPath();
-      areaCtx.strokeStyle = '#ff2d75';
-      areaCtx.lineWidth = 2 * (window.devicePixelRatio || 1);
+      areaCtx.strokeStyle = '#2563eb';
+      areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 10;
+        const y = h - ((rms / 520.0) * (h - 20)) - 8;
         if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
       }
       areaCtx.stroke();
 
-      // Draw scrubber vertical line
+      // Scrubber cursor line
       const curX = (currentIndex / (total - 1)) * w;
-      areaCtx.strokeStyle = '#00f0ff';
+      areaCtx.strokeStyle = '#2563eb';
       areaCtx.lineWidth = 2;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, 0);
       areaCtx.lineTo(curX, h);
       areaCtx.stroke();
 
-      // Scrubber point marker
+      // Scrubber circle
       const curRms = WASH_DATA[currentIndex][4];
-      const curY = h - ((curRms / 520.0) * (h - 20)) - 10;
-      areaCtx.fillStyle = '#00f0ff';
+      const curY = h - ((curRms / 520.0) * (h - 20)) - 8;
+      areaCtx.fillStyle = '#2563eb';
       areaCtx.beginPath();
-      areaCtx.arc(curX, curY, 5 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+      areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
+      areaCtx.strokeStyle = '#ffffff';
+      areaCtx.lineWidth = 2 * dpr;
+      areaCtx.stroke();
     }
 
-    // Scrubber Interaction
     function onScrub(val) {
       currentIndex = parseInt(val, 10);
       const minutes = ((WASH_DATA[currentIndex][0] / 60000)).toFixed(1);
@@ -1555,12 +1471,10 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       drawArea();
     }
 
-    // Playback Loop
     function togglePlayPause() {
       isPlaying = !isPlaying;
       if (isPlaying) {
         btnPlayWash.innerText = 'â¸ Pause Playback';
-        btnPlaybackStatus.innerText = 'â¸ Pause Wash 1019';
         playInterval = setInterval(() => {
           currentIndex++;
           if (currentIndex >= WASH_DATA.length) currentIndex = 0;
@@ -1569,31 +1483,23 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
         }, 80);
       } else {
         btnPlayWash.innerText = 'â–¶ Replay Wash 1019';
-        btnPlaybackStatus.innerText = 'â–¶ Playback Wash 1019';
         if (playInterval) clearInterval(playInterval);
       }
     }
 
-    // Mode Switching: Historic vs Live Firebase
     function setMode(mode) {
       currentMode = mode;
       if (mode === 'live') {
         if (isPlaying) togglePlayPause();
-        lblSourceToggle.innerText = 'Source: Live Firebase';
-        lblStatusText.innerText = 'LIVE STREAMING';
-        badgeMode.style.background = 'rgba(0, 240, 255, 0.15)';
-        badgeMode.style.color = '#00f0ff';
-        badgeMode.style.borderColor = 'rgba(0, 240, 255, 0.4)';
+        btnModeToggleText.innerText = 'Mode: Live Firebase Rig';
+        lblLiveText.innerText = 'Live Streaming (50 Hz)';
         document.getElementById('side-item-1').classList.remove('active');
         document.getElementById('side-item-2').classList.add('active');
         startLivePolling();
       } else {
         if (liveTimer) clearInterval(liveTimer);
-        lblSourceToggle.innerText = 'Source: Historic 1019';
-        lblStatusText.innerText = 'WASH 1019 COMPLETED';
-        badgeMode.style.background = 'rgba(16, 185, 129, 0.15)';
-        badgeMode.style.color = '#34d399';
-        badgeMode.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        btnModeToggleText.innerText = 'Mode: Wash 1019 Cycle';
+        lblLiveText.innerText = 'wash_1019 Active';
         document.getElementById('side-item-2').classList.remove('active');
         document.getElementById('side-item-1').classList.add('active');
         applyRecord(WASH_DATA[currentIndex]);
@@ -1603,7 +1509,6 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       }
     }
 
-    // Live Firebase Polling
     async function startLivePolling() {
       const fetchLive = async () => {
         try {
@@ -1620,7 +1525,6 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       liveTimer = setInterval(fetchLive, 2000);
     }
 
-    // CSV Download
     function downloadWashCsv() {
       let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n';
       WASH_DATA.forEach(r => {
@@ -1640,16 +1544,7 @@ const WASH_1019_DATA = [[5021,-0.77,1.36,-9.4,44.7],[10042,-0.74,1.42,-9.42,139.
       overlay.style.display = drawer.classList.contains('open') ? 'block' : 'none';
     }
 
-    function syncFirebase() {
-      alert('Firebase Asia-SE1 synced: 422 batches confirmed!');
-    }
-    function toggleFft() {
-      alert('Acoustic FFT: Peak harmonic at 23.3 Hz (1400 RPM spin) confirmed normal.');
-    }
-    function toggleHealth() {
-      alert('Machinery Health: ISO 10816 vibration severity evaluated as Class I (Good).');
-    }
-    function openDoc() {
+    function openPdfDoc() {
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
 
