@@ -293,6 +293,8 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     .card-title-text {
       font-size: 13px;
@@ -702,8 +704,8 @@
 
     <!-- Center Navigation Tabs -->
     <nav class="nav-tabs-center">
-      <a class="nav-tab-item active" onclick="setMode('historic')">Dashboard</a>
-      <a class="nav-tab-item" onclick="setMode('live')">Real-Time Telemetry</a>
+      <a class="nav-tab-item active" id="tab-historic" onclick="setMode('historic')">Dashboard (wash_1019)</a>
+      <a class="nav-tab-item" id="tab-live" onclick="setMode('live')">Real-Time Rig Telemetry</a>
       <a class="nav-tab-item" onclick="toggleDoc()">Acoustic Diagnostics</a>
       <a class="nav-tab-item" onclick="toggleDoc()">ISO 10816 Specs</a>
     </nav>
@@ -732,14 +734,14 @@
         <button onclick="toggleMobileMenu()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div class="account-item active" onclick="setMode('historic'); toggleMobileMenu()">
+        <div class="account-item active" id="m-acc-item-1" onclick="setMode('historic'); toggleMobileMenu()">
           <div class="account-avatar-ring">W</div>
           <div class="account-meta">
             <span class="account-name">Wash 1019 Run</span>
             <span class="account-sub">35.9 mins archived</span>
           </div>
         </div>
-        <div class="account-item" onclick="setMode('live'); toggleMobileMenu()">
+        <div class="account-item" id="m-acc-item-2" onclick="setMode('live'); toggleMobileMenu()">
           <div class="account-avatar-ring avatar-coral">L</div>
           <div class="account-meta">
             <span class="account-name">Live ESP32 Rig</span>
@@ -782,7 +784,7 @@
           <div class="account-avatar-ring avatar-coral">M</div>
           <div class="account-meta">
             <span class="account-name">MPU-6050 IMU</span>
-            <span class="account-sub">I2C 0x68 (&plusmn;16g)</span>
+            <span class="account-sub">Live 50 Hz stream</span>
           </div>
         </div>
 
@@ -879,7 +881,7 @@
           <div class="card-header-row">
             <div>
               <span class="card-title-text">Dual-Modality Telemetry</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Vibration resultant &amp; sound RMS with numeric rulers</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Vibration resultant &bull; Acoustic sound amplitude</span>
             </div>
             <div class="chart-legend-row">
               <span class="legend-item-dot">
@@ -960,7 +962,7 @@
           <div class="card-header-row">
             <div>
               <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">MPU-6050 direct register burst with explicit Y-axis scale (+10 to -15 m/s&sup2;)</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
@@ -994,7 +996,7 @@
           <div class="card-header-row">
             <div>
               <span class="card-title-text">Wash Cycle 1019 Timeline (35.9 Minutes)</span>
-              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Continuous acoustic waveform with Y-axis numbers &amp; spike peak markers</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">35.9-min continuous acoustic waveform &bull; Scrubber with peak spike rulers</span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
               <span class="axis-toggle-clean" style="color: var(--teal-accent);">
@@ -1009,7 +1011,7 @@
             </div>
           </div>
 
-          <div class="canvas-container-mid" style="height: 155px;">
+          <div class="canvas-container-mid" style="height: 160px;">
             <canvas id="area-canvas"></canvas>
           </div>
 
@@ -1180,7 +1182,31 @@
       drawXyz();
     }
 
-    function applyRecord(rec) {
+    // Helper: Draw pill badge with solid dark background
+    function drawPillBadge(ctx, x, y, text, color, align, dpr) {
+      ctx.font = `700 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
+      const tw = ctx.measureText(text).width;
+      const pw = tw + (12 * dpr);
+      const ph = 17 * dpr;
+      const px = align === 'right' ? x - pw : (align === 'center' ? x - (pw / 2) : x);
+      const py = y - (ph / 2);
+
+      ctx.fillStyle = 'rgba(26, 29, 36, 0.94)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 4 * dpr);
+      else ctx.rect(px, py, pw, ph);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1 * dpr;
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.textAlign = 'left';
+      ctx.fillText(text, px + (6 * dpr), py + (12 * dpr));
+    }
+
+    function applyRecord(rec, isFromLive = false) {
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
       const dg = Math.abs(vibe - 9.81);
@@ -1223,7 +1249,7 @@
         kpiSpikeDetail.innerText = `Current: ${rms.toFixed(1)} RMS (Baseline: 120 RMS)`;
       }
 
-      // 3. Middle Card: Signal Spike & Amplitude (Replaces Donut)
+      // 3. Middle Card: Signal Spike & Amplitude
       if (gaugeCurrRms) gaugeCurrRms.innerText = rms.toFixed(1);
       if (gaugeSpikePill) {
         if (rms > 300) {
@@ -1252,10 +1278,12 @@
       if (cellTotalAccel) cellTotalAccel.innerText = `${vibe.toFixed(2)} m/s²`;
       if (cellDynShock) cellDynShock.innerText = `±${dg.toFixed(2)} m/s²`;
 
-      // 4. Header Badges
-      if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
-      if (timelineHeadSpike) timelineHeadSpike.innerText = `${spikeRatio}x`;
-      if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
+      // 4. Header Badges: Only update historic timeline header if in historic mode or not a live background overwrite
+      if (!isFromLive || currentMode === 'live') {
+        if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
+        if (timelineHeadSpike) timelineHeadSpike.innerText = `${spikeRatio}x`;
+        if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
+      }
 
       // 5. Ax, Ay, Az text updates
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
@@ -1266,61 +1294,87 @@
       vibeLegY.innerText = strY;
       vibeLegZ.innerText = strZ;
 
-      const maxT = WASH_DATA[WASH_DATA.length - 1][0];
-      lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
+      // 6. Time readout: only update from historic wash when in historic mode
+      if (!isFromLive) {
+        const maxT = WASH_DATA[WASH_DATA.length - 1][0];
+        lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
+      }
     }
 
-    // Canvas 1: Dedicated Tri-Axial Vibration with Explicit Y-Axis Scale
+    // Canvas 1: Dedicated Tri-Axial Vibration with Left Margin Gutter & Zero Overlap
     function drawXyz() {
       const w = xyzCvs.width;
       const h = xyzCvs.height;
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      const yZero = h * 0.35;
-      const scaleXY = 14 * dpr;
-      const yGravity = h * 0.78;
-      const scaleZ = 16 * dpr;
+      const marginLeft = 68 * dpr;
+      const marginRight = 16 * dpr;
+      const marginTop = 16 * dpr;
+      const marginBottom = 16 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
 
-      // 1. Grid & Numerical Ticks for Ax, Ay
-      const xyTicks = [
-        { val: 5.0, label: '+5.0 m/s²' },
-        { val: 0.0, label: '0.0 m/s² (X/Y Baseline)' },
-        { val: -5.0, label: '-5.0 m/s²' }
+      // Lane 1: Ax & Ay centered around yZero (0.0 m/s^2)
+      const yZero = marginTop + (plotH * 0.32);
+      const scaleXY = 12 * dpr;
+
+      // Lane 2: Az centered around yGravity (-9.81 m/s^2)
+      const yGravity = marginTop + (plotH * 0.78);
+      const scaleZ = 12 * dpr;
+
+      // Vertical separator line dividing left gutter from plot area
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      xyzCtx.lineWidth = 1 * dpr;
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, marginTop);
+      xyzCtx.lineTo(marginLeft, h - marginBottom);
+      xyzCtx.stroke();
+
+      // Horizontal subtle baseline grid lines
+      const hLines = [
+        { y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s²', col: 'rgba(255, 255, 255, 0.25)' },
+        { y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' },
+        { y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s²', col: 'rgba(255, 255, 255, 0.25)' },
+        { y: yGravity - ((-7.0 + 9.81) * scaleZ), lbl: '-7.0 m/s²', col: 'rgba(167, 139, 250, 0.3)' },
+        { y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' },
+        { y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s²', col: 'rgba(167, 139, 250, 0.3)' }
       ];
-      xyTicks.forEach(t => {
-        const y = yZero - (t.val * scaleXY);
-        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        xyzCtx.lineWidth = 1;
+
+      hLines.forEach(l => {
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         xyzCtx.beginPath();
-        xyzCtx.moveTo(0, y);
-        xyzCtx.lineTo(w, y);
+        xyzCtx.moveTo(marginLeft, l.y);
+        xyzCtx.lineTo(w - marginRight, l.y);
         xyzCtx.stroke();
 
-        xyzCtx.fillStyle = t.val === 0.0 ? 'rgba(255, 255, 255, 0.38)' : 'rgba(255, 255, 255, 0.2)';
-        xyzCtx.font = `600 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
-        xyzCtx.fillText(t.label, 8 * dpr, y - (3 * dpr));
+        // Label in left gutter (NEVER collides with wave)
+        xyzCtx.fillStyle = l.col;
+        xyzCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
+        xyzCtx.textAlign = 'right';
+        xyzCtx.fillText(l.lbl, marginLeft - (8 * dpr), l.y + (3 * dpr));
       });
+      xyzCtx.textAlign = 'left';
 
-      // 2. Grid & Numerical Ticks for Az
-      const zTicks = [
-        { val: -5.0, label: '-5.0 m/s²' },
-        { val: -9.81, label: '-9.81 m/s² (Az 1g Gravity Baseline)' },
-        { val: -15.0, label: '-15.0 m/s²' }
-      ];
-      zTicks.forEach(t => {
-        const y = yGravity - ((t.val + 9.81) * scaleZ);
-        xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.08)';
-        xyzCtx.lineWidth = 1;
-        xyzCtx.beginPath();
-        xyzCtx.moveTo(0, y);
-        xyzCtx.lineTo(w, y);
-        xyzCtx.stroke();
+      // Dashed Zero Baseline across plot
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yZero);
+      xyzCtx.lineTo(w - marginRight, yZero);
+      xyzCtx.stroke();
 
-        xyzCtx.fillStyle = t.val === -9.81 ? 'rgba(167, 139, 250, 0.5)' : 'rgba(167, 139, 250, 0.25)';
-        xyzCtx.font = `600 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
-        xyzCtx.fillText(t.label, 8 * dpr, y - (3 * dpr));
-      });
+      // Dashed Gravity Baseline across plot
+      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, yGravity);
+      xyzCtx.lineTo(w - marginRight, yGravity);
+      xyzCtx.stroke();
+      xyzCtx.setLineDash([]);
+
+      // Right-aligned baseline indicator tags
+      drawPillBadge(xyzCtx, w - marginRight, yZero, 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'right', dpr);
+      drawPillBadge(xyzCtx, w - marginRight, yGravity, 'Z 1g Gravity (-9.81 m/s²)', '#a78bfa', 'right', dpr);
 
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
@@ -1329,13 +1383,13 @@
 
       if (points.length < 2) return;
 
-      // Plot Az (Purple)
+      // Plot Az (Purple) strictly in [marginLeft, w - marginRight]
       if (axisVisible.z) {
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#a78bfa';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
-          const x = (i / (points.length - 1)) * w;
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const az = points[i][3];
           const y = yGravity - ((az + 9.81) * scaleZ);
           if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
@@ -1343,13 +1397,13 @@
         xyzCtx.stroke();
       }
 
-      // Plot Ay (Coral)
+      // Plot Ay (Coral) strictly in [marginLeft, w - marginRight]
       if (axisVisible.y) {
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#fb923c';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
-          const x = (i / (points.length - 1)) * w;
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ay = points[i][2];
           const y = yZero - (ay * scaleXY);
           if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
@@ -1357,13 +1411,13 @@
         xyzCtx.stroke();
       }
 
-      // Plot Ax (Teal)
+      // Plot Ax (Teal) strictly in [marginLeft, w - marginRight]
       if (axisVisible.x) {
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#00f0d2';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
-          const x = (i / (points.length - 1)) * w;
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ax = points[i][1];
           const y = yZero - (ax * scaleXY);
           if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
@@ -1371,10 +1425,10 @@
         xyzCtx.stroke();
       }
 
-      // Active cursor points & numeric tags
+      // Active cursor dots
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {
-        const cx = (curRel / (points.length - 1)) * w;
+        const cx = marginLeft + ((curRel / (points.length - 1)) * plotW);
         if (axisVisible.x) {
           const cyX = yZero - (points[curRel][1] * scaleXY);
           xyzCtx.fillStyle = '#00f0d2';
@@ -1399,44 +1453,62 @@
       }
     }
 
-    // Canvas 2: Dual-Modality Waveform with Dual Numeric Rulers
+    // Canvas 2: Dual-Modality Waveform with Isolated Left/Right Gutters
     function drawSpline() {
       const w = splineCvs.width;
       const h = splineCvs.height;
       const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      // Dual Y-axis ticks
+      const marginLeft = 58 * dpr;
+      const marginRight = 58 * dpr;
+      const marginTop = 18 * dpr;
+      const marginBottom = 18 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
+
+      // Vertical separator lines
+      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      splineCtx.lineWidth = 1 * dpr;
+      splineCtx.beginPath();
+      splineCtx.moveTo(marginLeft, marginTop);
+      splineCtx.lineTo(marginLeft, h - marginBottom);
+      splineCtx.moveTo(w - marginRight, marginTop);
+      splineCtx.lineTo(w - marginRight, h - marginBottom);
+      splineCtx.stroke();
+
+      // Right side: Sound RMS ticks
       const soundTicks = [500, 375, 250, 125, 0];
       soundTicks.forEach(val => {
-        const y = h - ((val / 520.0) * h * 0.75) - 10;
+        const y = marginTop + plotH - ((val / 520.0) * plotH);
         splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-        splineCtx.lineWidth = 1;
         splineCtx.beginPath();
-        splineCtx.moveTo(0, y);
-        splineCtx.lineTo(w, y);
+        splineCtx.moveTo(marginLeft, y);
+        splineCtx.lineTo(w - marginRight, y);
         splineCtx.stroke();
 
-        // Right side: Sound RMS labels
-        splineCtx.fillStyle = 'rgba(251, 146, 60, 0.45)';
+        splineCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
         splineCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
-        splineCtx.textAlign = 'right';
-        splineCtx.fillText(`${val} RMS`, w - (8 * dpr), y - (3 * dpr));
         splineCtx.textAlign = 'left';
+        splineCtx.fillText(`${val}`, w - marginRight + (8 * dpr), y + (3 * dpr));
       });
+      splineCtx.fillText('RMS', w - marginRight + (8 * dpr), marginTop - (4 * dpr));
 
-      // Left side: Vibration labels
+      // Left side: Vibration m/s^2 ticks
       const vibeTicks = [
-        { val: 12.0, lbl: '12.0 m/s²' },
-        { val: 9.81, lbl: '9.81 m/s² (1g)' },
-        { val: 8.0, lbl: '8.0 m/s²' }
+        { val: 12.0, lbl: '12.0' },
+        { val: 9.81, lbl: '9.81 (1g)' },
+        { val: 8.0, lbl: '8.0' }
       ];
       vibeTicks.forEach(t => {
-        const y = (h * 0.45) - ((t.val - 9.81) * 25 * dpr);
-        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.45)';
+        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * 25 * dpr);
+        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
         splineCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
-        splineCtx.fillText(t.lbl, 8 * dpr, y - (3 * dpr));
+        splineCtx.textAlign = 'right';
+        splineCtx.fillText(t.lbl, marginLeft - (8 * dpr), y + (3 * dpr));
       });
+      splineCtx.fillText('m/s²', marginLeft - (8 * dpr), marginTop - (4 * dpr));
+      splineCtx.textAlign = 'left';
 
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
@@ -1445,20 +1517,20 @@
 
       if (points.length < 2) return;
 
-      // 1. Draw Sound Wave (Coral)
-      const gradCoral = splineCtx.createLinearGradient(0, 0, 0, h);
+      // 1. Draw Sound Wave (Coral) strictly within [marginLeft, w - marginRight]
+      const gradCoral = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       gradCoral.addColorStop(0, 'rgba(251, 146, 60, 0.15)');
       gradCoral.addColorStop(1, 'rgba(251, 146, 60, 0.0)');
 
       splineCtx.beginPath();
-      splineCtx.moveTo(0, h);
+      splineCtx.moveTo(marginLeft, marginTop + plotH);
       for (let i = 0; i < points.length; i++) {
-        const x = (i / (points.length - 1)) * w;
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const normRms = points[i][4] / 520.0;
-        const y = h - (normRms * h * 0.75) - 10;
+        const y = marginTop + plotH - (normRms * plotH);
         splineCtx.lineTo(x, y);
       }
-      splineCtx.lineTo(w, h);
+      splineCtx.lineTo(w - marginRight, marginTop + plotH);
       splineCtx.closePath();
       splineCtx.fillStyle = gradCoral;
       splineCtx.fill();
@@ -1467,27 +1539,27 @@
       splineCtx.strokeStyle = '#fb923c';
       splineCtx.lineWidth = 2.2 * dpr;
       for (let i = 0; i < points.length; i++) {
-        const x = (i / (points.length - 1)) * w;
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const normRms = points[i][4] / 520.0;
-        const y = h - (normRms * h * 0.75) - 10;
+        const y = marginTop + plotH - (normRms * plotH);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
 
-      // 2. Draw Vibration Wave (Teal)
-      const gradTeal = splineCtx.createLinearGradient(0, 0, 0, h);
+      // 2. Draw Vibration Wave (Teal) strictly within [marginLeft, w - marginRight]
+      const gradTeal = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
       gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
 
       splineCtx.beginPath();
-      splineCtx.moveTo(0, h);
+      splineCtx.moveTo(marginLeft, marginTop + plotH);
       for (let i = 0; i < points.length; i++) {
-        const x = (i / (points.length - 1)) * w;
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
         splineCtx.lineTo(x, y);
       }
-      splineCtx.lineTo(w, h);
+      splineCtx.lineTo(w - marginRight, marginTop + plotH);
       splineCtx.closePath();
       splineCtx.fillStyle = gradTeal;
       splineCtx.fill();
@@ -1496,9 +1568,9 @@
       splineCtx.strokeStyle = '#00f0d2';
       splineCtx.lineWidth = 2.2 * dpr;
       for (let i = 0; i < points.length; i++) {
-        const x = (i / (points.length - 1)) * w;
+        const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = (h * 0.45) - ((v - 9.81) * 25 * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * 25 * dpr);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
       splineCtx.stroke();
@@ -1506,9 +1578,9 @@
       // Active point dot
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {
-        const cx = (curRel / (points.length - 1)) * w;
+        const cx = marginLeft + ((curRel / (points.length - 1)) * plotW);
         const normRms = points[curRel][4] / 520.0;
-        const cyRms = h - (normRms * h * 0.75) - 10;
+        const cyRms = marginTop + plotH - (normRms * plotH);
         splineCtx.fillStyle = '#fb923c';
         splineCtx.beginPath();
         splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
@@ -1516,83 +1588,90 @@
       }
     }
 
-    // Canvas 3: Full Wash 1019 Timeline with Numbers, Max Peak Spike & Live Floating Cursor Badge
+    // Canvas 3: Full Wash 1019 Timeline with Isolated Left Gutter, Solid Pill Tags & Clamped Floating Badge
     function drawArea() {
       const w = areaCvs.width;
       const h = areaCvs.height;
       const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      const padBottom = 16 * dpr;
-      const padTop = 18 * dpr;
-      const plotH = h - padBottom - padTop;
+      const marginLeft = 60 * dpr;
+      const marginRight = 16 * dpr;
+      const marginTop = 20 * dpr;
+      const marginBottom = 18 * dpr;
+      const plotW = w - marginLeft - marginRight;
+      const plotH = h - marginTop - marginBottom;
 
-      // 1. Horizontal Y-Axis Numeric Rulers
+      const getY = (rms) => marginTop + plotH - ((rms / 520.0) * plotH);
+      const getX = (idx, total) => marginLeft + ((idx / (total - 1)) * plotW);
+
+      // Vertical separator line dividing left gutter from plot area
+      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      areaCtx.lineWidth = 1 * dpr;
+      areaCtx.beginPath();
+      areaCtx.moveTo(marginLeft, marginTop);
+      areaCtx.lineTo(marginLeft, h - marginBottom);
+      areaCtx.stroke();
+
+      // Horizontal Y-Axis Numeric Rulers in Left Gutter
       const yTicks = [500, 375, 250, 125, 0];
       yTicks.forEach(val => {
-        const yVal = h - padBottom - ((val / 520.0) * plotH);
-        areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        areaCtx.lineWidth = 1;
+        const yVal = getY(val);
+        areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         areaCtx.beginPath();
-        areaCtx.moveTo(0, yVal);
-        areaCtx.lineTo(w, yVal);
+        areaCtx.moveTo(marginLeft, yVal);
+        areaCtx.lineTo(w - marginRight, yVal);
         areaCtx.stroke();
 
-        areaCtx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+        // Label in Left Gutter (NEVER touched by waveform)
+        areaCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         areaCtx.font = `600 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
-        areaCtx.fillText(`${val} RMS`, 8 * dpr, yVal - (3 * dpr));
+        areaCtx.textAlign = 'right';
+        areaCtx.fillText(`${val}`, marginLeft - (8 * dpr), yVal + (3 * dpr));
       });
+      areaCtx.fillText('RMS', marginLeft - (8 * dpr), marginTop - (6 * dpr));
+      areaCtx.textAlign = 'left';
 
-      // 2. Horizontal Reference Line: Max Peak Spike (511.2 RMS)
-      const yPeak = h - padBottom - ((511.2 / 520.0) * plotH);
-      areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.5)';
+      // Horizontal Reference Lines with Solid Dark Pill Badges
+      const yPeak = getY(511.2);
+      areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
       areaCtx.lineWidth = 1.2 * dpr;
       areaCtx.setLineDash([4 * dpr, 4 * dpr]);
       areaCtx.beginPath();
-      areaCtx.moveTo(0, yPeak);
-      areaCtx.lineTo(w, yPeak);
+      areaCtx.moveTo(marginLeft, yPeak);
+      areaCtx.lineTo(w - marginRight, yPeak);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      areaCtx.fillStyle = 'rgba(251, 146, 60, 0.85)';
-      areaCtx.font = `700 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
-      areaCtx.textAlign = 'right';
-      areaCtx.fillText('PEAK SPIKE: 511.2 RMS (24.2m)', w - (8 * dpr), yPeak - (3 * dpr));
-      areaCtx.textAlign = 'left';
+      drawPillBadge(areaCtx, w - marginRight, yPeak, 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', 'right', dpr);
 
-      // 3. Horizontal Reference Line: Normal Baseline (120 RMS)
-      const yBase = h - padBottom - ((120.0 / 520.0) * plotH);
-      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.28)';
+      const yBase = getY(120.0);
+      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
       areaCtx.lineWidth = 1 * dpr;
       areaCtx.setLineDash([3 * dpr, 3 * dpr]);
       areaCtx.beginPath();
-      areaCtx.moveTo(0, yBase);
-      areaCtx.lineTo(w, yBase);
+      areaCtx.moveTo(marginLeft, yBase);
+      areaCtx.lineTo(w - marginRight, yBase);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      areaCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
-      areaCtx.font = `600 ${8 * dpr}px 'JetBrains Mono', monospace`;
-      areaCtx.textAlign = 'right';
-      areaCtx.fillText('NORMAL BASELINE: 120 RMS', w - (8 * dpr), yBase - (3 * dpr));
-      areaCtx.textAlign = 'left';
+      drawPillBadge(areaCtx, w - marginRight, yBase, 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'right', dpr);
 
       const total = WASH_DATA.length;
       if (total < 2) return;
 
-      // Area gradient
-      const grad = areaCtx.createLinearGradient(0, 0, 0, h);
+      // Area gradient strictly within [marginLeft, w - marginRight]
+      const grad = areaCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       grad.addColorStop(0, 'rgba(0, 240, 210, 0.25)');
       grad.addColorStop(0.8, 'rgba(0, 240, 210, 0.04)');
       grad.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
 
       areaCtx.beginPath();
-      areaCtx.moveTo(0, h);
+      areaCtx.moveTo(marginLeft, marginTop + plotH);
       for (let i = 0; i < total; i++) {
-        const x = (i / (total - 1)) * w;
-        const rms = WASH_DATA[i][4];
-        const y = h - padBottom - ((rms / 520.0) * plotH);
+        const x = getX(i, total);
+        const y = getY(WASH_DATA[i][4]);
         areaCtx.lineTo(x, y);
       }
-      areaCtx.lineTo(w, h);
+      areaCtx.lineTo(w - marginRight, marginTop + plotH);
       areaCtx.closePath();
       areaCtx.fillStyle = grad;
       areaCtx.fill();
@@ -1602,24 +1681,23 @@
       areaCtx.strokeStyle = '#00f0d2';
       areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {
-        const x = (i / (total - 1)) * w;
-        const rms = WASH_DATA[i][4];
-        const y = h - padBottom - ((rms / 520.0) * plotH);
+        const x = getX(i, total);
+        const y = getY(WASH_DATA[i][4]);
         if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
       }
       areaCtx.stroke();
 
-      // Cursor vertical scrubber line
-      const curX = (currentIndex / (total - 1)) * w;
-      areaCtx.strokeStyle = '#00f0d2';
-      areaCtx.lineWidth = 2 * dpr;
+      // Cursor scrubber line strictly within plot bounds
+      const curX = getX(currentIndex, total);
+      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.8)';
+      areaCtx.lineWidth = 1.5 * dpr;
       areaCtx.beginPath();
-      areaCtx.moveTo(curX, 0);
-      areaCtx.lineTo(curX, h);
+      areaCtx.moveTo(curX, marginTop);
+      areaCtx.lineTo(curX, marginTop + plotH);
       areaCtx.stroke();
 
       const curRms = WASH_DATA[currentIndex][4];
-      const curY = h - padBottom - ((curRms / 520.0) * plotH);
+      const curY = getY(curRms);
 
       // Cursor dot
       areaCtx.fillStyle = '#00f0d2';
@@ -1627,43 +1705,46 @@
       areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
 
-      // Floating cursor value badge (clearly shows the live number & spike)
+      // Floating cursor badge with glowing border and dark background
       const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
       const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
       const badgeText = `${curRms.toFixed(1)} RMS (${spikeMult}x ${spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'})`;
 
-      areaCtx.font = `700 ${9 * dpr}px 'JetBrains Mono', monospace`;
+      areaCtx.font = `700 ${8.5 * dpr}px 'JetBrains Mono', monospace`;
       const tw = areaCtx.measureText(badgeText).width;
-      const bw = tw + (12 * dpr);
-      const bh = 18 * dpr;
+      const bw = tw + (14 * dpr);
+      const bh = 20 * dpr;
 
       let bx = curX - (bw / 2);
-      if (bx < 6 * dpr) bx = 6 * dpr;
-      if (bx + bw > w - (6 * dpr)) bx = w - bw - (6 * dpr);
+      if (bx < marginLeft + (4 * dpr)) bx = marginLeft + (4 * dpr);
+      if (bx + bw > w - marginRight - (4 * dpr)) bx = w - marginRight - bw - (4 * dpr);
 
-      let by = curY - (22 * dpr);
-      if (by < 4 * dpr) by = curY + (10 * dpr);
+      let by = curY - (26 * dpr);
+      if (by < marginTop + (4 * dpr)) by = curY + (12 * dpr);
 
-      areaCtx.fillStyle = curRms > 250 ? 'rgba(251, 146, 60, 0.95)' : 'rgba(0, 240, 210, 0.95)';
+      const badgeCol = curRms > 250 ? '#fb923c' : '#00f0d2';
+      areaCtx.fillStyle = 'rgba(20, 24, 33, 0.94)';
       areaCtx.beginPath();
-      if (areaCtx.roundRect) {
-        areaCtx.roundRect(bx, by, bw, bh, 3 * dpr);
-      } else {
-        areaCtx.rect(bx, by, bw, bh);
-      }
+      if (areaCtx.roundRect) areaCtx.roundRect(bx, by, bw, bh, 4 * dpr);
+      else areaCtx.rect(bx, by, bw, bh);
       areaCtx.fill();
 
-      areaCtx.fillStyle = '#0f172a';
+      areaCtx.strokeStyle = badgeCol;
+      areaCtx.lineWidth = 1.2 * dpr;
+      areaCtx.stroke();
+
+      areaCtx.fillStyle = badgeCol;
       areaCtx.textAlign = 'center';
-      areaCtx.fillText(badgeText, bx + (bw / 2), by + (12.5 * dpr));
+      areaCtx.fillText(badgeText, bx + (bw / 2), by + (13.5 * dpr));
       areaCtx.textAlign = 'left';
     }
 
     function onScrub(val) {
       currentIndex = parseInt(val, 10);
-      const minutes = ((WASH_DATA[currentIndex][0] / 60000)).toFixed(1);
+      const curRec = WASH_DATA[currentIndex];
+      const minutes = ((curRec[0] / 60000)).toFixed(1);
       scrubLabel.innerText = `${minutes}m`;
-      applyRecord(WASH_DATA[currentIndex]);
+      applyRecord(curRec, false);
       drawSpline();
       drawXyz();
       drawArea();
@@ -1692,13 +1773,20 @@
         lblStatusText.innerText = 'Live Streaming (50 Hz)';
         document.getElementById('acc-item-1').classList.remove('active');
         document.getElementById('acc-item-2').classList.add('active');
+        document.getElementById('tab-historic').classList.remove('active');
+        document.getElementById('tab-live').classList.add('active');
         startLivePolling();
       } else {
-        if (liveTimer) clearInterval(liveTimer);
+        if (liveTimer) {
+          clearInterval(liveTimer);
+          liveTimer = null;
+        }
         lblStatusText.innerText = 'wash_1019 Active';
         document.getElementById('acc-item-2').classList.remove('active');
         document.getElementById('acc-item-1').classList.add('active');
-        applyRecord(WASH_DATA[currentIndex]);
+        document.getElementById('tab-live').classList.remove('active');
+        document.getElementById('tab-historic').classList.add('active');
+        applyRecord(WASH_DATA[currentIndex], false);
         drawSpline();
         drawXyz();
         drawArea();
@@ -1707,17 +1795,19 @@
 
     async function startLivePolling() {
       const fetchLive = async () => {
+        if (currentMode !== 'live') return;
         try {
           const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
           const d = await res.json();
-          if (d) {
-            applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms]);
+          if (d && currentMode === 'live') {
+            applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms], true);
             drawXyz();
             drawSpline();
           }
         } catch (e) {}
       };
       fetchLive();
+      if (liveTimer) clearInterval(liveTimer);
       liveTimer = setInterval(fetchLive, 2000);
     }
 
@@ -1744,9 +1834,10 @@
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
 
+    // Default to clean historic mode on startup
     setTimeout(() => {
       resizeCanvases();
-      applyRecord(WASH_DATA[0]);
+      setMode('historic');
     }, 100);
   </script>
 </body>
