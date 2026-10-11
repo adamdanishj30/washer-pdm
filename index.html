@@ -25,6 +25,7 @@
       --purple-accent: #a78bfa;
       --blue-accent: #38bdf8;
       --green-accent: #34d399;
+      --red-accent: #ef4444;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -127,6 +128,12 @@
       font-size: 11px;
       font-weight: 600;
       color: var(--teal-accent);
+      transition: all 0.25s ease;
+    }
+    .status-badge.offline-badge {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
     }
     .status-dot {
       width: 7px;
@@ -135,6 +142,12 @@
       background: var(--teal-accent);
       box-shadow: 0 0 8px var(--teal-accent);
       animation: pulse-glow 2s infinite;
+      transition: all 0.25s ease;
+    }
+    .status-dot.dot-offline {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+      animation: none;
     }
     @keyframes pulse-glow {
       0%, 100% { opacity: 1; transform: scale(1); }
@@ -226,6 +239,7 @@
       justify-content: center;
       font-weight: 700;
       font-size: 13px;
+      transition: all 0.2s;
     }
     .account-avatar-ring.avatar-coral {
       background: rgba(251, 146, 60, 0.15);
@@ -236,6 +250,11 @@
       background: rgba(167, 139, 250, 0.15);
       border-color: var(--purple-accent);
       color: var(--purple-accent);
+    }
+    .account-avatar-ring.avatar-dim {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.14);
+      color: var(--text-dim);
     }
     .account-meta {
       display: flex;
@@ -277,6 +296,25 @@
       flex-direction: column;
       gap: 20px;
       max-width: 1440px;
+    }
+
+    /* Live Offline Alert Banner */
+    .live-offline-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: #fca5a5;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: -4px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* Cards */
@@ -713,7 +751,7 @@
     <!-- Right Controls: Status & CSV (NO User Profile) -->
     <div class="nav-right">
       <div class="status-badge" id="badge-live-tag">
-        <span class="status-dot"></span>
+        <span class="status-dot" id="status-dot-indicator"></span>
         <span id="lbl-status-text">wash_1019 Active</span>
       </div>
       <button class="btn-header-action" onclick="downloadWashCsv()">
@@ -742,10 +780,10 @@
           </div>
         </div>
         <div class="account-item" id="m-acc-item-2" onclick="setMode('live'); toggleMobileMenu()">
-          <div class="account-avatar-ring avatar-coral">L</div>
+          <div class="account-avatar-ring avatar-dim" id="m-avatar-ring-rig">L</div>
           <div class="account-meta">
             <span class="account-name">Live ESP32 Rig</span>
-            <span class="account-sub">50 Hz Firebase stream</span>
+            <span class="account-sub" id="m-acc-sub-rig">Offline &bull; No Input</span>
           </div>
         </div>
         <div class="account-item" onclick="downloadWashCsv()">
@@ -781,10 +819,10 @@
         </div>
 
         <div class="account-item" id="acc-item-2" onclick="setMode('live')">
-          <div class="account-avatar-ring avatar-coral">M</div>
+          <div class="account-avatar-ring avatar-dim" id="avatar-ring-rig">M</div>
           <div class="account-meta">
             <span class="account-name">MPU-6050 IMU</span>
-            <span class="account-sub">Live 50 Hz stream</span>
+            <span class="account-sub" id="acc-sub-rig">Offline &bull; No Input</span>
           </div>
         </div>
 
@@ -806,6 +844,15 @@
 
     <!-- Main View -->
     <main class="main-view">
+
+      <!-- Live Offline Alert Banner -->
+      <div id="live-offline-banner" class="live-offline-banner" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+          <span><strong>Live Rig Offline:</strong> No incoming sensor packets received from ESP32. Displaying last cached packet.</span>
+        </div>
+        <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="setMode('historic')">Return to wash_1019</button>
+      </div>
 
       <!-- Row 1: Top 3 Metric Cards -->
       <section class="row-top-three">
@@ -1103,7 +1150,11 @@
     let currentIndex = 0;
     let isPlaying = false;
     let playInterval = null;
-    let liveTimer = null;
+
+    let lastLivePacketCnt = null;
+    let lastLivePacketUptime = null;
+    let lastPacketArrivedAt = 0;
+    let isRigOnline = false;
 
     const axisVisible = { x: true, y: true, z: true };
 
@@ -1119,6 +1170,9 @@
     const lblCurrTime = document.getElementById('lbl-curr-time');
     const btnPlayWash = document.getElementById('btn-play-wash');
     const lblStatusText = document.getElementById('lbl-status-text');
+    const statusDot = document.getElementById('status-dot-indicator');
+    const statusBadge = document.getElementById('badge-live-tag');
+    const offlineBanner = document.getElementById('live-offline-banner');
 
     const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
     const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
@@ -1206,6 +1260,83 @@
       ctx.fillText(text, px + (6 * dpr), py + (12 * dpr));
     }
 
+    // Update Rig Status everywhere (sidebar, header badge, alert banner)
+    function updateRigStatusUI(online) {
+      const sub1 = document.getElementById('acc-sub-rig');
+      const sub2 = document.getElementById('m-acc-sub-rig');
+      const ring1 = document.getElementById('avatar-ring-rig');
+      const ring2 = document.getElementById('m-avatar-ring-rig');
+
+      if (sub1) sub1.innerHTML = online 
+        ? '<span style="color:var(--teal-accent); font-weight:600;">Online &bull; 50 Hz</span>' 
+        : '<span style="color:var(--text-dim);">Offline &bull; No Input</span>';
+      if (sub2) sub2.innerHTML = online 
+        ? '<span style="color:var(--teal-accent); font-weight:600;">Online &bull; 50 Hz</span>' 
+        : '<span style="color:var(--text-dim);">Offline &bull; No Input</span>';
+
+      if (ring1) ring1.className = online ? 'account-avatar-ring avatar-coral' : 'account-avatar-ring avatar-dim';
+      if (ring2) ring2.className = online ? 'account-avatar-ring avatar-coral' : 'account-avatar-ring avatar-dim';
+
+      if (currentMode === 'live') {
+        if (online) {
+          if (statusBadge) statusBadge.className = 'status-badge';
+          if (statusDot) statusDot.className = 'status-dot';
+          if (lblStatusText) lblStatusText.innerText = 'Live Streaming (50 Hz)';
+          if (offlineBanner) offlineBanner.style.display = 'none';
+        } else {
+          if (statusBadge) statusBadge.className = 'status-badge offline-badge';
+          if (statusDot) statusDot.className = 'status-dot dot-offline';
+          if (lblStatusText) lblStatusText.innerText = 'Live Rig Offline (No Input)';
+          if (offlineBanner) offlineBanner.style.display = 'flex';
+        }
+      } else {
+        // Historic wash_1019 mode
+        if (statusBadge) statusBadge.className = 'status-badge';
+        if (statusDot) statusDot.className = 'status-dot';
+        if (lblStatusText) lblStatusText.innerText = 'wash_1019 Active';
+        if (offlineBanner) offlineBanner.style.display = 'none';
+      }
+    }
+
+    async function checkRigHeartbeat() {
+      try {
+        const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
+        const d = await res.json();
+        if (d && (d.cnt !== undefined || d.uptime !== undefined)) {
+          const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
+                                 (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
+
+          if (hasIncremented) {
+            lastPacketArrivedAt = Date.now();
+            isRigOnline = true;
+          } else {
+            if (lastPacketArrivedAt === 0) {
+              // Initial fetch with stagnant record -> Offline
+              isRigOnline = false;
+            } else if (Date.now() - lastPacketArrivedAt > 4500) {
+              // No packet increment in over 4.5 seconds -> Offline
+              isRigOnline = false;
+            }
+          }
+
+          lastLivePacketCnt = d.cnt;
+          lastLivePacketUptime = d.uptime;
+
+          // If currently viewing Live mode, stream data
+          if (currentMode === 'live') {
+            applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms], true);
+            drawXyz();
+            drawSpline();
+          }
+        } else {
+          isRigOnline = false;
+        }
+      } catch (e) {
+        isRigOnline = false;
+      }
+      updateRigStatusUI(isRigOnline);
+    }
+
     function applyRecord(rec, isFromLive = false) {
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
@@ -1278,7 +1409,7 @@
       if (cellTotalAccel) cellTotalAccel.innerText = `${vibe.toFixed(2)} m/s²`;
       if (cellDynShock) cellDynShock.innerText = `±${dg.toFixed(2)} m/s²`;
 
-      // 4. Header Badges: Only update historic timeline header if in historic mode or not a live background overwrite
+      // 4. Header Badges: Only update historic timeline header if in historic mode
       if (!isFromLive || currentMode === 'live') {
         if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
         if (timelineHeadSpike) timelineHeadSpike.innerText = `${spikeRatio}x`;
@@ -1770,45 +1901,23 @@
       currentMode = mode;
       if (mode === 'live') {
         if (isPlaying) togglePlayPause();
-        lblStatusText.innerText = 'Live Streaming (50 Hz)';
         document.getElementById('acc-item-1').classList.remove('active');
         document.getElementById('acc-item-2').classList.add('active');
         document.getElementById('tab-historic').classList.remove('active');
         document.getElementById('tab-live').classList.add('active');
-        startLivePolling();
+        updateRigStatusUI(isRigOnline);
+        checkRigHeartbeat();
       } else {
-        if (liveTimer) {
-          clearInterval(liveTimer);
-          liveTimer = null;
-        }
-        lblStatusText.innerText = 'wash_1019 Active';
         document.getElementById('acc-item-2').classList.remove('active');
         document.getElementById('acc-item-1').classList.add('active');
         document.getElementById('tab-live').classList.remove('active');
         document.getElementById('tab-historic').classList.add('active');
+        updateRigStatusUI(isRigOnline);
         applyRecord(WASH_DATA[currentIndex], false);
         drawSpline();
         drawXyz();
         drawArea();
       }
-    }
-
-    async function startLivePolling() {
-      const fetchLive = async () => {
-        if (currentMode !== 'live') return;
-        try {
-          const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
-          const d = await res.json();
-          if (d && currentMode === 'live') {
-            applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms], true);
-            drawXyz();
-            drawSpline();
-          }
-        } catch (e) {}
-      };
-      fetchLive();
-      if (liveTimer) clearInterval(liveTimer);
-      liveTimer = setInterval(fetchLive, 2000);
     }
 
     function downloadWashCsv() {
@@ -1834,10 +1943,12 @@
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
 
-    // Default to clean historic mode on startup
+    // Default to clean historic mode on startup and start rig heartbeat polling
     setTimeout(() => {
       resizeCanvases();
       setMode('historic');
+      checkRigHeartbeat();
+      setInterval(checkRigHeartbeat, 2500);
     }, 100);
   </script>
 </body>
