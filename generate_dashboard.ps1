@@ -6,32 +6,28 @@ $templatePart1 = @'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Samsung Washer PdM — Multimodal Cloud Dashboard</title>
+  <title>Samsung Washer PdM — Machinery Diagnostics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-body: #f4f7fc;
-      --bg-card: #ffffff;
-      --bg-card-sub: #f8fafc;
-      --border-card: #e8edf5;
-      --border-sub: #f1f5f9;
-      --text-main: #1e293b;
-      --text-muted: #64748b;
-      --text-dim: #94a3b8;
-      --primary-blue: #2563eb;
-      --primary-blue-light: #eff6ff;
-      --primary-blue-border: #dbeafe;
-      --accent-coral: #f97316;
-      --accent-coral-light: #fff7ed;
-      --accent-emerald: #10b981;
-      --accent-emerald-light: #ecfdf5;
-      --accent-purple: #8b5cf6;
-      --accent-purple-light: #f5f3ff;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
-      --shadow-card: 0 4px 20px -2px rgba(50, 60, 90, 0.05), 0 2px 6px -1px rgba(50, 60, 90, 0.03);
-      --shadow-card-hover: 0 10px 25px -4px rgba(50, 60, 90, 0.08), 0 4px 10px -2px rgba(50, 60, 90, 0.04);
+      --bg-body: #1e2229;
+      --bg-sidebar: #171a21;
+      --bg-card: #252934;
+      --bg-card-hover: #2c313e;
+      --bg-inner: #1a1d24;
+      --border-card: rgba(255, 255, 255, 0.05);
+      --border-sub: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --teal-accent: #00f0d2;
+      --teal-glow: rgba(0, 240, 210, 0.25);
+      --coral-accent: #fb923c;
+      --purple-accent: #a78bfa;
+      --blue-accent: #38bdf8;
+      --green-accent: #34d399;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -48,275 +44,233 @@ $templatePart1 = @'
 
     /* Top Navigation Bar */
     .top-nav {
-      background: #ffffff;
+      background: var(--bg-body);
       border-bottom: 1px solid var(--border-card);
-      padding: 12px 28px;
+      padding: 16px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 50;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.02);
     }
 
     .nav-left {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 16px;
     }
 
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-
-    .brand-name {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--primary-blue);
-      letter-spacing: -0.5px;
-    }
-
-    .search-box {
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #f1f5f9;
-      border: 1px solid transparent;
-      border-radius: 999px;
-      padding: 8px 16px;
-      width: 280px;
-      transition: all 0.2s;
+      text-decoration: none;
     }
-    .search-box:focus-within {
-      background: #ffffff;
-      border-color: var(--primary-blue-border);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    .brand-pill {
+      background: var(--teal-accent);
+      color: #0f172a;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
     }
-    .search-box input {
-      border: none;
-      background: transparent;
-      outline: none;
+
+    /* Center Tabs (Dashboard, Analytics, Audience...) */
+    .nav-tabs-center {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-tab-item {
       font-size: 13px;
-      color: var(--text-main);
-      width: 100%;
-      font-family: inherit;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.2s;
+      position: relative;
     }
-    .search-box input::placeholder {
-      color: var(--text-dim);
+    .nav-tab-item:hover {
+      color: #fff;
+    }
+    .nav-tab-item.active {
+      color: #fff;
+      font-weight: 700;
+    }
+    .nav-tab-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -16px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--teal-accent);
+      border-radius: 999px;
     }
 
     .nav-right {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
     }
 
-    .badge-live-tag {
-      background: var(--accent-emerald-light);
-      color: #059669;
-      border: 1px solid #bbf7d0;
-      border-radius: 999px;
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      display: flex;
+    .status-badge {
+      display: inline-flex;
       align-items: center;
       gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(0, 240, 210, 0.1);
+      color: var(--teal-accent);
+      border: 1px solid rgba(0, 240, 210, 0.2);
     }
-    .badge-dot {
+    .status-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #10b981;
+      background: var(--teal-accent);
       animation: pulse-dot 2s infinite;
     }
-    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
 
-    .btn-icon-light {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #f8fafc;
+    .btn-header-action {
+      background: var(--bg-card);
       border: 1px solid var(--border-card);
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 14px;
-      position: relative;
       transition: all 0.2s;
     }
-    .btn-icon-light:hover {
-      background: #f1f5f9;
-      color: var(--text-main);
-    }
-
-    .notif-bubble {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      background: var(--accent-coral);
-      color: #fff;
-      font-size: 9px;
-      font-weight: 800;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #ffffff;
-    }
-
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-    .user-avatar-circle {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .user-profile-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-main);
+    .btn-header-action:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.15);
     }
 
     .hamburger-btn {
       display: none;
       background: none;
       border: none;
-      color: var(--text-main);
+      color: #fff;
       font-size: 22px;
       cursor: pointer;
     }
 
-    /* App Layout */
+    /* Main App Layout */
     .app-layout {
       display: flex;
       flex: 1;
       max-width: 1560px;
       margin: 0 auto;
       width: 100%;
-      padding: 24px;
-      gap: 24px;
+      padding: 20px 24px;
+      gap: 20px;
     }
 
-    /* Clean White Sidebar */
+    /* Sidebar: "My Accounts" / Machines list */
     .sidebar {
-      width: 220px;
+      width: 210px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      gap: 20px;
     }
 
-    .sidebar-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .sidebar-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
     }
 
-    .sidebar-item {
+    .account-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
+      padding: 10px 12px;
+      border-radius: 12px;
       cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
     }
-    .sidebar-item:hover {
-      background: #f1f5f9;
-      color: var(--text-main);
+    .account-item:hover {
+      background: rgba(37, 41, 52, 0.6);
     }
-    .sidebar-item.active {
-      background: var(--primary-blue-light);
-      color: var(--primary-blue);
-      font-weight: 700;
+    .account-item.active {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
     }
 
-    .sidebar-card {
-      background: #ffffff;
-      border: 1px solid var(--border-card);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: var(--shadow-sm);
-    }
-    .sidebar-card h4 {
+    .account-avatar-ring {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00f0d2, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f172a;
+      font-weight: 800;
       font-size: 13px;
+      flex-shrink: 0;
+    }
+    .avatar-purple { background: linear-gradient(135deg, #a78bfa, #818cf8); color: #fff; }
+    .avatar-coral { background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; }
+
+    .account-meta {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .account-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .account-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .sidebar-info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: auto;
+    }
+    .sidebar-info-card h4 {
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-main);
       margin-bottom: 4px;
     }
-    .sidebar-card p {
-      font-size: 12px;
+    .sidebar-info-card p {
+      font-size: 11px;
       color: var(--text-muted);
       line-height: 1.4;
-      margin-bottom: 14px;
-    }
-    .btn-side-action {
-      width: 100%;
-      padding: 9px 12px;
-      border-radius: 8px;
-      background: var(--primary-blue);
-      color: #ffffff;
-      border: none;
-      font-weight: 600;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-side-action:hover {
-      background: #1d4ed8;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+      margin-bottom: 12px;
     }
 
-    /* Main Dashboard View */
+    /* Main Content Area */
     .main-view {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
       min-width: 0;
-    }
-
-    /* Section Title */
-    .dashboard-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: -4px;
-    }
-    .page-title {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text-main);
-      letter-spacing: -0.3px;
-    }
-    .page-subtitle {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
     }
 
     /* Card Styling */
@@ -324,110 +278,113 @@ $templatePart1 = @'
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: 16px;
-      padding: 20px;
-      box-shadow: var(--shadow-card);
-      transition: all 0.2s ease;
+      padding: 18px 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      position: relative;
+      transition: border-color 0.2s;
     }
     .card:hover {
-      box-shadow: var(--shadow-card-hover);
+      border-color: rgba(255, 255, 255, 0.08);
     }
 
-    /* Row 1: 4 Metric Cards (Matching tdlr style) */
-    .row-metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
-
-    .kpi-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 20px;
-    }
-    .kpi-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .kpi-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-dim);
-      font-weight: 700;
-    }
-    .kpi-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--text-main);
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-    }
-    .kpi-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-
-    .kpi-icon-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
-    .icon-blue { background: var(--primary-blue-light); color: var(--primary-blue); }
-    .icon-coral { background: var(--accent-coral-light); color: var(--accent-coral); }
-    .icon-purple { background: var(--accent-purple-light); color: var(--accent-purple); }
-    .icon-emerald { background: var(--accent-emerald-light); color: var(--accent-emerald); }
-
-    /* Row 2: Dual Waveform Spline & Multi-Segment Donut Ring */
-    .row-charts-mid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
-    }
-
-    .card-header-clean {
+    .card-header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
-    .card-title-clean {
-      font-size: 14px;
+    .card-title-text {
+      font-size: 13px;
       font-weight: 700;
       color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
     }
+    .card-dots {
+      color: var(--text-dim);
+      font-size: 14px;
+      cursor: pointer;
+    }
 
-    .legend-clean-row {
+    /* Row 1: Top 3 Metric Cards (Matching Image 3) */
+    .row-top-three {
+      display: grid;
+      grid-template-columns: 1.2fr 1.3fr 1.2fr;
+      gap: 16px;
+    }
+
+    /* Dual-Metric Block (Followers style: 2,535 & 957) */
+    .dual-metric-flex {
       display: flex;
-      gap: 14px;
+      gap: 28px;
+      margin-top: 4px;
+    }
+    .dual-metric-col {
+      display: flex;
+      flex-direction: column;
+    }
+    .metric-big-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .metric-sub-lbl {
       font-size: 11px;
-      font-weight: 600;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Overview Stats with % badges (+83.5%) */
+    .stat-with-badge {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 2px;
+    }
+    .badge-percent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal-accent);
+    }
+    .badge-coral {
+      color: var(--coral-accent);
+    }
+
+    /* Row 2: Middle Section (Vibration Spline/Bars + Donut Card) */
+    .row-middle {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 16px;
+    }
+
+    /* Legend Pills */
+    .chart-legend-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
       color: var(--text-muted);
     }
-    .legend-dot-item {
+    .legend-item-dot {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      cursor: pointer;
+      user-select: none;
     }
-    .dot-blue { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-blue); }
-    .dot-coral { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-coral); }
-    .dot-emerald { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); }
+    .dot-teal { width: 7px; height: 7px; border-radius: 50%; background: var(--teal-accent); }
+    .dot-coral { width: 7px; height: 7px; border-radius: 50%; background: var(--coral-accent); }
+    .dot-purple { width: 7px; height: 7px; border-radius: 50%; background: var(--purple-accent); }
+    .dot-blue { width: 7px; height: 7px; border-radius: 50%; background: var(--blue-accent); }
 
-    .canvas-box-mid {
+    .canvas-container-mid {
       position: relative;
       width: 100%;
-      height: 190px;
+      height: 180px;
     }
     canvas {
       width: 100%;
@@ -435,239 +392,209 @@ $templatePart1 = @'
       display: block;
     }
 
-    /* Donut Ring Card (Right Column) */
-    .card-donut-clean {
+    /* Circular Donut Ring (Gender card in Image 3) */
+    .donut-card-inner {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
     }
-    .donut-ring-wrap {
+    .donut-svg-wrap {
       position: relative;
       width: 130px;
       height: 130px;
-      margin: 6px auto;
     }
-    .donut-svg-clean {
+    .donut-svg-elem {
       transform: rotate(-90deg);
       width: 100%;
       height: 100%;
     }
-    .donut-bg-clean {
+    .donut-track-bg {
       fill: none;
-      stroke: #f1f5f9;
+      stroke: rgba(255, 255, 255, 0.05);
       stroke-width: 12;
     }
-    .donut-seg-blue {
+    .donut-arc-teal {
       fill: none;
-      stroke: var(--primary-blue);
+      stroke: var(--teal-accent);
       stroke-width: 12;
       stroke-linecap: round;
       stroke-dasharray: 326;
-      stroke-dashoffset: 70;
+      stroke-dashoffset: 80;
       transition: stroke-dashoffset 0.4s;
     }
-    .donut-seg-coral {
+    .donut-arc-purple {
       fill: none;
-      stroke: var(--accent-coral);
+      stroke: var(--purple-accent);
       stroke-width: 12;
       stroke-linecap: round;
       stroke-dasharray: 326;
-      stroke-dashoffset: 240;
+      stroke-dashoffset: 230;
     }
-    .donut-center-text {
+    .donut-inner-num {
       position: absolute;
       inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      text-align: center;
     }
-    .donut-big-num {
+    .donut-main-stat {
+      font-family: 'JetBrains Mono', monospace;
       font-size: 24px;
       font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
+      color: #fff;
     }
-    .donut-sub-lbl {
+    .donut-sub-stat {
       font-size: 10px;
+      color: var(--text-dim);
       text-transform: uppercase;
       font-weight: 700;
-      color: var(--text-dim);
     }
 
-    .donut-legend-list {
+    .donut-split-legend {
       display: flex;
       justify-content: space-around;
+      width: 100%;
+      margin-top: 14px;
       padding-top: 10px;
       border-top: 1px solid var(--border-sub);
       font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 600;
     }
 
     /* Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) Card */
-    .row-xyz-dedicated {
+    .row-xyz-full {
       display: grid;
       grid-template-columns: 1fr;
     }
 
-    .axis-pill-toggle {
-      background: #f8fafc;
+    .axis-toggle-clean {
+      background: var(--bg-inner);
       border: 1px solid var(--border-card);
       border-radius: 999px;
-      padding: 4px 12px;
+      padding: 3px 10px;
       font-size: 11px;
       font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       transition: all 0.2s;
+      user-select: none;
     }
-    .axis-pill-toggle:hover {
-      background: #f1f5f9;
-    }
-    .axis-pill-toggle.dimmed {
+    .axis-toggle-clean.dimmed {
       opacity: 0.35;
       text-decoration: line-through;
     }
 
-    /* Row 4: Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown */
-    .row-bottom-split {
+    /* Row 4: Timeline ("Most Active Times" style) + Phase Breakdown */
+    .row-bottom {
       display: grid;
-      grid-template-columns: 1.4fr 1fr;
+      grid-template-columns: 1.6fr 1fr;
       gap: 16px;
     }
 
-    /* Scrubber Slider */
-    .timeline-clean-box {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      background: var(--bg-card-sub);
-      border: 1px solid var(--border-card);
-      border-radius: 12px;
-      padding: 10px 16px;
-      margin-top: 12px;
-    }
-    .timeline-clean-box input[type="range"] {
-      flex: 1;
-      accent-color: var(--primary-blue);
-      cursor: pointer;
-    }
-    .timeline-tag-time {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--primary-blue);
-      min-width: 60px;
-    }
-
-    /* Action Control Row */
-    .actions-clean-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .btn-clean-primary {
-      padding: 10px 18px;
-      border-radius: 10px;
-      background: var(--primary-blue);
-      color: #ffffff;
-      border: none;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-clean-primary:hover {
-      background: #1d4ed8;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-    }
-    .btn-clean-secondary {
-      padding: 10px 18px;
-      border-radius: 10px;
-      background: #ffffff;
-      color: var(--text-main);
-      border: 1px solid var(--border-card);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-clean-secondary:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
-    }
-
-    /* Phase List Items ("Projects" list style) */
-    .phase-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .phase-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: var(--bg-card-sub);
-      border: 1px solid var(--border-sub);
-      transition: all 0.2s;
-    }
-    .phase-item:hover {
-      border-color: var(--primary-blue-border);
-      background: #ffffff;
-    }
-    .phase-left {
+    .timeline-scrubber-bar {
       display: flex;
       align-items: center;
       gap: 12px;
+      background: var(--bg-inner);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      padding: 8px 14px;
+      margin-top: 10px;
     }
-    .phase-badge-num {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: var(--primary-blue-light);
-      color: var(--primary-blue);
-      font-weight: 700;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .timeline-scrubber-bar input[type="range"] {
+      flex: 1;
+      accent-color: var(--teal-accent);
+      cursor: pointer;
     }
-    .phase-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-    .phase-desc {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    .phase-val {
+    .time-badge-mono {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--teal-accent);
+      min-width: 50px;
     }
 
-    /* Mobile Drawer Overlay */
+    .action-button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .btn-dark-primary {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: var(--teal-accent);
+      color: #0f172a;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-dark-primary:hover {
+      box-shadow: 0 0 12px var(--teal-glow);
+    }
+    .btn-dark-secondary {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: var(--bg-inner);
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-dark-secondary:hover {
+      background: var(--bg-card-hover);
+    }
+
+    /* Phase Progress Bars ("Top Locations" in Image 3) */
+    .phase-bars-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .phase-bar-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .phase-header-flex {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+    .phase-name-txt {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .phase-pct-txt {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    .progress-track-dark {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-inner);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill-teal {
+      height: 100%;
+      background: var(--teal-accent);
+      border-radius: 999px;
+    }
+
+    /* Mobile Drawer */
     .mobile-drawer-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
       z-index: 99;
     }
     .mobile-drawer {
@@ -676,7 +603,7 @@ $templatePart1 = @'
       bottom: 0;
       left: -280px;
       width: 260px;
-      background: #ffffff;
+      background: var(--bg-sidebar);
       border-right: 1px solid var(--border-card);
       z-index: 100;
       padding: 24px;
@@ -684,30 +611,29 @@ $templatePart1 = @'
       flex-direction: column;
       justify-content: space-between;
       transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
     .mobile-drawer.open {
       left: 0;
     }
 
     /* Responsive Breakpoints */
-    @media (max-width: 1200px) {
-      .row-metrics {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .row-charts-mid {
+    @media (max-width: 1100px) {
+      .row-top-three {
         grid-template-columns: 1fr;
       }
-      .row-bottom-split {
+      .row-middle {
+        grid-template-columns: 1fr;
+      }
+      .row-bottom {
         grid-template-columns: 1fr;
       }
     }
 
     @media (max-width: 768px) {
       .top-nav {
-        padding: 10px 16px;
+        padding: 12px 16px;
       }
-      .search-box {
+      .nav-tabs-center {
         display: none;
       }
       .sidebar {
@@ -719,48 +645,41 @@ $templatePart1 = @'
       .app-layout {
         padding: 14px;
       }
-      .row-metrics {
-        grid-template-columns: 1fr;
-      }
       .card {
-        padding: 16px;
+        padding: 14px 16px;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
+  <!-- Top Navigation Bar (NO user profile interface) -->
   <header class="top-nav">
     <div class="nav-left">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
-      <a href="#" class="brand-logo">
-        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
+      <a href="#" class="brand-title">
+        <span class="brand-pill">PDM</span>
+        <span>Samsung Washer Monitor</span>
       </a>
-      <div class="search-box">
-        <span style="color: var(--text-dim); font-size: 14px;">🔍</span>
-        <input type="text" placeholder="Search machine telemetry, ISO 10816...">
-      </div>
     </div>
 
+    <!-- Center Navigation Tabs -->
+    <nav class="nav-tabs-center">
+      <a class="nav-tab-item active" onclick="setMode('historic')">Dashboard</a>
+      <a class="nav-tab-item" onclick="setMode('live')">Real-Time Telemetry</a>
+      <a class="nav-tab-item" onclick="toggleDoc()">Acoustic Diagnostics</a>
+      <a class="nav-tab-item" onclick="toggleDoc()">ISO 10816 Specs</a>
+    </nav>
+
+    <!-- Right Controls: Status & CSV (NO User Profile) -->
     <div class="nav-right">
-      <div class="badge-live-tag" id="badge-live">
-        <span class="badge-dot"></span>
-        <span id="lbl-live-text">wash_1019 Active</span>
+      <div class="status-badge" id="badge-live-tag">
+        <span class="status-dot"></span>
+        <span id="lbl-status-text">wash_1019 Active</span>
       </div>
-
-      <div class="btn-icon-light" onclick="downloadWashCsv()" title="Download CSV">
-        📥
-      </div>
-      <div class="btn-icon-light" title="Notifications">
-        🔔
-        <span class="notif-bubble">1</span>
-      </div>
-
-      <div class="user-profile">
-        <div class="user-avatar-circle">AD</div>
-        <span class="user-profile-name">Adam D.</span>
-      </div>
+      <button class="btn-header-action" onclick="downloadWashCsv()">
+        Export CSV
+      </button>
     </div>
   </header>
 
@@ -769,291 +688,300 @@ $templatePart1 = @'
   <aside class="mobile-drawer" id="mobile-drawer">
     <div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <span class="brand-name">tdlr<span style="color: var(--primary-blue);">.</span></span>
-        <button onclick="toggleMobileMenu()" style="background:none; border:none; font-size:20px; cursor:pointer;">✕</button>
+        <span class="brand-title">
+          <span class="brand-pill">PDM</span>
+          <span>Washer Monitor</span>
+        </span>
+        <button onclick="toggleMobileMenu()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">✕</button>
       </div>
-      <div class="sidebar-menu">
-        <a class="sidebar-item active" onclick="setMode('historic'); toggleMobileMenu()">📊 Wash 1019 Run</a>
-        <a class="sidebar-item" onclick="setMode('live'); toggleMobileMenu()">📡 Live ESP32 Stream</a>
-        <a class="sidebar-item" onclick="downloadWashCsv()">💾 Download wash_1019.csv</a>
-        <a class="sidebar-item" onclick="toggleMobileMenu()">🛡️ ISO 10816 Standards</a>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="account-item active" onclick="setMode('historic'); toggleMobileMenu()">
+          <div class="account-avatar-ring">W</div>
+          <div class="account-meta">
+            <span class="account-name">Wash 1019 Run</span>
+            <span class="account-sub">35.9 mins archived</span>
+          </div>
+        </div>
+        <div class="account-item" onclick="setMode('live'); toggleMobileMenu()">
+          <div class="account-avatar-ring avatar-coral">L</div>
+          <div class="account-meta">
+            <span class="account-name">Live ESP32 Rig</span>
+            <span class="account-sub">50 Hz Firebase stream</span>
+          </div>
+        </div>
+        <div class="account-item" onclick="downloadWashCsv()">
+          <div class="account-avatar-ring avatar-purple">D</div>
+          <div class="account-meta">
+            <span class="account-name">Download Data</span>
+            <span class="account-sub">CSV time-series</span>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="sidebar-card">
-      <h4>Firebase Cloud</h4>
-      <p>422 multimodal records synced over Asia-SE1.</p>
-      <button class="btn-side-action" onclick="downloadWashCsv()">📥 Export CSV</button>
+    <div class="sidebar-info-card">
+      <h4>Google Firebase</h4>
+      <p>Autonomous Asia-SE1 cloud sync active.</p>
+      <button class="btn-dark-primary" style="width: 100%;" onclick="downloadWashCsv()">Export CSV</button>
     </div>
   </aside>
 
   <!-- App Layout -->
   <div class="app-layout">
     
-    <!-- Clean Minimalist Sidebar -->
+    <!-- Sidebar: Machines / Nodes list ("My Accounts" style from Image 3) -->
     <aside class="sidebar">
-      <div class="sidebar-menu">
-        <div class="sidebar-item active" id="side-item-1" onclick="setMode('historic')">
-          <span>📊</span> Dashboard
+      <div>
+        <div class="sidebar-section-title">Nodes & Sensors</div>
+        
+        <div class="account-item active" id="acc-item-1" onclick="setMode('historic')">
+          <div class="account-avatar-ring">W</div>
+          <div class="account-meta">
+            <span class="account-name">Samsung WW10T</span>
+            <span class="account-sub">wash_1019 cycle</span>
+          </div>
         </div>
-        <div class="sidebar-item" id="side-item-2" onclick="setMode('live')">
-          <span>📡</span> Live Telemetry
+
+        <div class="account-item" id="acc-item-2" onclick="setMode('live')">
+          <div class="account-avatar-ring avatar-coral">M</div>
+          <div class="account-meta">
+            <span class="account-name">MPU-6050 IMU</span>
+            <span class="account-sub">I2C 0x68 (±16g)</span>
+          </div>
         </div>
-        <div class="sidebar-item" onclick="toggleAxis('x')">
-          <span>📳</span> Tri-Axial IMU
-        </div>
-        <div class="sidebar-item" onclick="openPdfDoc()">
-          <span>📑</span> Setup Guide
-        </div>
-        <div class="sidebar-item" onclick="openPdfDoc()">
-          <span>⚙️</span> Settings
+
+        <div class="account-item" onclick="toggleAxis('z')">
+          <div class="account-avatar-ring avatar-purple">A</div>
+          <div class="account-meta">
+            <span class="account-name">INMP441 Audio</span>
+            <span class="account-sub">16 kHz I2S DMA</span>
+          </div>
         </div>
       </div>
 
-      <div class="sidebar-card">
-        <h4>Samsung Washer PdM</h4>
-        <p>WW10TP44DSX/FQ front-load rotating machine diagnostics.</p>
-        <button class="btn-side-action" onclick="downloadWashCsv()">📥 Export CSV</button>
+      <div class="sidebar-info-card">
+        <h4>Predictive Maintenance</h4>
+        <p>10kg Front-Load Anomaly & Vibration Monitor.</p>
+        <button class="btn-dark-primary" style="width: 100%;" onclick="downloadWashCsv()">Download CSV</button>
       </div>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Main View -->
     <main class="main-view">
 
-      <!-- Header Title Row -->
-      <div class="dashboard-header-row">
-        <div>
-          <h2 class="page-title">Dashboard</h2>
-          <p class="page-subtitle">Multimodal Machine Learning PdM • ESP32 DevKit V1 (MPU-6050 + INMP441)</p>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-clean-secondary" style="padding: 6px 14px; font-size: 12px;" onclick="setMode(currentMode === 'live' ? 'historic' : 'live')">
-            <span id="btn-mode-toggle-text">Mode: Wash 1019 Cycle</span> ⇄
-          </button>
-        </div>
-      </div>
-
-      <!-- Row 1: 4 Clean KPI Cards -->
-      <section class="row-metrics">
+      <!-- Row 1: Top 3 Metric Cards (Matching Image 3) -->
+      <section class="row-top-three">
         
-        <!-- Card 1: Resultant Vibration -->
-        <div class="card kpi-card">
-          <div class="kpi-info">
-            <span class="kpi-label">Avg Vibration</span>
-            <div class="kpi-val" style="color: var(--primary-blue);" id="kpi-avg-vibe">
-              9.58 <span class="kpi-sub">m/s²</span>
-            </div>
-            <span class="kpi-sub">Static Gravity: 1.0g</span>
+        <!-- Card 1: Resultant Vibration (Dual numbers: Avg & Peak) -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title-text">Vibration Resultant</span>
+            <span class="card-dots">•••</span>
           </div>
-          <div class="kpi-icon-circle icon-blue">📳</div>
+          <div class="dual-metric-flex">
+            <div class="dual-metric-col">
+              <span class="metric-big-num" style="color: var(--teal-accent);" id="kpi-avg-vibe">9.58</span>
+              <span class="metric-sub-lbl">Avg (m/s²)</span>
+            </div>
+            <div class="dual-metric-col">
+              <span class="metric-big-num" style="color: var(--coral-accent);" id="kpi-peak-vibe">10.14</span>
+              <span class="metric-sub-lbl">Peak Spin</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Card 2: Peak Vibration -->
-        <div class="card kpi-card">
-          <div class="kpi-info">
-            <span class="kpi-label">Peak Vibration</span>
-            <div class="kpi-val" style="color: var(--accent-coral);" id="kpi-peak-vibe">
-              10.14 <span class="kpi-sub">m/s²</span>
-            </div>
-            <span class="kpi-sub" style="color: #ea580c;">Spin Extraction</span>
+        <!-- Card 2: Overview (Acoustic Noise + Percentages) -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title-text">Acoustic Energy</span>
+            <span class="card-dots">•••</span>
           </div>
-          <div class="kpi-icon-circle icon-coral">📈</div>
+          <div>
+            <div class="stat-with-badge">
+              <span class="metric-big-num" style="font-size: 22px;" id="kpi-avg-rms">146.9</span>
+              <span class="badge-percent">+12.4%</span>
+            </div>
+            <span class="metric-sub-lbl">Average Sound RMS</span>
+            <div class="stat-with-badge" style="margin-top: 8px;">
+              <span class="metric-big-num" style="font-size: 18px; color: var(--coral-accent);" id="kpi-peak-rms">511.2</span>
+              <span class="badge-percent badge-coral">+45.2%</span>
+            </div>
+            <span class="metric-sub-lbl">Max Peak Extraction Noise</span>
+          </div>
         </div>
 
-        <!-- Card 3: Acoustic Noise -->
-        <div class="card kpi-card">
-          <div class="kpi-info">
-            <span class="kpi-label">Acoustic Energy</span>
-            <div class="kpi-val" style="color: var(--accent-purple);" id="kpi-avg-rms">
-              146.9 <span class="kpi-sub">RMS</span>
-            </div>
-            <span class="kpi-sub">Peak: 511.2 RMS</span>
+        <!-- Card 3: Machine Health (Your Audience style) -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title-text">Machinery Health</span>
+            <span class="card-dots">•••</span>
           </div>
-          <div class="kpi-icon-circle icon-purple">🎙️</div>
-        </div>
-
-        <!-- Card 4: Machine Health -->
-        <div class="card kpi-card">
-          <div class="kpi-info">
-            <span class="kpi-label">Health Score</span>
-            <div class="kpi-val" style="color: var(--accent-emerald);" id="kpi-health-score">
-              94%
-            </div>
-            <span class="kpi-sub" style="color: #059669;">ISO 10816 Class I</span>
+          <div class="stat-with-badge" style="margin-top: 4px;">
+            <span class="metric-big-num" style="color: var(--teal-accent);" id="kpi-health-score">94%</span>
+            <span class="badge-percent">+9.3%</span>
           </div>
-          <div class="kpi-icon-circle icon-emerald">🛡️</div>
+          <span class="metric-sub-lbl">ISO 10816 Class I (Normal)</span>
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 10px;">
+            Chassis dynamic equilibrium maintained.
+          </div>
         </div>
 
       </section>
 
-      <!-- Row 2: Conversions Spline Waveform & Traffic Channels Donut -->
-      <section class="row-charts-mid">
+      <!-- Row 2: Middle Section (Vibration Spline + Donut Gender Card) -->
+      <section class="row-middle">
         
-        <!-- Spline Dual-Modality Waveform (Conversions Style) -->
+        <!-- Dual-Modality Waveform (Post Performance style) -->
         <div class="card">
-          <div class="card-header-clean">
-            <div>
-              <h3 class="card-title-clean">Dual-Modality Spline Waveform</h3>
-              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Synchronized vibration acceleration vs. acoustic sound pressure</p>
-            </div>
-            <div class="legend-clean-row">
-              <span class="legend-dot-item"><span class="dot-blue"></span> Vibration |a|</span>
-              <span class="legend-dot-item"><span class="dot-coral"></span> Acoustic RMS</span>
+          <div class="card-header-row">
+            <span class="card-title-text">Dual-Modality Telemetry</span>
+            <div class="chart-legend-row">
+              <span class="legend-item-dot"><span class="dot-teal"></span> Vibration |a|</span>
+              <span class="legend-item-dot"><span class="dot-coral"></span> Acoustic RMS</span>
             </div>
           </div>
-
-          <div class="canvas-box-mid">
+          <div class="canvas-container-mid">
             <canvas id="spline-canvas"></canvas>
           </div>
         </div>
 
-        <!-- Clean Donut Multi-Segment Ring (Traffic Channels Style) -->
-        <div class="card card-donut-clean">
-          <div class="card-header-clean" style="margin-bottom: 0;">
-            <h3 class="card-title-clean">Machinery Status</h3>
-            <span style="font-size: 11px; color: var(--text-dim);">Real-Time</span>
+        <!-- Donut Card (Gender card style in Image 3) -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title-text">Machinery Health</span>
+            <span class="card-dots">•••</span>
           </div>
 
-          <div class="donut-ring-wrap">
-            <svg class="donut-svg-clean" viewBox="0 0 130 130">
-              <circle class="donut-bg-clean" cx="65" cy="65" r="52"></circle>
-              <circle class="donut-seg-blue" id="donut-fill-seg" cx="65" cy="65" r="52"></circle>
-              <circle class="donut-seg-coral" cx="65" cy="65" r="52"></circle>
-            </svg>
-            <div class="donut-center-text">
-              <span class="donut-big-num" id="donut-center-num">94%</span>
-              <span class="donut-sub-lbl">Health</span>
+          <div class="donut-card-inner">
+            <div class="donut-svg-wrap">
+              <svg class="donut-svg-elem" viewBox="0 0 130 130">
+                <circle class="donut-track-bg" cx="65" cy="65" r="52"></circle>
+                <circle class="donut-arc-teal" id="donut-arc-teal" cx="65" cy="65" r="52"></circle>
+                <circle class="donut-arc-purple" cx="65" cy="65" r="52"></circle>
+              </svg>
+              <div class="donut-inner-num">
+                <span class="donut-main-stat" id="donut-center-num">94%</span>
+                <span class="donut-sub-stat">HEALTH</span>
+              </div>
             </div>
-          </div>
 
-          <div class="donut-legend-list">
-            <span class="legend-dot-item"><span class="dot-blue"></span> Normal</span>
-            <span class="legend-dot-item"><span class="dot-coral"></span> Dynamic</span>
-            <span class="legend-dot-item"><span class="dot-emerald"></span> Stable</span>
+            <div class="donut-split-legend">
+              <span style="color: var(--teal-accent); font-weight: 600;">● 56.7% Stable</span>
+              <span style="color: var(--purple-accent); font-weight: 600;">● 43.3% Dynamic</span>
+            </div>
           </div>
         </div>
 
       </section>
 
-      <!-- Row 3: DEDICATED Tri-Axial Vibration (Ax, Ay, Az) Graph -->
-      <section class="row-xyz-dedicated">
+      <!-- Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) Card -->
+      <section class="row-xyz-full">
         <div class="card">
-          <div class="card-header-clean">
+          <div class="card-header-row">
             <div>
-              <h3 class="card-title-clean">Tri-Axial Vibration (Ax, Ay, Az)</h3>
-              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">MPU-6050 direct ±16g accelerometer register burst reading</p>
+              <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
+              <span style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">MPU-6050 direct accelerometer register burst</span>
             </div>
             <div style="display: flex; gap: 8px;">
-              <span class="axis-pill-toggle" id="pill-tog-x" style="color: var(--primary-blue);" onclick="toggleAxis('x')">
-                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--primary-blue);"></span>
-                Ax: <strong id="vibe-leg-x">-0.72</strong> m/s²
+              <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
+                ● Ax: <strong id="vibe-leg-x">-0.72</strong> m/s²
               </span>
-              <span class="axis-pill-toggle" id="pill-tog-y" style="color: var(--accent-coral);" onclick="toggleAxis('y')">
-                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-coral);"></span>
-                Ay: <strong id="vibe-leg-y">+1.41</strong> m/s²
+              <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
+                ● Ay: <strong id="vibe-leg-y">+1.41</strong> m/s²
               </span>
-              <span class="axis-pill-toggle" id="pill-tog-z" style="color: var(--accent-emerald);" onclick="toggleAxis('z')">
-                <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);"></span>
-                Az: <strong id="vibe-leg-z">-9.44</strong> m/s²
+              <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
+                ● Az: <strong id="vibe-leg-z">-9.44</strong> m/s²
               </span>
             </div>
           </div>
-
-          <div class="canvas-box-mid" style="height: 180px;">
+          <div class="canvas-container-mid" style="height: 180px;">
             <canvas id="xyz-canvas"></canvas>
           </div>
         </div>
       </section>
 
-      <!-- Row 4: Full 35.9-min Timeline Scrubber (Sales Bar Chart style) & Phase Breakdown -->
-      <section class="row-bottom-split">
+      <!-- Row 4: Timeline ("Most Active Times" style) + Phase Breakdown -->
+      <section class="row-bottom">
         
-        <!-- Full Timeline & Controls -->
+        <!-- Full Wash 1019 Timeline & Playback -->
         <div class="card">
-          <div class="card-header-clean">
-            <div>
-              <h3 class="card-title-clean">Wash Cycle 1019 Full Timeline (35.9 Minutes)</h3>
-              <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">422 real recorded time-series frames from Samsung front-load washer</p>
-            </div>
-            <span style="font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary-blue);" id="lbl-curr-time">
+          <div class="card-header-row">
+            <span class="card-title-text">Wash Cycle 1019 Timeline (35.9 Minutes)</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--teal-accent);" id="lbl-curr-time">
               00:00 / 35:54
             </span>
           </div>
 
-          <div class="canvas-box-mid" style="height: 160px;">
+          <div class="canvas-container-mid" style="height: 140px;">
             <canvas id="area-canvas"></canvas>
           </div>
 
           <!-- Timeline Scrubber -->
-          <div class="timeline-clean-box">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Scrub Timeline:</span>
+          <div class="timeline-scrubber-bar">
+            <span style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Scrub:</span>
             <input type="range" id="time-slider" min="0" max="421" value="0" oninput="onScrub(this.value)">
-            <span class="timeline-tag-time" id="scrub-label">0.0m</span>
+            <span class="time-badge-mono" id="scrub-label">0.0m</span>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="actions-clean-row">
-            <button class="btn-clean-primary" onclick="togglePlayPause()" id="btn-play-wash">
+          <!-- Actions -->
+          <div class="action-button-row">
+            <button class="btn-dark-primary" onclick="togglePlayPause()" id="btn-play-wash">
               ▶ Replay Wash 1019
             </button>
-            <button class="btn-clean-secondary" onclick="downloadWashCsv()">
+            <button class="btn-dark-secondary" onclick="downloadWashCsv()">
               📥 Download wash_1019.csv
             </button>
-            <button class="btn-clean-secondary" onclick="setMode('live')">
+            <button class="btn-dark-secondary" onclick="setMode('live')">
               ⚡ Connect Live Firebase
             </button>
           </div>
         </div>
 
-        <!-- Phase List ("Projects" style list from reference image) -->
+        <!-- Phase Breakdown ("Top Locations" style in Image 3) -->
         <div class="card">
-          <div class="card-header-clean">
-            <h3 class="card-title-clean">Wash Phases & Cycle Breakdown</h3>
-            <span style="font-size: 12px; color: var(--primary-blue); font-weight: 600; cursor: pointer;">Samsung WW10T</span>
+          <div class="card-header-row">
+            <span class="card-title-text">Cycle Phase Breakdown</span>
+            <span class="card-dots">•••</span>
           </div>
 
-          <div class="phase-list">
-            <div class="phase-item">
-              <div class="phase-left">
-                <div class="phase-badge-num">1</div>
-                <div>
-                  <div class="phase-title">Drum Fill & Soak</div>
-                  <div class="phase-desc">0 - 8 mins • Water inlet valve</div>
-                </div>
+          <div class="phase-bars-list">
+            <div class="phase-bar-row">
+              <div class="phase-header-flex">
+                <span class="phase-name-txt">Drum Fill & Soak (0 - 8m)</span>
+                <span class="phase-pct-txt">44.7 RMS</span>
               </div>
-              <span class="phase-val" style="color: var(--primary-blue);">44.7 RMS</span>
+              <div class="progress-track-dark">
+                <div class="progress-fill-teal" style="width: 20%;"></div>
+              </div>
             </div>
 
-            <div class="phase-item">
-              <div class="phase-left">
-                <div class="phase-badge-num">2</div>
-                <div>
-                  <div class="phase-title">Agitation & Wash Tumble</div>
-                  <div class="phase-desc">8 - 22 mins • Direct drive motor 50 RPM</div>
-                </div>
+            <div class="phase-bar-row">
+              <div class="phase-header-flex">
+                <span class="phase-name-txt">Agitation & Tumble (8 - 22m)</span>
+                <span class="phase-pct-txt">146.9 RMS</span>
               </div>
-              <span class="phase-val" style="color: var(--primary-blue);">146.9 RMS</span>
+              <div class="progress-track-dark">
+                <div class="progress-fill-teal" style="width: 48%;"></div>
+              </div>
             </div>
 
-            <div class="phase-item">
-              <div class="phase-left">
-                <div class="phase-badge-num">3</div>
-                <div>
-                  <div class="phase-title">Intermediate Drain & Rinse</div>
-                  <div class="phase-desc">22 - 30 mins • Drain pump active</div>
-                </div>
+            <div class="phase-bar-row">
+              <div class="phase-header-flex">
+                <span class="phase-name-txt">Drain & Rinse (22 - 30m)</span>
+                <span class="phase-pct-txt">227.0 RMS</span>
               </div>
-              <span class="phase-val" style="color: var(--accent-coral);">227.0 RMS</span>
+              <div class="progress-track-dark">
+                <div class="progress-fill-teal" style="width: 68%;"></div>
+              </div>
             </div>
 
-            <div class="phase-item">
-              <div class="phase-left">
-                <div class="phase-badge-num">4</div>
-                <div>
-                  <div class="phase-title">High-Speed Spin Extraction</div>
-                  <div class="phase-desc">30 - 35.9 mins • 1400 RPM spin</div>
-                </div>
+            <div class="phase-bar-row">
+              <div class="phase-header-flex">
+                <span class="phase-name-txt">High-Speed Extraction (30 - 36m)</span>
+                <span class="phase-pct-txt" style="color: var(--coral-accent);">511.2 RMS</span>
               </div>
-              <span class="phase-val" style="color: #dc2626;">511.2 RMS</span>
+              <div class="progress-track-dark">
+                <div class="progress-fill-teal" style="width: 95%; background: var(--coral-accent);"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1092,8 +1020,7 @@ $templatePart2 = @'
     const scrubLabel = document.getElementById('scrub-label');
     const lblCurrTime = document.getElementById('lbl-curr-time');
     const btnPlayWash = document.getElementById('btn-play-wash');
-    const btnModeToggleText = document.getElementById('btn-mode-toggle-text');
-    const lblLiveText = document.getElementById('lbl-live-text');
+    const lblStatusText = document.getElementById('lbl-status-text');
 
     // KPI & Legend DOM
     const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
@@ -1101,7 +1028,7 @@ $templatePart2 = @'
     const kpiAvgRms = document.getElementById('kpi-avg-rms');
     const kpiHealthScore = document.getElementById('kpi-health-score');
     const donutCenterNum = document.getElementById('donut-center-num');
-    const donutFillSeg = document.getElementById('donut-fill-seg');
+    const donutArcTeal = document.getElementById('donut-arc-teal');
 
     const vibeLegX = document.getElementById('vibe-leg-x');
     const vibeLegY = document.getElementById('vibe-leg-y');
@@ -1160,7 +1087,7 @@ $templatePart2 = @'
 
       // Circumference = 2 * PI * 52 ~= 326
       const offset = 326 - (326 * (health / 100));
-      donutFillSeg.style.strokeDashoffset = offset;
+      donutArcTeal.style.strokeDashoffset = offset;
 
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
@@ -1181,8 +1108,8 @@ $templatePart2 = @'
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      // Light grid lines
-      xyzCtx.strokeStyle = '#f1f5f9';
+      // Subtle grid lines
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       xyzCtx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
@@ -1194,7 +1121,7 @@ $templatePart2 = @'
 
       // Zero baseline (Ax & Ay) at 35% height
       const yZero = h * 0.35;
-      xyzCtx.strokeStyle = '#e2e8f0';
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       xyzCtx.setLineDash([4, 4]);
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yZero);
@@ -1203,7 +1130,7 @@ $templatePart2 = @'
 
       // Gravity baseline (Az at -9.81) at 78% height
       const yGravity = h * 0.78;
-      xyzCtx.strokeStyle = '#bbf7d0';
+      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
       xyzCtx.beginPath();
       xyzCtx.moveTo(0, yGravity);
       xyzCtx.lineTo(w, yGravity);
@@ -1211,10 +1138,10 @@ $templatePart2 = @'
       xyzCtx.setLineDash([]);
 
       // Baseline labels
-      xyzCtx.fillStyle = '#94a3b8';
+      xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
       xyzCtx.font = `600 ${9 * dpr}px 'JetBrains Mono', monospace`;
       xyzCtx.fillText('0.0 (X/Y)', 6 * dpr, yZero - (4 * dpr));
-      xyzCtx.fillStyle = '#10b981';
+      xyzCtx.fillStyle = 'rgba(167, 139, 250, 0.4)';
       xyzCtx.fillText('-9.81g (Z)', 6 * dpr, yGravity - (4 * dpr));
 
       const winSize = 40;
@@ -1227,10 +1154,10 @@ $templatePart2 = @'
       const scaleXY = 14 * dpr;
       const scaleZ = 16 * dpr;
 
-      // 1. Plot Az (Emerald)
+      // 1. Plot Az (Purple)
       if (axisVisible.z) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#10b981';
+        xyzCtx.strokeStyle = '#a78bfa';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1244,7 +1171,7 @@ $templatePart2 = @'
       // 2. Plot Ay (Coral)
       if (axisVisible.y) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#f97316';
+        xyzCtx.strokeStyle = '#fb923c';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1255,10 +1182,10 @@ $templatePart2 = @'
         xyzCtx.stroke();
       }
 
-      // 3. Plot Ax (Royal Blue)
+      // 3. Plot Ax (Teal)
       if (axisVisible.x) {
         xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#2563eb';
+        xyzCtx.strokeStyle = '#00f0d2';
         xyzCtx.lineWidth = 2.2 * dpr;
         for (let i = 0; i < points.length; i++) {
           const x = (i / (points.length - 1)) * w;
@@ -1275,21 +1202,21 @@ $templatePart2 = @'
         const cx = (curRel / (points.length - 1)) * w;
         if (axisVisible.x) {
           const cyX = yZero - (points[curRel][1] * scaleXY);
-          xyzCtx.fillStyle = '#2563eb';
+          xyzCtx.fillStyle = '#00f0d2';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
         }
         if (axisVisible.y) {
           const cyY = yZero - (points[curRel][2] * scaleXY);
-          xyzCtx.fillStyle = '#f97316';
+          xyzCtx.fillStyle = '#fb923c';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
         }
         if (axisVisible.z) {
           const cyZ = yGravity - ((points[curRel][3] + 9.81) * scaleZ);
-          xyzCtx.fillStyle = '#10b981';
+          xyzCtx.fillStyle = '#a78bfa';
           xyzCtx.beginPath();
           xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
@@ -1297,15 +1224,15 @@ $templatePart2 = @'
       }
     }
 
-    // DRAW DUAL-MODALITY SPLINE WAVEFORM (Conversions Style)
+    // DRAW DUAL-MODALITY SPLINE WAVEFORM (Post Performance style)
     function drawSpline() {
       const w = splineCvs.width;
       const h = splineCvs.height;
       const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      // Light horizontal grid
-      splineCtx.strokeStyle = '#f1f5f9';
+      // Subtle horizontal grid
+      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       splineCtx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
@@ -1322,10 +1249,10 @@ $templatePart2 = @'
 
       if (points.length < 2) return;
 
-      // 1. Draw Acoustic Wave (Coral with Soft Gradient Fill)
+      // 1. Draw Acoustic Wave (Coral with Translucent Fill)
       const gradCoral = splineCtx.createLinearGradient(0, 0, 0, h);
-      gradCoral.addColorStop(0, 'rgba(249, 115, 22, 0.18)');
-      gradCoral.addColorStop(1, 'rgba(249, 115, 22, 0.0)');
+      gradCoral.addColorStop(0, 'rgba(251, 146, 60, 0.15)');
+      gradCoral.addColorStop(1, 'rgba(251, 146, 60, 0.0)');
 
       splineCtx.beginPath();
       splineCtx.moveTo(0, h);
@@ -1341,8 +1268,8 @@ $templatePart2 = @'
       splineCtx.fill();
 
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#f97316';
-      splineCtx.lineWidth = 2.5 * dpr;
+      splineCtx.strokeStyle = '#fb923c';
+      splineCtx.lineWidth = 2.2 * dpr;
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const normRms = points[i][4] / 520.0;
@@ -1351,10 +1278,10 @@ $templatePart2 = @'
       }
       splineCtx.stroke();
 
-      // 2. Draw Vibration Wave (Royal Blue with Soft Gradient Fill)
-      const gradBlue = splineCtx.createLinearGradient(0, 0, 0, h);
-      gradBlue.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
-      gradBlue.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+      // 2. Draw Vibration Wave (Teal with Translucent Fill)
+      const gradTeal = splineCtx.createLinearGradient(0, 0, 0, h);
+      gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
+      gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
 
       splineCtx.beginPath();
       splineCtx.moveTo(0, h);
@@ -1366,12 +1293,12 @@ $templatePart2 = @'
       }
       splineCtx.lineTo(w, h);
       splineCtx.closePath();
-      splineCtx.fillStyle = gradBlue;
+      splineCtx.fillStyle = gradTeal;
       splineCtx.fill();
 
       splineCtx.beginPath();
-      splineCtx.strokeStyle = '#2563eb';
-      splineCtx.lineWidth = 2.5 * dpr;
+      splineCtx.strokeStyle = '#00f0d2';
+      splineCtx.lineWidth = 2.2 * dpr;
       for (let i = 0; i < points.length; i++) {
         const x = (i / (points.length - 1)) * w;
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
@@ -1380,28 +1307,28 @@ $templatePart2 = @'
       }
       splineCtx.stroke();
 
-      // Current dot marker
+      // Current point dot
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {
         const cx = (curRel / (points.length - 1)) * w;
         const normRms = points[curRel][4] / 520.0;
         const cyRms = h - (normRms * h * 0.75) - 10;
-        splineCtx.fillStyle = '#f97316';
+        splineCtx.fillStyle = '#fb923c';
         splineCtx.beginPath();
         splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
         splineCtx.fill();
       }
     }
 
-    // DRAW FULL AREA & TIMELINE BARS (Sales Style)
+    // DRAW FULL AREA & TIMELINE (Most Active Times style in Image 3)
     function drawArea() {
       const w = areaCvs.width;
       const h = areaCvs.height;
       const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      // Light grid
-      areaCtx.strokeStyle = '#f1f5f9';
+      // Grid
+      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       areaCtx.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         const y = (h / 4) * i;
@@ -1414,11 +1341,11 @@ $templatePart2 = @'
       const total = WASH_DATA.length;
       if (total < 2) return;
 
-      // Area gradient in light royal blue
+      // Area gradient in glowing teal
       const grad = areaCtx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
-      grad.addColorStop(0.8, 'rgba(37, 99, 235, 0.04)');
-      grad.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+      grad.addColorStop(0, 'rgba(0, 240, 210, 0.25)');
+      grad.addColorStop(0.8, 'rgba(0, 240, 210, 0.04)');
+      grad.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
 
       areaCtx.beginPath();
       areaCtx.moveTo(0, h);
@@ -1435,7 +1362,7 @@ $templatePart2 = @'
 
       // Top curve stroke
       areaCtx.beginPath();
-      areaCtx.strokeStyle = '#2563eb';
+      areaCtx.strokeStyle = '#00f0d2';
       areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {
         const x = (i / (total - 1)) * w;
@@ -1447,23 +1374,20 @@ $templatePart2 = @'
 
       // Scrubber cursor line
       const curX = (currentIndex / (total - 1)) * w;
-      areaCtx.strokeStyle = '#2563eb';
+      areaCtx.strokeStyle = '#00f0d2';
       areaCtx.lineWidth = 2;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, 0);
       areaCtx.lineTo(curX, h);
       areaCtx.stroke();
 
-      // Scrubber circle
+      // Scrubber point
       const curRms = WASH_DATA[currentIndex][4];
       const curY = h - ((curRms / 520.0) * (h - 20)) - 8;
-      areaCtx.fillStyle = '#2563eb';
+      areaCtx.fillStyle = '#00f0d2';
       areaCtx.beginPath();
       areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
-      areaCtx.strokeStyle = '#ffffff';
-      areaCtx.lineWidth = 2 * dpr;
-      areaCtx.stroke();
     }
 
     function onScrub(val) {
@@ -1496,17 +1420,15 @@ $templatePart2 = @'
       currentMode = mode;
       if (mode === 'live') {
         if (isPlaying) togglePlayPause();
-        btnModeToggleText.innerText = 'Mode: Live Firebase Rig';
-        lblLiveText.innerText = 'Live Streaming (50 Hz)';
-        document.getElementById('side-item-1').classList.remove('active');
-        document.getElementById('side-item-2').classList.add('active');
+        lblStatusText.innerText = 'Live Streaming (50 Hz)';
+        document.getElementById('acc-item-1').classList.remove('active');
+        document.getElementById('acc-item-2').classList.add('active');
         startLivePolling();
       } else {
         if (liveTimer) clearInterval(liveTimer);
-        btnModeToggleText.innerText = 'Mode: Wash 1019 Cycle';
-        lblLiveText.innerText = 'wash_1019 Active';
-        document.getElementById('side-item-2').classList.remove('active');
-        document.getElementById('side-item-1').classList.add('active');
+        lblStatusText.innerText = 'wash_1019 Active';
+        document.getElementById('acc-item-2').classList.remove('active');
+        document.getElementById('acc-item-1').classList.add('active');
         applyRecord(WASH_DATA[currentIndex]);
         drawSpline();
         drawXyz();
@@ -1549,7 +1471,7 @@ $templatePart2 = @'
       overlay.style.display = drawer.classList.contains('open') ? 'block' : 'none';
     }
 
-    function openPdfDoc() {
+    function toggleDoc() {
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
 
@@ -1572,4 +1494,4 @@ $fullHtml = $templatePart1 + "`n" + $embeddedJs + "`n" + $templatePart2
 $brainArtifact = "C:\Users\adamd\.gemini\antigravity\brain\eaf1a310-7f2a-46d6-b3a7-72b474df813e\dashboard.html"
 [System.IO.File]::WriteAllText($brainArtifact, $fullHtml, [System.Text.Encoding]::UTF8)
 
-Write-Output "Complete! Light aesthetic dashboard generated and written to all targets."
+Write-Output "Complete! Sleek dark slate dashboard generated and written to all targets."
