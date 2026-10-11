@@ -1109,18 +1109,15 @@ def generate_html(default_view='live'):
       xyzCtx.lineTo(marginLeft, h - marginBottom);
       xyzCtx.stroke();
 
-      // Baseline grid lines
+      // Baseline grid lines (cleanly spaced, zero gutter collisions)
       const hLines = isMobile ? [
         {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0', col: 'rgba(255, 255, 255, 0.25)' }},
         {{ y: yZero, lbl: '0.0', col: 'rgba(255, 255, 255, 0.45)' }},
-        {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0', col: 'rgba(255, 255, 255, 0.25)' }},
         {{ y: yGravity, lbl: '-9.81', col: 'rgba(167, 139, 250, 0.6)' }},
         {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0', col: 'rgba(167, 139, 250, 0.3)' }}
       ] : [
         {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
         {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
-        {{ y: yZero + (4.0 * scaleXY), lbl: '-4.0 m/s\u00B2', col: 'rgba(255, 255, 255, 0.25)' }},
-        {{ y: yGravity - ((-7.0 + 9.81) * scaleZ), lbl: '-7.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }},
         {{ y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' }},
         {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s\u00B2', col: 'rgba(167, 139, 250, 0.3)' }}
       ];
@@ -1155,10 +1152,6 @@ def generate_html(default_view='live'):
       xyzCtx.stroke();
       xyzCtx.setLineDash([]);
 
-      // Baseline labels placed on the LEFT side to prevent ANY collision with active live dots on the right
-      drawPillBadge(xyzCtx, marginLeft + (6 * dpr), yZero - (10 * dpr), isMobile ? '0.0 Baseline' : 'X/Y Zero Baseline', 'rgba(255,255,255,0.4)', 'left', dpr);
-      drawPillBadge(xyzCtx, marginLeft + (6 * dpr), yGravity - (10 * dpr), isMobile ? 'Z 1g (-9.81)' : 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', 'left', dpr);
-
       let points;
       let curRelIdx = 0;
       if (currentMode === 'live') {{
@@ -1174,6 +1167,14 @@ def generate_html(default_view='live'):
         points = WASH_DATA.slice(startIdx, endIdx + 1);
         curRelIdx = currentIndex - startIdx;
       }}
+
+      // Dynamic Anti-Collision Placement: Always render baseline badges on the OPPOSITE side of the active cursor!
+      const isCursorOnLeftXyz = (points.length > 1) ? ((curRelIdx / (points.length - 1)) < 0.5) : true;
+      const badgeAlign = isCursorOnLeftXyz ? 'right' : 'left';
+      const badgeX = isCursorOnLeftXyz ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
+
+      drawPillBadge(xyzCtx, badgeX, yZero - (10 * dpr), isMobile ? '0.0 Baseline' : 'X/Y Zero Baseline', 'rgba(255,255,255,0.45)', badgeAlign, dpr);
+      drawPillBadge(xyzCtx, badgeX, yGravity - (10 * dpr), isMobile ? 'Z 1g Gravity' : 'Z 1g Gravity (-9.81 m/s\u00B2)', '#a78bfa', badgeAlign, dpr);
 
       if (points.length < 2) return;
 
@@ -1289,7 +1290,7 @@ def generate_html(default_view='live'):
       areaCtx.fillText('RMS', marginLeft - (5 * dpr), marginTop - (6 * dpr));
       areaCtx.textAlign = 'left';
 
-      // Peak Spike Marker
+      // Peak Spike Dashed Line
       const yPeak = getY(511.2);
       areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
       areaCtx.lineWidth = 1.2 * dpr;
@@ -1299,9 +1300,8 @@ def generate_html(default_view='live'):
       areaCtx.lineTo(w - marginRight, yPeak);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      drawPillBadge(areaCtx, w - marginRight, yPeak, isMobile ? 'PEAK: 511.2 (24.2m)' : 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', 'right', dpr);
 
-      // Baseline Marker - Positioned on the LEFT to ensure ZERO collision with live cursor badge on the right
+      // Baseline Dashed Line
       const yBase = getY(120.0);
       areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
       areaCtx.lineWidth = 1 * dpr;
@@ -1311,7 +1311,6 @@ def generate_html(default_view='live'):
       areaCtx.lineTo(w - marginRight, yBase);
       areaCtx.stroke();
       areaCtx.setLineDash([]);
-      drawPillBadge(areaCtx, marginLeft + (6 * dpr), yBase - (10 * dpr), isMobile ? 'BASELINE: 120' : 'NORMAL BASELINE: 120 RMS', '#00f0d2', 'left', dpr);
 
       // Data source based on mode
       let dataSeries;
@@ -1331,6 +1330,20 @@ def generate_html(default_view='live'):
       if (total < 2) return;
 
       const getX = (idx) => marginLeft + ((idx / (total - 1)) * plotW);
+      const curX = getX(curPointIdx);
+      const curRms = dataSeries[curPointIdx][4];
+      const curY = getY(curRms);
+
+      // Dynamic Anti-Collision Placement: Always draw baseline & peak on OPPOSITE side of active cursor!
+      const isCursorOnLeft = (total > 1) ? ((curPointIdx / (total - 1)) < 0.5) : true;
+      const baseAlign = isCursorOnLeft ? 'right' : 'left';
+      const baseX = isCursorOnLeft ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
+      drawPillBadge(areaCtx, baseX, yBase - (10 * dpr), isMobile ? 'BASELINE: 120' : 'NORMAL BASELINE: 120 RMS', '#00f0d2', baseAlign, dpr);
+
+      const isPeakOnLeft = (!isCursorOnLeft && curRms > 300 && curX > (w - marginRight - (160 * dpr)));
+      const peakAlign = isPeakOnLeft ? 'left' : 'right';
+      const peakX = peakAlign === 'right' ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
+      drawPillBadge(areaCtx, peakX, yPeak - (10 * dpr), isMobile ? 'PEAK: 511.2 (24.2m)' : 'PEAK SPIKE: 511.2 RMS (24.2m)', '#fb923c', peakAlign, dpr);
 
       // Area gradient
       const grad = areaCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
@@ -1362,16 +1375,12 @@ def generate_html(default_view='live'):
       areaCtx.stroke();
 
       // Cursor scrubber line
-      const curX = getX(curPointIdx);
       areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.8)';
       areaCtx.lineWidth = 1.5 * dpr;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, marginTop);
       areaCtx.lineTo(curX, marginTop + plotH);
       areaCtx.stroke();
-
-      const curRms = dataSeries[curPointIdx][4];
-      const curY = getY(curRms);
 
       // Cursor dot
       areaCtx.fillStyle = '#00f0d2';
