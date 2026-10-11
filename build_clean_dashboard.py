@@ -23,7 +23,7 @@ html_content = f'''<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Samsung Washer PdM - Machinery Diagnostics</title>
+  <title>Samsung Washer PdM - Vibration &amp; Acoustic Spike Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -100,9 +100,8 @@ html_content = f'''<!DOCTYPE html>
     .nav-tabs-center {{
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 24px;
     }}
-
     .nav-tab-item {{
       font-size: 13px;
       font-weight: 600;
@@ -111,51 +110,56 @@ html_content = f'''<!DOCTYPE html>
       text-decoration: none;
       transition: color 0.2s;
       position: relative;
+      padding: 6px 0;
     }}
     .nav-tab-item:hover {{
       color: #fff;
     }}
     .nav-tab-item.active {{
       color: #fff;
-      font-weight: 700;
     }}
     .nav-tab-item.active::after {{
       content: '';
       position: absolute;
       bottom: -16px;
       left: 0;
-      width: 100%;
+      right: 0;
       height: 2px;
       background: var(--teal-accent);
-      border-radius: 999px;
+      border-radius: 2px;
     }}
 
+    /* Right Controls: Status & CSV (NO User Profile) */
     .nav-right {{
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }}
-
     .status-badge {{
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(0, 240, 210, 0.1);
-      color: var(--teal-accent);
+      gap: 8px;
+      background: rgba(0, 240, 210, 0.08);
       border: 1px solid rgba(0, 240, 210, 0.2);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--teal-accent);
     }}
     .status-dot {{
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--teal-accent);
-      animation: pulse-dot 2s infinite;
+      box-shadow: 0 0 8px var(--teal-accent);
+      animation: pulse-glow 2s infinite;
     }}
-    @keyframes pulse-dot {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.4; transform: scale(0.85); }} }}
+    @keyframes pulse-glow {{
+      0%, 100% {{ opacity: 1; transform: scale(1); }}
+      50% {{ opacity: 0.4; transform: scale(0.85); }}
+    }}
 
     .btn-header-action {{
       background: var(--bg-card);
@@ -166,47 +170,51 @@ html_content = f'''<!DOCTYPE html>
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       transition: all 0.2s;
     }}
     .btn-header-action:hover {{
       background: var(--bg-card-hover);
-      border-color: rgba(255, 255, 255, 0.15);
+      border-color: var(--border-sub);
     }}
 
     .hamburger-btn {{
       display: none;
       background: none;
       border: none;
-      color: #fff;
+      color: var(--text-main);
       cursor: pointer;
       padding: 4px;
     }}
 
-    /* Main App Layout */
+    /* Main Container with Sidebar */
     .app-layout {{
-      display: flex;
+      display: grid;
+      grid-template-columns: 240px 1fr;
       flex: 1;
-      max-width: 1560px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 20px 24px;
-      gap: 20px;
+      min-height: calc(100vh - 65px);
     }}
 
-    /* Sidebar */
+    /* Left Sidebar */
     .sidebar {{
-      width: 210px;
-      flex-shrink: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-card);
+      padding: 24px 18px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      justify-content: space-between;
     }}
 
     .sidebar-section-title {{
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      padding-left: 6px;
     }}
 
     .account-item {{
@@ -214,47 +222,49 @@ html_content = f'''<!DOCTYPE html>
       align-items: center;
       gap: 12px;
       padding: 10px 12px;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.2s;
-      background: transparent;
+      transition: background 0.2s;
+      margin-bottom: 6px;
     }}
     .account-item:hover {{
-      background: rgba(37, 41, 52, 0.6);
+      background: rgba(255, 255, 255, 0.03);
     }}
     .account-item.active {{
       background: var(--bg-card);
       border: 1px solid var(--border-card);
     }}
-
     .account-avatar-ring {{
-      width: 38px;
-      height: 38px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #00f0d2, #38bdf8);
+      background: rgba(0, 240, 210, 0.15);
+      border: 1px solid var(--teal-accent);
+      color: var(--teal-accent);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #0f172a;
-      font-weight: 800;
+      font-weight: 700;
       font-size: 13px;
-      flex-shrink: 0;
     }}
-    .avatar-purple {{ background: linear-gradient(135deg, #a78bfa, #818cf8); color: #fff; }}
-    .avatar-coral {{ background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; }}
-
+    .account-avatar-ring.avatar-coral {{
+      background: rgba(251, 146, 60, 0.15);
+      border-color: var(--coral-accent);
+      color: var(--coral-accent);
+    }}
+    .account-avatar-ring.avatar-purple {{
+      background: rgba(167, 139, 250, 0.15);
+      border-color: var(--purple-accent);
+      color: var(--purple-accent);
+    }}
     .account-meta {{
       display: flex;
       flex-direction: column;
-      min-width: 0;
     }}
     .account-name {{
       font-size: 13px;
       font-weight: 600;
       color: var(--text-main);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }}
     .account-sub {{
       font-size: 11px;
@@ -264,51 +274,45 @@ html_content = f'''<!DOCTYPE html>
     .sidebar-info-card {{
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 16px;
-      margin-top: auto;
     }}
     .sidebar-info-card h4 {{
       font-size: 12px;
       font-weight: 700;
       color: var(--text-main);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }}
     .sidebar-info-card p {{
       font-size: 11px;
       color: var(--text-muted);
-      line-height: 1.4;
+      line-height: 1.5;
       margin-bottom: 12px;
     }}
 
-    /* Main Content Area */
+    /* Main View Area */
     .main-view {{
-      flex: 1;
+      padding: 24px 32px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      min-width: 0;
+      gap: 20px;
+      max-width: 1440px;
     }}
 
-    /* Card Styling */
+    /* Cards */
     .card {{
       background: var(--bg-card);
       border: 1px solid var(--border-card);
-      border-radius: 16px;
-      padding: 18px 20px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      border-radius: 14px;
+      padding: 20px;
       position: relative;
-      transition: border-color 0.2s;
-    }}
-    .card:hover {{
-      border-color: rgba(255, 255, 255, 0.08);
     }}
 
     .card-header-row {{
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }}
     .card-title-text {{
       font-size: 13px;
@@ -322,30 +326,32 @@ html_content = f'''<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 3px;
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: pointer;
     }}
     .card-menu-dots:hover {{
       opacity: 1;
     }}
     .mini-dot {{
-      width: 3px;
-      height: 3px;
+      width: 3.5px;
+      height: 3.5px;
+      background: #fff;
       border-radius: 50%;
-      background: var(--text-muted);
+      display: inline-block;
     }}
 
     /* Row 1: Top 3 Metric Cards */
     .row-top-three {{
       display: grid;
-      grid-template-columns: 1.2fr 1.3fr 1.2fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
     }}
 
     .dual-metric-flex {{
       display: flex;
-      gap: 28px;
-      margin-top: 4px;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
     }}
     .dual-metric-col {{
       display: flex;
@@ -398,7 +404,6 @@ html_content = f'''<!DOCTYPE html>
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      cursor: pointer;
       user-select: none;
     }}
     .dot-indicator {{
@@ -418,75 +423,89 @@ html_content = f'''<!DOCTYPE html>
       display: block;
     }}
 
-    /* Circular Donut Ring */
-    .donut-card-inner {{
+    /* Live Spike & Intensity Box (replaces donut) */
+    .spike-monitor-box {{
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 0;
-    }}
-    .donut-svg-wrap {{
-      position: relative;
-      width: 130px;
-      height: 130px;
-    }}
-    .donut-svg-elem {{
-      transform: rotate(-90deg);
-      width: 100%;
+      justify-content: space-between;
       height: 100%;
+      padding-top: 2px;
     }}
-    .donut-track-bg {{
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.05);
-      stroke-width: 12;
-    }}
-    .donut-arc-teal {{
-      fill: none;
-      stroke: var(--teal-accent);
-      stroke-width: 12;
-      stroke-linecap: round;
-      stroke-dasharray: 326;
-      stroke-dashoffset: 80;
-      transition: stroke-dashoffset 0.4s;
-    }}
-    .donut-arc-purple {{
-      fill: none;
-      stroke: var(--purple-accent);
-      stroke-width: 12;
-      stroke-linecap: round;
-      stroke-dasharray: 326;
-      stroke-dashoffset: 230;
-    }}
-    .donut-inner-num {{
-      position: absolute;
-      inset: 0;
+    .spike-primary-readout {{
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
     }}
-    .donut-main-stat {{
+    .spike-pill-badge {{
       font-family: 'JetBrains Mono', monospace;
-      font-size: 24px;
-      font-weight: 800;
-      color: #fff;
-    }}
-    .donut-sub-stat {{
-      font-size: 10px;
-      color: var(--text-dim);
-      text-transform: uppercase;
+      font-size: 11px;
       font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid currentColor;
+      transition: all 0.2s ease;
     }}
-
-    .donut-split-legend {{
-      display: flex;
-      justify-content: space-around;
+    .spike-bar-wrap {{
+      margin: 14px 0 10px 0;
+    }}
+    .spike-bar-track {{
+      position: relative;
       width: 100%;
-      margin-top: 14px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+    }}
+    .spike-bar-fill {{
+      height: 100%;
+      background: linear-gradient(90deg, #00f0d2 0%, #38bdf8 45%, #fb923c 85%);
+      border-radius: 6px;
+      transition: width 0.12s ease;
+    }}
+    .spike-bar-pin {{
+      position: absolute;
+      top: -4px;
+      width: 4px;
+      height: 18px;
+      background: #ffffff;
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+      transition: left 0.12s ease;
+      transform: translateX(-50%);
+    }}
+    .spike-bar-scale {{
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }}
+    .spike-stat-grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
       padding-top: 10px;
       border-top: 1px solid var(--border-sub);
-      font-size: 11px;
+    }}
+    .spike-stat-cell {{
+      background: var(--bg-inner);
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-card);
+      display: flex;
+      flex-direction: column;
+    }}
+    .spike-stat-lbl {{
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: 600;
+    }}
+    .spike-stat-val {{
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 2px;
     }}
 
     /* Row 3: Dedicated Tri-Axial Vibration (Ax, Ay, Az) */
@@ -498,92 +517,35 @@ html_content = f'''<!DOCTYPE html>
     .axis-toggle-clean {{
       background: var(--bg-inner);
       border: 1px solid var(--border-card);
-      border-radius: 999px;
-      padding: 3px 10px;
-      font-size: 11px;
+      border-radius: 8px;
+      padding: 4px 10px;
       font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
       cursor: pointer;
-      transition: all 0.2s;
-      user-select: none;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      user-select: none;
+      transition: opacity 0.2s;
     }}
     .axis-toggle-clean.dimmed {{
       opacity: 0.35;
       text-decoration: line-through;
     }}
 
-    /* Row 4: Timeline + Phase Breakdown */
+    /* Row 4: Bottom Section (Timeline & Phase breakdown) */
     .row-bottom {{
       display: grid;
-      grid-template-columns: 1.6fr 1fr;
+      grid-template-columns: 2fr 1fr;
       gap: 16px;
     }}
 
-    .timeline-scrubber-bar {{
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--bg-inner);
-      border: 1px solid var(--border-card);
-      border-radius: 10px;
-      padding: 8px 14px;
-      margin-top: 10px;
-    }}
-    .timeline-scrubber-bar input[type="range"] {{
-      flex: 1;
-      accent-color: var(--teal-accent);
-      cursor: pointer;
-    }}
-    .time-badge-mono {{
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--teal-accent);
-      min-width: 50px;
-    }}
-
-    .action-button-row {{
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-    }}
-    .btn-dark-primary {{
-      padding: 8px 16px;
-      border-radius: 8px;
-      background: var(--teal-accent);
-      color: #0f172a;
-      border: none;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-    }}
-    .btn-dark-primary:hover {{
-      box-shadow: 0 0 12px var(--teal-glow);
-    }}
-    .btn-dark-secondary {{
-      padding: 8px 16px;
-      border-radius: 8px;
-      background: var(--bg-inner);
-      color: var(--text-main);
-      border: 1px solid var(--border-card);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }}
-    .btn-dark-secondary:hover {{
-      background: var(--bg-card-hover);
-    }}
-
-    /* Phase Progress Bars */
+    /* Horizontal Phase Bars */
     .phase-bars-list {{
       display: flex;
       flex-direction: column;
       gap: 12px;
-      margin-top: 6px;
+      margin-top: 4px;
     }}
     .phase-bar-row {{
       display: flex;
@@ -593,78 +555,156 @@ html_content = f'''<!DOCTYPE html>
     .phase-header-flex {{
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
+      font-size: 11.5px;
+      font-weight: 600;
     }}
     .phase-name-txt {{
       color: var(--text-muted);
-      font-weight: 500;
     }}
     .phase-pct-txt {{
       font-family: 'JetBrains Mono', monospace;
       color: var(--text-main);
-      font-weight: 600;
     }}
     .progress-track-dark {{
       width: 100%;
       height: 6px;
-      background: var(--bg-inner);
-      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
       overflow: hidden;
     }}
     .progress-fill-teal {{
       height: 100%;
       background: var(--teal-accent);
-      border-radius: 999px;
+      border-radius: 4px;
+    }}
+
+    /* Timeline Scrubber Bar */
+    .timeline-scrubber-bar {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-sub);
+    }}
+    .timeline-scrubber-bar input[type="range"] {{
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      accent-color: var(--teal-accent);
+      cursor: pointer;
+    }}
+    .time-badge-mono {{
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--teal-accent);
+      min-width: 48px;
+      text-align: right;
+    }}
+
+    .action-button-row {{
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }}
+    .btn-dark-primary {{
+      background: var(--teal-accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }}
+    .btn-dark-primary:hover {{
+      opacity: 0.9;
+    }}
+    .btn-dark-secondary {{
+      background: var(--bg-inner);
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }}
+    .btn-dark-secondary:hover {{
+      background: var(--bg-card-hover);
     }}
 
     /* Mobile Drawer */
-    .mobile-drawer-overlay {{
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
-      z-index: 99;
-    }}
     .mobile-drawer {{
       position: fixed;
       top: 0;
+      left: 0;
       bottom: 0;
-      left: -280px;
       width: 260px;
       background: var(--bg-sidebar);
       border-right: 1px solid var(--border-card);
       z-index: 100;
-      padding: 24px;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 24px 18px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }}
     .mobile-drawer.open {{
-      left: 0;
+      transform: translateX(0);
+    }}
+    .mobile-drawer-overlay {{
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 99;
+      display: none;
     }}
 
-    /* Responsive */
-    @media (max-width: 1100px) {{
-      .row-top-three {{ grid-template-columns: 1fr; }}
-      .row-middle {{ grid-template-columns: 1fr; }}
-      .row-bottom {{ grid-template-columns: 1fr; }}
+    @media (max-width: 1024px) {{
+      .app-layout {{
+        grid-template-columns: 1fr;
+      }}
+      .sidebar {{
+        display: none;
+      }}
+      .hamburger-btn {{
+        display: block;
+      }}
+      .row-middle {{
+        grid-template-columns: 1fr;
+      }}
+      .row-bottom {{
+        grid-template-columns: 1fr;
+      }}
+      .main-view {{
+        padding: 16px;
+      }}
+      .top-nav {{
+        padding: 12px 16px;
+      }}
+      .nav-tabs-center {{
+        display: none;
+      }}
     }}
 
     @media (max-width: 768px) {{
-      .top-nav {{ padding: 12px 16px; }}
-      .nav-tabs-center {{ display: none; }}
-      .sidebar {{ display: none; }}
-      .hamburger-btn {{ display: block; }}
-      .app-layout {{ padding: 14px; }}
-      .card {{ padding: 14px 16px; }}
+      .row-top-three {{
+        grid-template-columns: 1fr;
+      }}
     }}
   </style>
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
+  <!-- Top Sticky Header -->
   <header class="top-nav">
     <div class="nav-left">
       <button class="hamburger-btn" onclick="toggleMobileMenu()">
@@ -745,7 +785,7 @@ html_content = f'''<!DOCTYPE html>
   <!-- App Layout -->
   <div class="app-layout">
     
-    <!-- Sidebar: Machines / Nodes list -->
+    <!-- Sidebar: Nodes list -->
     <aside class="sidebar">
       <div>
         <div class="sidebar-section-title">Nodes &amp; Sensors</div>
@@ -808,43 +848,44 @@ html_content = f'''<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Card 2: Overview (Acoustic Noise) -->
+        <!-- Card 2: Acoustic Sound Level -->
         <div class="card">
           <div class="card-header-row">
-            <span class="card-title-text">Acoustic Energy</span>
+            <span class="card-title-text">Acoustic Sound Level</span>
             <div class="card-menu-dots">
               <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
             </div>
           </div>
           <div>
             <div class="stat-with-badge">
-              <span class="metric-big-num" style="font-size: 22px;" id="kpi-avg-rms">146.9</span>
-              <span class="badge-percent">+12.4%</span>
+              <span class="metric-big-num" style="font-size: 24px; color: var(--teal-accent);" id="kpi-curr-rms">44.7</span>
+              <span class="badge-percent" id="kpi-rms-badge">BASELINE</span>
             </div>
-            <span class="metric-sub-lbl">Average Sound RMS</span>
+            <span class="metric-sub-lbl">Instantaneous Acoustic RMS</span>
             <div class="stat-with-badge" style="margin-top: 8px;">
               <span class="metric-big-num" style="font-size: 18px; color: var(--coral-accent);" id="kpi-peak-rms">511.2</span>
-              <span class="badge-percent badge-coral">+45.2%</span>
+              <span class="badge-percent badge-coral">+326% Peak</span>
             </div>
-            <span class="metric-sub-lbl">Max Peak Extraction Noise</span>
+            <span class="metric-sub-lbl">Wash Cycle Max Extraction Spike</span>
           </div>
         </div>
 
-        <!-- Card 3: Machine Health -->
+        <!-- Card 3: Instantaneous Spike Ratio -->
         <div class="card">
           <div class="card-header-row">
-            <span class="card-title-text">Machinery Health</span>
+            <span class="card-title-text">Instantaneous Spike Ratio</span>
             <div class="card-menu-dots">
               <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
             </div>
           </div>
           <div class="stat-with-badge" style="margin-top: 4px;">
-            <span class="metric-big-num" style="color: var(--teal-accent);" id="kpi-health-score">94%</span>
-            <span class="badge-percent">+9.3%</span>
+            <span class="metric-big-num" style="color: var(--coral-accent);" id="kpi-spike-factor">1.0x</span>
+            <span class="badge-percent" id="kpi-spike-badge" style="color: var(--teal-accent);">BASELINE</span>
           </div>
-          <span class="metric-sub-lbl">ISO 10816 Class I (Normal)</span>
-          <div style="font-size: 11px; color: var(--text-dim); margin-top: 10px;">
-            Chassis dynamic equilibrium maintained.
+          <span class="metric-sub-lbl" id="kpi-spike-detail">Current: 44.7 RMS (Normal: 120 RMS)</span>
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 10px; display: flex; justify-content: space-between;">
+            <span>Cycle Max Spike: <strong style="color: #fff;" id="kpi-max-spike">511.2 RMS</strong></span>
+            <span style="color: var(--coral-accent); font-weight: 700;">+326% Peak</span>
           </div>
         </div>
 
@@ -856,13 +897,16 @@ html_content = f'''<!DOCTYPE html>
         <!-- Dual-Modality Waveform -->
         <div class="card">
           <div class="card-header-row">
-            <span class="card-title-text">Dual-Modality Telemetry</span>
+            <div>
+              <span class="card-title-text">Dual-Modality Telemetry</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Vibration resultant &amp; sound RMS with numeric rulers</span>
+            </div>
             <div class="chart-legend-row">
               <span class="legend-item-dot">
-                <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a|
+                <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a| (m/s&sup2;)
               </span>
               <span class="legend-item-dot">
-                <span class="dot-indicator" style="background: var(--coral-accent);"></span> Acoustic RMS
+                <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound (RMS)
               </span>
             </div>
           </div>
@@ -871,31 +915,59 @@ html_content = f'''<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Donut Card -->
+        <!-- Card: Signal Spike & Amplitude Monitor -->
         <div class="card">
           <div class="card-header-row">
-            <span class="card-title-text">Machinery Health</span>
+            <span class="card-title-text">Signal Spike &amp; Amplitude</span>
             <div class="card-menu-dots">
               <span class="mini-dot"></span><span class="mini-dot"></span><span class="mini-dot"></span>
             </div>
           </div>
 
-          <div class="donut-card-inner">
-            <div class="donut-svg-wrap">
-              <svg class="donut-svg-elem" viewBox="0 0 130 130">
-                <circle class="donut-track-bg" cx="65" cy="65" r="52"></circle>
-                <circle class="donut-arc-teal" id="donut-arc-teal" cx="65" cy="65" r="52"></circle>
-                <circle class="donut-arc-purple" cx="65" cy="65" r="52"></circle>
-              </svg>
-              <div class="donut-inner-num">
-                <span class="donut-main-stat" id="donut-center-num">94%</span>
-                <span class="donut-sub-stat">HEALTH</span>
+          <div class="spike-monitor-box">
+            <div class="spike-primary-readout">
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span class="metric-big-num" style="font-size: 32px; color: var(--teal-accent);" id="gauge-curr-rms">44.7</span>
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;">RMS</span>
+              </div>
+              <div class="spike-pill-badge" id="gauge-spike-pill" style="background: rgba(0,240,210,0.12); color: var(--teal-accent);">
+                Baseline 1.0x
+              </div>
+            </div>
+            <span class="metric-sub-lbl">Real-time acoustic intensity at scrub cursor</span>
+
+            <!-- Spike Level Meter Bar -->
+            <div class="spike-bar-wrap">
+              <div class="spike-bar-track">
+                <div class="spike-bar-fill" id="gauge-bar-fill" style="width: 8.7%;"></div>
+                <div class="spike-bar-pin" id="gauge-bar-pin" style="left: 8.7%;"></div>
+              </div>
+              <div class="spike-bar-scale">
+                <span>0</span>
+                <span>120 (Normal)</span>
+                <span>250 (Agitation)</span>
+                <span>511.2 (Peak Spike)</span>
               </div>
             </div>
 
-            <div class="donut-split-legend">
-              <span style="color: var(--teal-accent); font-weight: 600;">56.7% Stable</span>
-              <span style="color: var(--purple-accent); font-weight: 600;">43.3% Dynamic</span>
+            <!-- 4-Stat Live Breakdown Grid -->
+            <div class="spike-stat-grid">
+              <div class="spike-stat-cell">
+                <span class="spike-stat-lbl">Spike Delta:</span>
+                <span class="spike-stat-val" id="cell-spike-delta" style="color: var(--teal-accent);">0% (Baseline)</span>
+              </div>
+              <div class="spike-stat-cell">
+                <span class="spike-stat-lbl">Total Accel |a|:</span>
+                <span class="spike-stat-val" id="cell-total-accel">9.58 m/s&sup2;</span>
+              </div>
+              <div class="spike-stat-cell">
+                <span class="spike-stat-lbl">Dynamic Shock:</span>
+                <span class="spike-stat-val" id="cell-dyn-shock" style="color: var(--coral-accent);">&plusmn;0.23 m/s&sup2;</span>
+              </div>
+              <div class="spike-stat-cell">
+                <span class="spike-stat-lbl">Cycle Peak Spike:</span>
+                <span class="spike-stat-val" style="color: #fff;">511.2 RMS (24.2m)</span>
+              </div>
             </div>
           </div>
         </div>
@@ -908,24 +980,27 @@ html_content = f'''<!DOCTYPE html>
           <div class="card-header-row">
             <div>
               <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
-              <span style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">MPU-6050 direct accelerometer register burst</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">MPU-6050 direct register burst with explicit Y-axis scale (+10 to -15 m/s&sup2;)</span>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
-                Ax: <strong id="vibe-leg-x">-0.72</strong> m/s&sup2;
+                Ax: <strong id="vibe-leg-x">-0.77</strong> m/s&sup2;
               </span>
               <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--coral-accent);"></span>
-                Ay: <strong id="vibe-leg-y">+1.41</strong> m/s&sup2;
+                Ay: <strong id="vibe-leg-y">+1.36</strong> m/s&sup2;
               </span>
               <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple-accent);"></span>
-                Az: <strong id="vibe-leg-z">-9.44</strong> m/s&sup2;
+                Az: <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
+              </span>
+              <span class="axis-toggle-clean" style="color: #fff;">
+                |a|: <strong id="head-vibe-mag">9.58</strong> m/s&sup2;
               </span>
             </div>
           </div>
-          <div class="canvas-container-mid" style="height: 180px;">
+          <div class="canvas-container-mid" style="height: 190px;">
             <canvas id="xyz-canvas"></canvas>
           </div>
         </div>
@@ -937,13 +1012,24 @@ html_content = f'''<!DOCTYPE html>
         <!-- Full Wash 1019 Timeline & Playback -->
         <div class="card">
           <div class="card-header-row">
-            <span class="card-title-text">Wash Cycle 1019 Timeline (35.9 Minutes)</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--teal-accent);" id="lbl-curr-time">
-              00:00 / 35:54
-            </span>
+            <div>
+              <span class="card-title-text">Wash Cycle 1019 Timeline (35.9 Minutes)</span>
+              <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Continuous acoustic waveform with Y-axis numbers &amp; spike peak markers</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="axis-toggle-clean" style="color: var(--teal-accent);">
+                Current: <strong id="timeline-head-rms">44.7</strong> RMS
+              </span>
+              <span class="axis-toggle-clean" style="color: var(--coral-accent);">
+                Spike: <strong id="timeline-head-spike">1.0x</strong>
+              </span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #fff;" id="lbl-curr-time">
+                00:00 / 35:54
+              </span>
+            </div>
           </div>
 
-          <div class="canvas-container-mid" style="height: 140px;">
+          <div class="canvas-container-mid" style="height: 155px;">
             <canvas id="area-canvas"></canvas>
           </div>
 
@@ -1000,23 +1086,27 @@ html_content = f'''<!DOCTYPE html>
 
             <div class="phase-bar-row">
               <div class="phase-header-flex">
-                <span class="phase-name-txt">Drain &amp; Rinse (22 - 30m)</span>
-                <span class="phase-pct-txt">227.0 RMS</span>
+                <span class="phase-name-txt">High-Spin Extraction (22 - 28m)</span>
+                <span class="phase-pct-txt" style="color: var(--coral-accent);">511.2 RMS (Peak)</span>
               </div>
               <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 68%;"></div>
+                <div class="progress-fill-teal" style="width: 100%; background: var(--coral-accent);"></div>
               </div>
             </div>
 
             <div class="phase-bar-row">
               <div class="phase-header-flex">
-                <span class="phase-name-txt">High-Speed Extraction (30 - 36m)</span>
-                <span class="phase-pct-txt" style="color: var(--coral-accent);">511.2 RMS</span>
+                <span class="phase-name-txt">Final Drain &amp; Rinse (28 - 36m)</span>
+                <span class="phase-pct-txt">98.3 RMS</span>
               </div>
               <div class="progress-track-dark">
-                <div class="progress-fill-teal" style="width: 95%; background: var(--coral-accent);"></div>
+                <div class="progress-fill-teal" style="width: 32%;"></div>
               </div>
             </div>
+          </div>
+
+          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-sub); font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+            Dynamic shock triggers during spin transition when drum speed crosses natural chassis resonant frequency (14 Hz).
           </div>
         </div>
 
@@ -1025,7 +1115,6 @@ html_content = f'''<!DOCTYPE html>
     </main>
   </div>
 
-  <!-- Embedded Wash 1019 Dataset & Logic -->
   <script>
     const WASH_DATA = {embedded_json};
     let currentMode = 'historic';
@@ -1051,10 +1140,23 @@ html_content = f'''<!DOCTYPE html>
 
     const kpiAvgVibe = document.getElementById('kpi-avg-vibe');
     const kpiPeakVibe = document.getElementById('kpi-peak-vibe');
-    const kpiAvgRms = document.getElementById('kpi-avg-rms');
-    const kpiHealthScore = document.getElementById('kpi-health-score');
-    const donutCenterNum = document.getElementById('donut-center-num');
-    const donutArcTeal = document.getElementById('donut-arc-teal');
+    const kpiCurrRms = document.getElementById('kpi-curr-rms');
+    const kpiRmsBadge = document.getElementById('kpi-rms-badge');
+    const kpiSpikeFactor = document.getElementById('kpi-spike-factor');
+    const kpiSpikeBadge = document.getElementById('kpi-spike-badge');
+    const kpiSpikeDetail = document.getElementById('kpi-spike-detail');
+
+    const gaugeCurrRms = document.getElementById('gauge-curr-rms');
+    const gaugeSpikePill = document.getElementById('gauge-spike-pill');
+    const gaugeBarFill = document.getElementById('gauge-bar-fill');
+    const gaugeBarPin = document.getElementById('gauge-bar-pin');
+    const cellSpikeDelta = document.getElementById('cell-spike-delta');
+    const cellTotalAccel = document.getElementById('cell-total-accel');
+    const cellDynShock = document.getElementById('cell-dyn-shock');
+
+    const timelineHeadRms = document.getElementById('timeline-head-rms');
+    const timelineHeadSpike = document.getElementById('timeline-head-spike');
+    const headVibeMag = document.getElementById('head-vibe-mag');
 
     const vibeLegX = document.getElementById('vibe-leg-x');
     const vibeLegY = document.getElementById('vibe-leg-y');
@@ -1103,17 +1205,79 @@ html_content = f'''<!DOCTYPE html>
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
       const dg = Math.abs(vibe - 9.81);
 
-      let health = 100;
-      if (dg > 0.5) health -= (dg * 12);
-      if (rms > 200) health -= ((rms - 200) * 0.08);
-      health = Math.min(100, Math.max(40, Math.round(health)));
+      // Normal baseline is 120 RMS during wash tumble
+      const baselineRms = 120.0;
+      const spikeRatio = Math.max(1.0, (rms / baselineRms)).toFixed(1);
+      const spikePct = Math.round(((rms - baselineRms) / baselineRms) * 100);
 
-      kpiHealthScore.innerText = `${{health}}%`;
-      donutCenterNum.innerText = `${{health}}%`;
+      // 1. Top Card 2: Acoustic Sound Level
+      if (kpiCurrRms) kpiCurrRms.innerText = rms.toFixed(1);
+      if (kpiRmsBadge) {{
+        if (rms > 300) {{
+          kpiRmsBadge.innerText = 'HIGH SPIKE';
+          kpiRmsBadge.style.color = 'var(--coral-accent)';
+        }} else if (rms > 160) {{
+          kpiRmsBadge.innerText = 'AGITATION';
+          kpiRmsBadge.style.color = 'var(--blue-accent)';
+        }} else {{
+          kpiRmsBadge.innerText = 'BASELINE';
+          kpiRmsBadge.style.color = 'var(--teal-accent)';
+        }}
+      }}
 
-      const offset = 326 - (326 * (health / 100));
-      donutArcTeal.style.strokeDashoffset = offset;
+      // 2. Top Card 3: Instantaneous Spike Ratio
+      if (kpiSpikeFactor) kpiSpikeFactor.innerText = `${{spikeRatio}}x`;
+      if (kpiSpikeBadge) {{
+        if (rms > 300) {{
+          kpiSpikeBadge.innerText = `+${{spikePct}}% SPIKE`;
+          kpiSpikeBadge.style.color = 'var(--coral-accent)';
+        }} else if (rms > 160) {{
+          kpiSpikeBadge.innerText = `+${{spikePct}}% TUMBLE`;
+          kpiSpikeBadge.style.color = 'var(--blue-accent)';
+        }} else {{
+          kpiSpikeBadge.innerText = 'BASELINE 1.0x';
+          kpiSpikeBadge.style.color = 'var(--teal-accent)';
+        }}
+      }}
+      if (kpiSpikeDetail) {{
+        kpiSpikeDetail.innerText = `Current: ${{rms.toFixed(1)}} RMS (Baseline: 120 RMS)`;
+      }}
 
+      // 3. Middle Card: Signal Spike & Amplitude (Replaces Donut)
+      if (gaugeCurrRms) gaugeCurrRms.innerText = rms.toFixed(1);
+      if (gaugeSpikePill) {{
+        if (rms > 300) {{
+          gaugeSpikePill.innerText = `Spike ${{spikeRatio}}x (+${{spikePct}}%)`;
+          gaugeSpikePill.style.background = 'rgba(251, 146, 60, 0.15)';
+          gaugeSpikePill.style.color = 'var(--coral-accent)';
+        }} else if (rms > 160) {{
+          gaugeSpikePill.innerText = `Agitation ${{spikeRatio}}x (+${{spikePct}}%)`;
+          gaugeSpikePill.style.background = 'rgba(56, 189, 248, 0.15)';
+          gaugeSpikePill.style.color = 'var(--blue-accent)';
+        }} else {{
+          gaugeSpikePill.innerText = `Baseline 1.0x (${{rms <= 50 ? 'Drum Fill' : 'Normal'}})`;
+          gaugeSpikePill.style.background = 'rgba(0, 240, 210, 0.12)';
+          gaugeSpikePill.style.color = 'var(--teal-accent)';
+        }}
+      }}
+
+      const pctWidth = Math.min(100, Math.max(0, (rms / 511.2) * 100));
+      if (gaugeBarFill) gaugeBarFill.style.width = `${{pctWidth}}%`;
+      if (gaugeBarPin) gaugeBarPin.style.left = `${{pctWidth}}%`;
+
+      if (cellSpikeDelta) {{
+        cellSpikeDelta.innerText = spikePct > 0 ? `+${{spikePct}}%` : '0% (Baseline)';
+        cellSpikeDelta.style.color = spikePct > 80 ? 'var(--coral-accent)' : 'var(--teal-accent)';
+      }}
+      if (cellTotalAccel) cellTotalAccel.innerText = `${{vibe.toFixed(2)}} m/s\u00B2`;
+      if (cellDynShock) cellDynShock.innerText = `\u00B1${{dg.toFixed(2)}} m/s\u00B2`;
+
+      // 4. Header Badges
+      if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
+      if (timelineHeadSpike) timelineHeadSpike.innerText = `${{spikeRatio}}x`;
+      if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
+
+      // 5. Ax, Ay, Az text updates
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
       const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
@@ -1126,43 +1290,57 @@ html_content = f'''<!DOCTYPE html>
       lblCurrTime.innerText = `${{formatMs(t)}} / ${{formatMs(maxT)}}`;
     }}
 
+    // Canvas 1: Dedicated Tri-Axial Vibration with Explicit Y-Axis Scale
     function drawXyz() {{
       const w = xyzCvs.width;
       const h = xyzCvs.height;
       const dpr = window.devicePixelRatio || 1;
       xyzCtx.clearRect(0, 0, w, h);
 
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-      xyzCtx.lineWidth = 1;
-      for (let i = 1; i <= 3; i++) {{
-        const y = (h / 4) * i;
+      const yZero = h * 0.35;
+      const scaleXY = 14 * dpr;
+      const yGravity = h * 0.78;
+      const scaleZ = 16 * dpr;
+
+      // 1. Grid & Numerical Ticks for Ax, Ay
+      const xyTicks = [
+        {{ val: 5.0, label: '+5.0 m/s\u00B2' }},
+        {{ val: 0.0, label: '0.0 m/s\u00B2 (X/Y Baseline)' }},
+        {{ val: -5.0, label: '-5.0 m/s\u00B2' }}
+      ];
+      xyTicks.forEach(t => {{
+        const y = yZero - (t.val * scaleXY);
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        xyzCtx.lineWidth = 1;
         xyzCtx.beginPath();
         xyzCtx.moveTo(0, y);
         xyzCtx.lineTo(w, y);
         xyzCtx.stroke();
-      }}
 
-      const yZero = h * 0.35;
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      xyzCtx.setLineDash([4, 4]);
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(0, yZero);
-      xyzCtx.lineTo(w, yZero);
-      xyzCtx.stroke();
+        xyzCtx.fillStyle = t.val === 0.0 ? 'rgba(255, 255, 255, 0.38)' : 'rgba(255, 255, 255, 0.2)';
+        xyzCtx.font = `600 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+        xyzCtx.fillText(t.label, 8 * dpr, y - (3 * dpr));
+      }});
 
-      const yGravity = h * 0.78;
-      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(0, yGravity);
-      xyzCtx.lineTo(w, yGravity);
-      xyzCtx.stroke();
-      xyzCtx.setLineDash([]);
+      // 2. Grid & Numerical Ticks for Az
+      const zTicks = [
+        {{ val: -5.0, label: '-5.0 m/s\u00B2' }},
+        {{ val: -9.81, label: '-9.81 m/s\u00B2 (Az 1g Gravity Baseline)' }},
+        {{ val: -15.0, label: '-15.0 m/s\u00B2' }}
+      ];
+      zTicks.forEach(t => {{
+        const y = yGravity - ((t.val + 9.81) * scaleZ);
+        xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.08)';
+        xyzCtx.lineWidth = 1;
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(0, y);
+        xyzCtx.lineTo(w, y);
+        xyzCtx.stroke();
 
-      xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      xyzCtx.font = `600 ${{9 * dpr}}px 'JetBrains Mono', monospace`;
-      xyzCtx.fillText('0.0 (X/Y)', 6 * dpr, yZero - (4 * dpr));
-      xyzCtx.fillStyle = 'rgba(167, 139, 250, 0.4)';
-      xyzCtx.fillText('-9.81g (Z)', 6 * dpr, yGravity - (4 * dpr));
+        xyzCtx.fillStyle = t.val === -9.81 ? 'rgba(167, 139, 250, 0.5)' : 'rgba(167, 139, 250, 0.25)';
+        xyzCtx.font = `600 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+        xyzCtx.fillText(t.label, 8 * dpr, y - (3 * dpr));
+      }});
 
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
@@ -1171,9 +1349,7 @@ html_content = f'''<!DOCTYPE html>
 
       if (points.length < 2) return;
 
-      const scaleXY = 14 * dpr;
-      const scaleZ = 16 * dpr;
-
+      // Plot Az (Purple)
       if (axisVisible.z) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#a78bfa';
@@ -1187,6 +1363,7 @@ html_content = f'''<!DOCTYPE html>
         xyzCtx.stroke();
       }}
 
+      // Plot Ay (Coral)
       if (axisVisible.y) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#fb923c';
@@ -1200,6 +1377,7 @@ html_content = f'''<!DOCTYPE html>
         xyzCtx.stroke();
       }}
 
+      // Plot Ax (Teal)
       if (axisVisible.x) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#00f0d2';
@@ -1213,6 +1391,7 @@ html_content = f'''<!DOCTYPE html>
         xyzCtx.stroke();
       }}
 
+      // Active cursor points & numeric tags
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {{
         const cx = (curRel / (points.length - 1)) * w;
@@ -1240,21 +1419,44 @@ html_content = f'''<!DOCTYPE html>
       }}
     }}
 
+    // Canvas 2: Dual-Modality Waveform with Dual Numeric Rulers
     function drawSpline() {{
       const w = splineCvs.width;
       const h = splineCvs.height;
       const dpr = window.devicePixelRatio || 1;
       splineCtx.clearRect(0, 0, w, h);
 
-      splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-      splineCtx.lineWidth = 1;
-      for (let i = 1; i <= 3; i++) {{
-        const y = (h / 4) * i;
+      // Dual Y-axis ticks
+      const soundTicks = [500, 375, 250, 125, 0];
+      soundTicks.forEach(val => {{
+        const y = h - ((val / 520.0) * h * 0.75) - 10;
+        splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        splineCtx.lineWidth = 1;
         splineCtx.beginPath();
         splineCtx.moveTo(0, y);
         splineCtx.lineTo(w, y);
         splineCtx.stroke();
-      }}
+
+        // Right side: Sound RMS labels
+        splineCtx.fillStyle = 'rgba(251, 146, 60, 0.45)';
+        splineCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        splineCtx.textAlign = 'right';
+        splineCtx.fillText(`${{val}} RMS`, w - (8 * dpr), y - (3 * dpr));
+        splineCtx.textAlign = 'left';
+      }});
+
+      // Left side: Vibration labels
+      const vibeTicks = [
+        {{ val: 12.0, lbl: '12.0 m/s\u00B2' }},
+        {{ val: 9.81, lbl: '9.81 m/s\u00B2 (1g)' }},
+        {{ val: 8.0, lbl: '8.0 m/s\u00B2' }}
+      ];
+      vibeTicks.forEach(t => {{
+        const y = (h * 0.45) - ((t.val - 9.81) * 25 * dpr);
+        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.45)';
+        splineCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+        splineCtx.fillText(t.lbl, 8 * dpr, y - (3 * dpr));
+      }});
 
       const winSize = 40;
       const startIdx = Math.max(0, currentIndex - (winSize / 2));
@@ -1263,6 +1465,7 @@ html_content = f'''<!DOCTYPE html>
 
       if (points.length < 2) return;
 
+      // 1. Draw Sound Wave (Coral)
       const gradCoral = splineCtx.createLinearGradient(0, 0, 0, h);
       gradCoral.addColorStop(0, 'rgba(251, 146, 60, 0.15)');
       gradCoral.addColorStop(1, 'rgba(251, 146, 60, 0.0)');
@@ -1291,6 +1494,7 @@ html_content = f'''<!DOCTYPE html>
       }}
       splineCtx.stroke();
 
+      // 2. Draw Vibration Wave (Teal)
       const gradTeal = splineCtx.createLinearGradient(0, 0, 0, h);
       gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
       gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
@@ -1319,6 +1523,7 @@ html_content = f'''<!DOCTYPE html>
       }}
       splineCtx.stroke();
 
+      // Active point dot
       const curRel = currentIndex - startIdx;
       if (curRel >= 0 && curRel < points.length) {{
         const cx = (curRel / (points.length - 1)) * w;
@@ -1331,25 +1536,69 @@ html_content = f'''<!DOCTYPE html>
       }}
     }}
 
+    // Canvas 3: Full Wash 1019 Timeline with Numbers, Max Peak Spike & Live Floating Cursor Badge
     function drawArea() {{
       const w = areaCvs.width;
       const h = areaCvs.height;
       const dpr = window.devicePixelRatio || 1;
       areaCtx.clearRect(0, 0, w, h);
 
-      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-      areaCtx.lineWidth = 1;
-      for (let i = 1; i <= 3; i++) {{
-        const y = (h / 4) * i;
+      const padBottom = 16 * dpr;
+      const padTop = 18 * dpr;
+      const plotH = h - padBottom - padTop;
+
+      // 1. Horizontal Y-Axis Numeric Rulers
+      const yTicks = [500, 375, 250, 125, 0];
+      yTicks.forEach(val => {{
+        const yVal = h - padBottom - ((val / 520.0) * plotH);
+        areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        areaCtx.lineWidth = 1;
         areaCtx.beginPath();
-        areaCtx.moveTo(0, y);
-        areaCtx.lineTo(w, y);
+        areaCtx.moveTo(0, yVal);
+        areaCtx.lineTo(w, yVal);
         areaCtx.stroke();
-      }}
+
+        areaCtx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+        areaCtx.font = `600 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+        areaCtx.fillText(`${{val}} RMS`, 8 * dpr, yVal - (3 * dpr));
+      }});
+
+      // 2. Horizontal Reference Line: Max Peak Spike (511.2 RMS)
+      const yPeak = h - padBottom - ((511.2 / 520.0) * plotH);
+      areaCtx.strokeStyle = 'rgba(251, 146, 60, 0.5)';
+      areaCtx.lineWidth = 1.2 * dpr;
+      areaCtx.setLineDash([4 * dpr, 4 * dpr]);
+      areaCtx.beginPath();
+      areaCtx.moveTo(0, yPeak);
+      areaCtx.lineTo(w, yPeak);
+      areaCtx.stroke();
+      areaCtx.setLineDash([]);
+      areaCtx.fillStyle = 'rgba(251, 146, 60, 0.85)';
+      areaCtx.font = `700 ${{8.5 * dpr}}px 'JetBrains Mono', monospace`;
+      areaCtx.textAlign = 'right';
+      areaCtx.fillText('PEAK SPIKE: 511.2 RMS (24.2m)', w - (8 * dpr), yPeak - (3 * dpr));
+      areaCtx.textAlign = 'left';
+
+      // 3. Horizontal Reference Line: Normal Baseline (120 RMS)
+      const yBase = h - padBottom - ((120.0 / 520.0) * plotH);
+      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.28)';
+      areaCtx.lineWidth = 1 * dpr;
+      areaCtx.setLineDash([3 * dpr, 3 * dpr]);
+      areaCtx.beginPath();
+      areaCtx.moveTo(0, yBase);
+      areaCtx.lineTo(w, yBase);
+      areaCtx.stroke();
+      areaCtx.setLineDash([]);
+      areaCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
+      areaCtx.font = `600 ${{8 * dpr}}px 'JetBrains Mono', monospace`;
+      areaCtx.textAlign = 'right';
+      areaCtx.fillText('NORMAL BASELINE: 120 RMS', w - (8 * dpr), yBase - (3 * dpr));
+      areaCtx.textAlign = 'left';
 
       const total = WASH_DATA.length;
       if (total < 2) return;
 
+      // Area gradient
       const grad = areaCtx.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, 'rgba(0, 240, 210, 0.25)');
       grad.addColorStop(0.8, 'rgba(0, 240, 210, 0.04)');
@@ -1360,7 +1609,7 @@ html_content = f'''<!DOCTYPE html>
       for (let i = 0; i < total; i++) {{
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 8;
+        const y = h - padBottom - ((rms / 520.0) * plotH);
         areaCtx.lineTo(x, y);
       }}
       areaCtx.lineTo(w, h);
@@ -1368,31 +1617,66 @@ html_content = f'''<!DOCTYPE html>
       areaCtx.fillStyle = grad;
       areaCtx.fill();
 
+      // Top stroke
       areaCtx.beginPath();
       areaCtx.strokeStyle = '#00f0d2';
       areaCtx.lineWidth = 2 * dpr;
       for (let i = 0; i < total; i++) {{
         const x = (i / (total - 1)) * w;
         const rms = WASH_DATA[i][4];
-        const y = h - ((rms / 520.0) * (h - 20)) - 8;
+        const y = h - padBottom - ((rms / 520.0) * plotH);
         if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
       }}
       areaCtx.stroke();
 
+      // Cursor vertical scrubber line
       const curX = (currentIndex / (total - 1)) * w;
       areaCtx.strokeStyle = '#00f0d2';
-      areaCtx.lineWidth = 2;
+      areaCtx.lineWidth = 2 * dpr;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, 0);
       areaCtx.lineTo(curX, h);
       areaCtx.stroke();
 
       const curRms = WASH_DATA[currentIndex][4];
-      const curY = h - ((curRms / 520.0) * (h - 20)) - 8;
+      const curY = h - padBottom - ((curRms / 520.0) * plotH);
+
+      // Cursor dot
       areaCtx.fillStyle = '#00f0d2';
       areaCtx.beginPath();
       areaCtx.arc(curX, curY, 5 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
+
+      // Floating cursor value badge (clearly shows the live number & spike)
+      const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
+      const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
+      const badgeText = `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x ${{spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'}})`;
+
+      areaCtx.font = `700 ${{9 * dpr}}px 'JetBrains Mono', monospace`;
+      const tw = areaCtx.measureText(badgeText).width;
+      const bw = tw + (12 * dpr);
+      const bh = 18 * dpr;
+
+      let bx = curX - (bw / 2);
+      if (bx < 6 * dpr) bx = 6 * dpr;
+      if (bx + bw > w - (6 * dpr)) bx = w - bw - (6 * dpr);
+
+      let by = curY - (22 * dpr);
+      if (by < 4 * dpr) by = curY + (10 * dpr);
+
+      areaCtx.fillStyle = curRms > 250 ? 'rgba(251, 146, 60, 0.95)' : 'rgba(0, 240, 210, 0.95)';
+      areaCtx.beginPath();
+      if (areaCtx.roundRect) {{
+        areaCtx.roundRect(bx, by, bw, bh, 3 * dpr);
+      }} else {{
+        areaCtx.rect(bx, by, bw, bh);
+      }}
+      areaCtx.fill();
+
+      areaCtx.fillStyle = '#0f172a';
+      areaCtx.textAlign = 'center';
+      areaCtx.fillText(badgeText, bx + (bw / 2), by + (12.5 * dpr));
+      areaCtx.textAlign = 'left';
     }}
 
     function onScrub(val) {{
