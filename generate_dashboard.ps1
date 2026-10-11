@@ -483,10 +483,10 @@ $templatePart1 = @'
       box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
     }
 
-    /* Row 2: Capsule Bars, Filter Pills & Oscilloscope */
+    /* Row 2: Capsule Bars, Filter Pills & Dual Oscilloscopes */
     .row-mid {
       display: grid;
-      grid-template-columns: 240px 1.4fr;
+      grid-template-columns: 220px 1fr 1fr;
       gap: 16px;
     }
 
@@ -501,23 +501,23 @@ $templatePart1 = @'
       display: flex;
       justify-content: space-around;
       align-items: flex-end;
-      height: 120px;
-      padding: 10px 0;
+      height: 110px;
+      padding: 8px 0;
     }
     .capsule-col {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     .capsule-num {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
     }
     .capsule-pill {
-      width: 30px;
-      height: 80px;
+      width: 26px;
+      height: 75px;
       background: var(--bg-card-inner);
       border-radius: 999px;
       border: 1px solid var(--border-card);
@@ -540,7 +540,7 @@ $templatePart1 = @'
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-top: 6px;
+      margin-top: 4px;
     }
     .pill-select-btn {
       background: var(--bg-card-inner);
@@ -560,7 +560,7 @@ $templatePart1 = @'
       color: #fff;
     }
 
-    /* Oscilloscope Card */
+    /* Oscilloscope Cards */
     .card-osc {
       display: flex;
       flex-direction: column;
@@ -588,6 +588,19 @@ $templatePart1 = @'
       width: 100%;
       height: 100%;
       display: block;
+    }
+
+    /* Interactive Axis Toggles */
+    .axis-toggle-pill {
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      user-select: none;
+      transition: opacity 0.2s;
+    }
+    .axis-toggle-pill.dimmed {
+      opacity: 0.35;
+      text-decoration: line-through;
     }
 
     /* Row 3: Neon Area Chart, Grouped Bars & Action Controls */
@@ -730,7 +743,7 @@ $templatePart1 = @'
     }
 
     /* Responsive Breakpoints */
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
       .row-top {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -849,10 +862,10 @@ $templatePart1 = @'
         <div class="sidebar-item" id="side-item-2" onclick="setMode('live')">
           <span>📡</span> Live Firebase Rig
         </div>
-        <div class="sidebar-item" onclick="toggleOscilloscopeTrace('vibe')">
+        <div class="sidebar-item" onclick="toggleAxis('x')">
           <span>📳</span> 3-Axis IMU (MPU)
         </div>
-        <div class="sidebar-item" onclick="toggleOscilloscopeTrace('rms')">
+        <div class="sidebar-item" onclick="toggleFft()">
           <span>🎙️</span> I2S Audio (INMP)
         </div>
         <div class="sidebar-item" onclick="openDoc()">
@@ -950,10 +963,10 @@ $templatePart1 = @'
         </div>
       </section>
 
-      <!-- Row 2: Capsule 3-Axis Bars, Filter Pills, & Dual-Line Spline Waveform -->
+      <!-- Row 2: Capsule 3-Axis Bars, DEDICATED Tri-Axial Vibration (X, Y, Z) Graph, & Dual-Line Spline Waveform -->
       <section class="row-mid">
         
-        <!-- 3-Axis Capsules & Filter Selectors -->
+        <!-- 1. 3-Axis Dynamic Vectors & Filter Pills -->
         <div class="card card-capsules">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-sub);">
             3-Axis Dynamic Vectors
@@ -994,16 +1007,40 @@ $templatePart1 = @'
           </div>
         </div>
 
-        <!-- Dual-Line Spline Oscilloscope -->
+        <!-- 2. NEW DEDICATED GRAPH: Tri-Axial Vibration Only (Ax, Ay, Az) -->
+        <div class="card card-osc">
+          <div class="chart-header">
+            <div class="chart-title">
+              <span>Tri-Axial Vibration (Ax, Ay, Az)</span>
+              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">[MPU-6050 Direct]</span>
+            </div>
+            <div style="display: flex; gap: 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
+              <span class="axis-toggle-pill" id="pill-tog-x" style="color: #00f0ff;" onclick="toggleAxis('x')" title="Toggle Ax">
+                ● Ax: <span id="vibe-leg-x">-0.72</span>
+              </span>
+              <span class="axis-toggle-pill" id="pill-tog-y" style="color: #f59e0b;" onclick="toggleAxis('y')" title="Toggle Ay">
+                ● Ay: <span id="vibe-leg-y">+1.41</span>
+              </span>
+              <span class="axis-toggle-pill" id="pill-tog-z" style="color: #10b981;" onclick="toggleAxis('z')" title="Toggle Az">
+                ● Az: <span id="vibe-leg-z">-9.44</span>
+              </span>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="xyz-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Dual-Line Spline Oscilloscope (Resultant Vibe & Acoustic RMS) -->
         <div class="card card-osc">
           <div class="chart-header">
             <div class="chart-title">
               <span>Dual-Modality Spline Waveform</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">(Vibration & Audio RMS)</span>
+              <span style="font-size: 11px; font-weight: normal; color: var(--text-dim);">(|a| & RMS)</span>
             </div>
             <div style="display: flex; gap: 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
-              <span style="color: #00f0ff;">● Vibration |a|</span>
-              <span style="color: #ff2d75;">● Acoustic RMS</span>
+              <span style="color: #00f0ff;">● Vibe |a|</span>
+              <span style="color: #ff2d75;">● Sound RMS</span>
             </div>
           </div>
           <div class="canvas-container">
@@ -1103,8 +1140,12 @@ $templatePart2 = @'
     let playInterval = null;
     let liveTimer = null;
 
+    // Axis visibility state
+    const axisVisible = { x: true, y: true, z: true };
+
     // DOM Elements
     const splineCvs = document.getElementById('spline-canvas');
+    const xyzCvs = document.getElementById('xyz-canvas');
     const areaCvs = document.getElementById('area-canvas');
     const timeSlider = document.getElementById('time-slider');
     const scrubLabel = document.getElementById('scrub-label');
@@ -1135,21 +1176,33 @@ $templatePart2 = @'
     const capFillY = document.getElementById('cap-fill-y');
     const capFillZ = document.getElementById('cap-fill-z');
 
+    // XYZ Legend DOM
+    const vibeLegX = document.getElementById('vibe-leg-x');
+    const vibeLegY = document.getElementById('vibe-leg-y');
+    const vibeLegZ = document.getElementById('vibe-leg-z');
+
     // Canvas Contexts
     const splineCtx = splineCvs.getContext('2d');
+    const xyzCtx = xyzCvs.getContext('2d');
     const areaCtx = areaCvs.getContext('2d');
 
     function resizeCanvases() {
       const dpr = window.devicePixelRatio || 1;
+      
       const sRect = splineCvs.parentElement.getBoundingClientRect();
       splineCvs.width = sRect.width * dpr;
       splineCvs.height = sRect.height * dpr;
+
+      const xRect = xyzCvs.parentElement.getBoundingClientRect();
+      xyzCvs.width = xRect.width * dpr;
+      xyzCvs.height = xRect.height * dpr;
 
       const aRect = areaCvs.parentElement.getBoundingClientRect();
       areaCvs.width = aRect.width * dpr;
       areaCvs.height = aRect.height * dpr;
 
       drawSpline();
+      drawXyz();
       drawArea();
     }
     window.addEventListener('resize', resizeCanvases);
@@ -1160,6 +1213,17 @@ $templatePart2 = @'
       const m = Math.floor(totalSec / 60);
       const s = totalSec % 60;
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Toggle specific axis trace in XYZ graph
+    function toggleAxis(axis) {
+      axisVisible[axis] = !axisVisible[axis];
+      const pill = document.getElementById(`pill-tog-${axis}`);
+      if (pill) {
+        if (axisVisible[axis]) pill.classList.remove('dimmed');
+        else pill.classList.add('dimmed');
+      }
+      drawXyz();
     }
 
     // Update Dashboard Display with specific record
@@ -1175,7 +1239,6 @@ $templatePart2 = @'
       health = Math.min(100, Math.max(40, Math.round(health)));
 
       donutHealthText.innerText = `${health}%`;
-      // Circumference = 2 * PI * 36 ~= 226
       const healthOffset = 226 - (226 * (health / 100));
       donutHealthFill.style.strokeDashoffset = healthOffset;
 
@@ -1185,10 +1248,18 @@ $templatePart2 = @'
       const vibeOffset = 226 - (226 * (vibePct / 100));
       donutVibeFill.style.strokeDashoffset = vibeOffset;
 
-      // 3-Axis Capsules
-      capValX.innerText = (ax >= 0 ? '+' : '') + ax.toFixed(2);
-      capValY.innerText = (ay >= 0 ? '+' : '') + ay.toFixed(2);
-      capValZ.innerText = (az >= 0 ? '+' : '') + az.toFixed(2);
+      // 3-Axis Capsules & XYZ Legend Values
+      const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
+      const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
+      const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
+
+      capValX.innerText = strX;
+      capValY.innerText = strY;
+      capValZ.innerText = strZ;
+
+      vibeLegX.innerText = strX;
+      vibeLegY.innerText = strY;
+      vibeLegZ.innerText = strZ;
 
       capFillX.style.height = `${Math.min(100, Math.abs(ax) * 40)}%`;
       capFillY.style.height = `${Math.min(100, Math.abs(ay) * 40)}%`;
@@ -1206,6 +1277,139 @@ $templatePart2 = @'
       // Live / Scrubbed timestamp
       const maxT = WASH_DATA[WASH_DATA.length - 1][0];
       lblCurrTime.innerText = `${formatMs(t)} / ${formatMs(maxT)}`;
+    }
+
+    // DRAW DEDICATED TRI-AXIAL VIBRATION GRAPH (Ax, Ay, Az ONLY)
+    function drawXyz() {
+      const w = xyzCvs.width;
+      const h = xyzCvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      xyzCtx.clearRect(0, 0, w, h);
+
+      // Grid Lines
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      xyzCtx.setLineDash([4, 6]);
+      xyzCtx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = (h / 4) * i;
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(0, y);
+        xyzCtx.lineTo(w, y);
+        xyzCtx.stroke();
+      }
+
+      // Zero Baseline (for lateral Ax & Ay) - at 35% height
+      const yZero = h * 0.35;
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(0, yZero);
+      xyzCtx.lineTo(w, yZero);
+      xyzCtx.stroke();
+
+      // Gravity Baseline (for Az at -9.81 m/s^2) - at 78% height
+      const yGravity = h * 0.78;
+      xyzCtx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(0, yGravity);
+      xyzCtx.lineTo(w, yGravity);
+      xyzCtx.stroke();
+      xyzCtx.setLineDash([]);
+
+      // Baseline Text Labels
+      xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      xyzCtx.font = `${9 * dpr}px 'JetBrains Mono', monospace`;
+      xyzCtx.fillText('0.0 (X/Y)', 6 * dpr, yZero - (4 * dpr));
+      xyzCtx.fillStyle = 'rgba(16, 185, 129, 0.4)';
+      xyzCtx.fillText('-9.81g (Z)', 6 * dpr, yGravity - (4 * dpr));
+
+      // Window around current index
+      const winSize = 40;
+      const startIdx = Math.max(0, currentIndex - (winSize / 2));
+      const endIdx = Math.min(WASH_DATA.length - 1, startIdx + winSize);
+      const points = WASH_DATA.slice(startIdx, endIdx + 1);
+
+      if (points.length < 2) return;
+
+      const scaleXY = 14 * dpr; // 1 m/s^2 = 14px
+      const scaleZ = 16 * dpr;  // 1 m/s^2 delta from 9.81 = 16px
+
+      // 1. Plot Az (Vertical / Gravity Vector) in Emerald (#10b981)
+      if (axisVisible.z) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#10b981';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = (i / (points.length - 1)) * w;
+          const az = points[i][3];
+          const y = yGravity - ((az + 9.81) * scaleZ);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // 2. Plot Ay (Fore-Aft / Pitch Vector) in Amber (#f59e0b)
+      if (axisVisible.y) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#f59e0b';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = (i / (points.length - 1)) * w;
+          const ay = points[i][2];
+          const y = yZero - (ay * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // 3. Plot Ax (Lateral / Roll Vector) in Cyan (#00f0ff)
+      if (axisVisible.x) {
+        xyzCtx.beginPath();
+        xyzCtx.strokeStyle = '#00f0ff';
+        xyzCtx.lineWidth = 2.2 * dpr;
+        for (let i = 0; i < points.length; i++) {
+          const x = (i / (points.length - 1)) * w;
+          const ax = points[i][1];
+          const y = yZero - (ax * scaleXY);
+          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+        }
+        xyzCtx.stroke();
+      }
+
+      // Draw Cursor Points on Active Axes
+      const curRel = currentIndex - startIdx;
+      if (curRel >= 0 && curRel < points.length) {
+        const cx = (curRel / (points.length - 1)) * w;
+        
+        if (axisVisible.x) {
+          const cyX = yZero - (points[curRel][1] * scaleXY);
+          xyzCtx.fillStyle = '#fff';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+          xyzCtx.strokeStyle = '#00f0ff';
+          xyzCtx.stroke();
+        }
+
+        if (axisVisible.y) {
+          const cyY = yZero - (points[curRel][2] * scaleXY);
+          xyzCtx.fillStyle = '#fff';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+          xyzCtx.strokeStyle = '#f59e0b';
+          xyzCtx.stroke();
+        }
+
+        if (axisVisible.z) {
+          const cyZ = yGravity - ((points[curRel][3] + 9.81) * scaleZ);
+          xyzCtx.fillStyle = '#fff';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+          xyzCtx.strokeStyle = '#10b981';
+          xyzCtx.stroke();
+        }
+      }
     }
 
     // Draw Spline Waveform (Middle Chart)
@@ -1352,6 +1556,7 @@ $templatePart2 = @'
       scrubLabel.innerText = `${minutes}m`;
       applyRecord(WASH_DATA[currentIndex]);
       drawSpline();
+      drawXyz();
       drawArea();
     }
 
@@ -1398,6 +1603,7 @@ $templatePart2 = @'
         document.getElementById('side-item-1').classList.add('active');
         applyRecord(WASH_DATA[currentIndex]);
         drawSpline();
+        drawXyz();
         drawArea();
       }
     }
@@ -1410,6 +1616,8 @@ $templatePart2 = @'
           const d = await res.json();
           if (d) {
             applyRecord([d.uptime * 1000, d.ax, d.ay, d.az, d.rms]);
+            drawXyz();
+            drawSpline();
           }
         } catch (e) {}
       };
@@ -1449,9 +1657,6 @@ $templatePart2 = @'
     function openDoc() {
       window.open('hardware_bom_and_setup_guide.pdf', '_blank');
     }
-    function toggleOscilloscopeTrace(trace) {
-      alert(`Toggled ${trace} trace filter.`);
-    }
 
     // Initialize
     setTimeout(() => {
@@ -1472,4 +1677,4 @@ $fullHtml = $templatePart1 + "`n" + $embeddedJs + "`n" + $templatePart2
 $brainArtifact = "C:\Users\adamd\.gemini\antigravity\brain\eaf1a310-7f2a-46d6-b3a7-72b474df813e\dashboard.html"
 [System.IO.File]::WriteAllText($brainArtifact, $fullHtml, [System.Text.Encoding]::UTF8)
 
-Write-Output "Complete! Dashboard HTML written to all targets."
+Write-Output "Complete! Updated dashboard with dedicated vibration X, Y, Z graph written to all targets."
