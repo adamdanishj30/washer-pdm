@@ -323,10 +323,41 @@ def generate_html(default_view='live'):
     .box-xyz {{ height: 195px; }}
     .box-timeline {{ height: 165px; }}
 
+    .view-toggle-pill {{
+      display: inline-flex;
+      background: var(--bg-inner);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }}
+    .span-btn {{
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }}
+    .span-btn:hover {{
+      color: var(--text-main);
+    }}
+    .span-btn.active {{
+      background: rgba(0, 240, 210, 0.15);
+      color: var(--teal-accent);
+      box-shadow: 0 0 8px rgba(0, 240, 210, 0.2);
+    }}
+
     canvas {{
       width: 100%;
       height: 100%;
       display: block;
+      cursor: crosshair;
     }}
 
     /* Axis Toggle Badges */
@@ -673,11 +704,15 @@ def generate_html(default_view='live'):
           <span class="card-sub-txt" id="sub-spline">Vibration resultant &bull; Acoustic sound amplitude</span>
         </div>
         <div class="chart-legend-row">
+          <div class="view-toggle-pill" id="tog-spline-mode" style="display: none;">
+            <button class="span-btn active" id="btn-spline-full" onclick="setChartSpan('spline', 'full')">Full Run</button>
+            <button class="span-btn" id="btn-spline-win" onclick="setChartSpan('spline', 'win')">40s Window</button>
+          </div>
           <span class="legend-item-dot">
-            <span class="dot-indicator" style="background: var(--teal-accent);"></span> Vibration |a| (m/s&sup2;)
+            <span class="dot-indicator" style="background: var(--teal-accent);"></span> |a|: <strong id="spline-cur-vibe" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">9.54</strong> m/s&sup2;
           </span>
           <span class="legend-item-dot">
-            <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound (RMS)
+            <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound: <strong id="spline-cur-rms" style="color: var(--coral-accent); font-family: 'JetBrains Mono', monospace;">75.3</strong> RMS
           </span>
         </div>
       </div>
@@ -690,10 +725,14 @@ def generate_html(default_view='live'):
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="card-title-text">Tri-Axial Vibration (Ax, Ay, Az)</span>
-          <span class="card-sub-txt">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
+          <span class="card-title-text" id="title-xyz">Tri-Axial Vibration (Ax, Ay, Az)</span>
+          <span class="card-sub-txt" id="sub-xyz">MPU-6050 Accelerometer &bull; Isolated X/Y &amp; Z oscilloscope lanes</span>
         </div>
         <div class="vibe-badges-container">
+          <div class="view-toggle-pill" id="tog-xyz-mode" style="display: none;">
+            <button class="span-btn active" id="btn-xyz-full" onclick="setChartSpan('xyz', 'full')">Full Run</button>
+            <button class="span-btn" id="btn-xyz-win" onclick="setChartSpan('xyz', 'win')">40s Window</button>
+          </div>
           <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
             Ax: <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
@@ -824,6 +863,57 @@ def generate_html(default_view='live'):
     let isRigOnline = false;
 
     let axisVisible = {{ x: true, y: true, z: true }};
+    let chartSpanMode = {{ spline: 'full', xyz: 'full' }};
+
+    function setChartSpan(chart, span) {{
+      chartSpanMode[chart] = span;
+      const btnFull = document.getElementById(`btn-${{chart}}-full`);
+      const btnWin = document.getElementById(`btn-${{chart}}-win`);
+      if (btnFull && btnWin) {{
+        if (span === 'full') {{
+          btnFull.classList.add('active');
+          btnWin.classList.remove('active');
+        }} else {{
+          btnFull.classList.remove('active');
+          btnWin.classList.add('active');
+        }}
+      }}
+      updateChartSubtitles();
+      if (chart === 'spline') drawSpline();
+      else if (chart === 'xyz') drawXyz();
+    }}
+
+    function updateChartSubtitles() {{
+      const subSpline = document.getElementById('sub-spline');
+      const subXyz = document.getElementById('sub-xyz');
+      const togSpline = document.getElementById('tog-spline-mode');
+      const togXyz = document.getElementById('tog-xyz-mode');
+      if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {{
+        const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
+        if (subSpline) {{
+          subSpline.innerText = (chartSpanMode.spline === 'full')
+            ? `${{durMin}}-min complete run • Vibration resultant & Acoustic sound amplitude`
+            : `40s window • Vibration resultant & Acoustic sound amplitude`;
+        }}
+        if (subXyz) {{
+          subXyz.innerText = (chartSpanMode.xyz === 'full')
+            ? `${{durMin}}-min complete run • Isolated X/Y & Z oscilloscope lanes`
+            : `40s window • Isolated X/Y & Z oscilloscope lanes`;
+        }}
+        const btnSplineFull = document.getElementById('btn-spline-full');
+        const btnXyzFull = document.getElementById('btn-xyz-full');
+        if (btnSplineFull) btnSplineFull.innerText = `Full Run (${{durMin}}m)`;
+        if (btnXyzFull) btnXyzFull.innerText = `Full Run (${{durMin}}m)`;
+
+        if (togSpline) togSpline.style.display = 'inline-flex';
+        if (togXyz) togXyz.style.display = 'inline-flex';
+      }} else {{
+        if (subSpline) subSpline.innerText = 'Vibration resultant • Acoustic sound amplitude';
+        if (subXyz) subXyz.innerText = 'MPU-6050 Accelerometer • Isolated X/Y & Z oscilloscope lanes';
+        if (togSpline) togSpline.style.display = 'none';
+        if (togXyz) togXyz.style.display = 'none';
+      }}
+    }}
 
     const splineCvs = document.getElementById('spline-canvas');
     const splineCtx = splineCvs.getContext('2d');
@@ -930,6 +1020,100 @@ def generate_html(default_view='live'):
       ctx.fillText(text, px + (5 * dpr), py + (11.5 * dpr));
     }}
 
+    function drawTimeGrid(ctx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile) {{
+      if (currentMode !== 'historic' || !ACTIVE_DATA || ACTIVE_DATA.length < 2) return;
+      const startT = ACTIVE_DATA[0][0];
+      const endT = ACTIVE_DATA[ACTIVE_DATA.length - 1][0];
+      const durMin = (endT - startT) / 60000;
+      if (durMin <= 0) return;
+
+      let stepMin = 20;
+      if (durMin <= 3) stepMin = 0.5;
+      else if (durMin <= 6) stepMin = 1;
+      else if (durMin <= 15) stepMin = 2;
+      else if (durMin <= 35) stepMin = 5;
+      else if (durMin <= 75) stepMin = 10;
+      else if (durMin <= 150) stepMin = 20;
+      else stepMin = 30;
+
+      const durMs = endT - startT;
+      const stepMs = stepMin * 60000;
+
+      for (let ms = stepMs; ms < durMs - (stepMs * 0.45); ms += stepMs) {{
+        const frac = ms / durMs;
+        const x = marginLeft + (frac * plotW);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(x, marginTop);
+        ctx.lineTo(x, marginTop + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+        ctx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        const lbl = (ms % 60000 === 0) ? `${{(ms / 60000).toFixed(0)}}m` : `${{(ms / 60000).toFixed(1)}}m`;
+        ctx.fillText(lbl, x, h - (4 * dpr));
+      }}
+
+      // Start label (0.0m)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'left';
+      ctx.fillText('0.0m', marginLeft + (2 * dpr), h - (4 * dpr));
+
+      // End label (e.g. 102.8m)
+      ctx.textAlign = 'right';
+      ctx.fillText(`${{durMin.toFixed(1)}}m`, w - marginRight - (2 * dpr), h - (4 * dpr));
+      ctx.textAlign = 'left';
+    }}
+
+    function setupCanvasScrubbing(canvas) {{
+      let isDragging = false;
+
+      function scrubAt(e) {{
+        if (currentMode !== 'historic' || !ACTIVE_DATA || ACTIVE_DATA.length < 2) return;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const isMobile = (canvas.width / dpr) < 580;
+        const marginLeft = (isMobile ? 44 : 64) * dpr;
+        const marginRight = (isMobile ? 34 : 52) * dpr;
+        const plotW = canvas.width - marginLeft - marginRight;
+        if (plotW <= 0) return;
+
+        const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+        const rawX = (clientX - rect.left) * dpr;
+        const frac = Math.max(0, Math.min(1, (rawX - marginLeft) / plotW));
+        const targetIdx = Math.round(frac * (ACTIVE_DATA.length - 1));
+
+        if (timeSlider) timeSlider.value = targetIdx;
+        onScrub(targetIdx);
+      }}
+
+      canvas.addEventListener('mousedown', (e) => {{
+        isDragging = true;
+        scrubAt(e);
+      }});
+      window.addEventListener('mousemove', (e) => {{
+        if (isDragging) scrubAt(e);
+      }});
+      window.addEventListener('mouseup', () => {{
+        isDragging = false;
+      }});
+
+      canvas.addEventListener('touchstart', (e) => {{
+        isDragging = true;
+        scrubAt(e);
+      }}, {{ passive: true }});
+      canvas.addEventListener('touchmove', (e) => {{
+        if (isDragging) scrubAt(e);
+      }}, {{ passive: true }});
+      canvas.addEventListener('touchend', () => {{
+        isDragging = false;
+      }});
+    }}
+
     function getRmsScale(maxObserved) {{
       if (maxObserved > 1100) {{
         const ceil = Math.ceil(maxObserved / 250) * 250;
@@ -1011,6 +1195,7 @@ def generate_html(default_view='live'):
 
       setViewMode('historic');
       applyRecord(ACTIVE_DATA[0], false);
+      updateChartSubtitles();
       drawSpline();
       drawXyz();
       drawArea();
@@ -1029,6 +1214,7 @@ def generate_html(default_view='live'):
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
         lblCurrTime.innerText = 'LIVE (50 Hz)';
         updateRigStatusUI(isRigOnline);
+        updateChartSubtitles();
         checkRigHeartbeat();
       }} else {{
         if (isPlaying) togglePlayPause();
@@ -1039,7 +1225,9 @@ def generate_html(default_view='live'):
         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
         titleTimeline.innerText = `${{activeSessionName}} Archive (${{durMin}} Mins)`;
         subTimeline.innerText = `${{durMin}}-min continuous telemetry waveform • ${{activeSessionName}}`;
+        if (timeSlider) timeSlider.max = ACTIVE_DATA.length - 1;
         updateRigStatusUI(false);
+        updateChartSubtitles();
         applyRecord(ACTIVE_DATA[currentIndex], false);
       }}
       drawSpline();
@@ -1099,15 +1287,20 @@ def generate_html(default_view='live'):
       try {{
         const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
         const d = await res.json();
-        if (d && (d.cnt !== undefined || d.uptime !== undefined)) {{
+        const wasOnlineBefore = isRigOnline;
+
+        if (d && (d.cnt !== undefined || d.uptime !== undefined || d.ts !== undefined)) {{
+          const isFreshByTs = d.ts ? (Date.now() - d.ts < 12000) : true;
           const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
                                  (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
 
-          if (hasIncremented) {{
+          if (hasIncremented && isFreshByTs) {{
             lastPacketArrivedAt = Date.now();
             isRigOnline = true;
           }} else {{
-            if (lastPacketArrivedAt === 0) {{
+            if (!isFreshByTs) {{
+              isRigOnline = false;
+            }} else if (lastPacketArrivedAt === 0) {{
               isRigOnline = false;
             }} else if (Date.now() - lastPacketArrivedAt > 4500) {{
               isRigOnline = false;
@@ -1118,7 +1311,7 @@ def generate_html(default_view='live'):
           lastLivePacketUptime = d.uptime;
 
           // Push into Live rolling buffer
-          if (!isLivePaused) {{
+          if (!isLivePaused && isRigOnline) {{
             const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms];
             LIVE_BUFFER.push(newRec);
             if (LIVE_BUFFER.length > 80) LIVE_BUFFER.shift();
@@ -1132,6 +1325,11 @@ def generate_html(default_view='live'):
           }}
         }} else {{
           isRigOnline = false;
+        }}
+
+        // When rig finishes transmitting and transitions to offline, immediately discover newly archived cloud session
+        if (wasOnlineBefore && !isRigOnline) {{
+          discoverFirebaseSessions();
         }}
       }} catch (e) {{
         isRigOnline = false;
@@ -1149,6 +1347,11 @@ def generate_html(default_view='live'):
       if (timelineHeadSpike) timelineHeadSpike.innerText = `${{spikeRatio}}x`;
       if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
 
+      const curVibeEl = document.getElementById('spline-cur-vibe');
+      if (curVibeEl) curVibeEl.innerText = vibe.toFixed(2);
+      const curRmsEl = document.getElementById('spline-cur-rms');
+      if (curRmsEl) curRmsEl.innerText = rms.toFixed(1);
+
       const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
       const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
       const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
@@ -1156,7 +1359,7 @@ def generate_html(default_view='live'):
       vibeLegY.innerText = strY;
       vibeLegZ.innerText = strZ;
 
-      if (!isFromLive) {{
+      if (!isFromLive && ACTIVE_DATA && ACTIVE_DATA.length > 0) {{
         const startT = ACTIVE_DATA[0][0];
         const maxT = ACTIVE_DATA[ACTIVE_DATA.length - 1][0];
         lblCurrTime.innerText = `${{formatMs(t - startT)}} / ${{formatMs(maxT - startT)}}`;
@@ -1171,22 +1374,26 @@ def generate_html(default_view='live'):
       splineCtx.clearRect(0, 0, w, h);
 
       const isMobile = (w / dpr) < 580;
-      const marginLeft = (isMobile ? 36 : 56) * dpr;
-      const marginRight = (isMobile ? 32 : 56) * dpr;
+      const marginLeft = (isMobile ? 44 : 64) * dpr;
+      const marginRight = (isMobile ? 34 : 52) * dpr;
       const marginTop = 16 * dpr;
-      const marginBottom = 16 * dpr;
+      const marginBottom = (isMobile ? 18 : 22) * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
-      // Select data source based on active mode
       let points;
       let curRelIdx = 0;
+      const isFull = (currentMode === 'historic' && chartSpanMode.spline === 'full');
+
       if (currentMode === 'live') {{
         points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
           [0, -0.74, 1.40, -9.40, 105.6],
           [2000, -0.74, 1.40, -9.40, 105.6]
         ];
         curRelIdx = points.length - 1;
+      }} else if (isFull) {{
+        points = ACTIVE_DATA;
+        curRelIdx = currentIndex;
       }} else {{
         const winSize = 40;
         const startIdx = Math.max(0, currentIndex - (winSize / 2));
@@ -1204,6 +1411,11 @@ def generate_html(default_view='live'):
       splineCtx.moveTo(w - marginRight, marginTop);
       splineCtx.lineTo(w - marginRight, h - marginBottom);
       splineCtx.stroke();
+
+      // Time grid & labels across the bottom (in full historical mode)
+      if (isFull) {{
+        drawTimeGrid(splineCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
+      }}
 
       // Dynamic RMS scale based on visible points
       const maxRmsInPoints = points.reduce((m, p) => Math.max(m, p[4]), 0);
@@ -1227,14 +1439,25 @@ def generate_html(default_view='live'):
       }});
       splineCtx.fillText('RMS', w - marginRight + (5 * dpr), marginTop - (4 * dpr));
 
-      // Left side: Vibration m/s^2 ticks
+      // Left side: Vibration m/s^2 ticks & dynamic scaling
+      const maxVibe = points.reduce((m, p) => Math.max(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
+      const minVibe = points.reduce((m, p) => Math.min(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
+      const vibeSpread = Math.max(2.5, maxVibe - 9.81, 9.81 - minVibe);
+      const scaleVibe = Math.min((isMobile ? 20 : 25) * dpr, (plotH * 0.38) / vibeSpread);
+
       const vibeTicks = [
         {{ val: 12.0, lbl: '12.0' }},
         {{ val: 9.81, lbl: isMobile ? '9.81' : '9.81 (1g)' }},
         {{ val: 8.0, lbl: '8.0' }}
       ];
       vibeTicks.forEach(t => {{
-        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * (isMobile ? 20 : 25) * dpr);
+        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * scaleVibe);
+        splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        splineCtx.beginPath();
+        splineCtx.moveTo(marginLeft, y);
+        splineCtx.lineTo(w - marginRight, y);
+        splineCtx.stroke();
+
         splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
         splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
         splineCtx.textAlign = 'right';
@@ -1243,7 +1466,19 @@ def generate_html(default_view='live'):
       splineCtx.fillText('m/s²', marginLeft - (5 * dpr), marginTop - (4 * dpr));
       splineCtx.textAlign = 'left';
 
+      // Dashed 1g Gravity Baseline
+      const y1g = marginTop + (plotH * 0.45);
+      splineCtx.strokeStyle = 'rgba(0, 240, 210, 0.2)';
+      splineCtx.setLineDash([3 * dpr, 3 * dpr]);
+      splineCtx.beginPath();
+      splineCtx.moveTo(marginLeft, y1g);
+      splineCtx.lineTo(w - marginRight, y1g);
+      splineCtx.stroke();
+      splineCtx.setLineDash([]);
+
       if (points.length < 2) return;
+
+      const strokeW = (isFull && points.length > 500) ? (1.5 * dpr) : (2 * dpr);
 
       // 1. Draw Sound Wave (Coral) strictly within [marginLeft, w - marginRight]
       const gradCoral = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
@@ -1265,7 +1500,7 @@ def generate_html(default_view='live'):
 
       splineCtx.beginPath();
       splineCtx.strokeStyle = '#fb923c';
-      splineCtx.lineWidth = 2 * dpr;
+      splineCtx.lineWidth = strokeW;
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const normRms = points[i][4] / rmsMax;
@@ -1284,7 +1519,7 @@ def generate_html(default_view='live'):
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * (isMobile ? 20 : 25) * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
         splineCtx.lineTo(x, y);
       }}
       splineCtx.lineTo(w - marginRight, marginTop + plotH);
@@ -1294,24 +1529,50 @@ def generate_html(default_view='live'):
 
       splineCtx.beginPath();
       splineCtx.strokeStyle = '#00f0d2';
-      splineCtx.lineWidth = 2 * dpr;
+      splineCtx.lineWidth = strokeW;
       for (let i = 0; i < points.length; i++) {{
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * (isMobile ? 20 : 25) * dpr);
+        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }}
       splineCtx.stroke();
 
-      // Active point dot
+      // Vertical Playhead & Active point dots
       if (curRelIdx >= 0 && curRelIdx < points.length) {{
         const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
-        const normRms = points[curRelIdx][4] / rmsMax;
+
+        // Vertical Scrubber Cursor Line
+        splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        splineCtx.lineWidth = 1.5 * dpr;
+        splineCtx.beginPath();
+        splineCtx.moveTo(cx, marginTop);
+        splineCtx.lineTo(cx, marginTop + plotH);
+        splineCtx.stroke();
+
+        const curPt = points[curRelIdx];
+
+        // Active Sound dot (Coral)
+        const normRms = curPt[4] / rmsMax;
         const cyRms = Math.max(marginTop + (1 * dpr), marginTop + plotH - (normRms * plotH));
         splineCtx.fillStyle = '#fb923c';
         splineCtx.beginPath();
-        splineCtx.arc(cx, cyRms, 3.5 * dpr, 0, Math.PI * 2);
+        splineCtx.arc(cx, cyRms, 4 * dpr, 0, Math.PI * 2);
         splineCtx.fill();
+        splineCtx.strokeStyle = '#ffffff';
+        splineCtx.lineWidth = 1 * dpr;
+        splineCtx.stroke();
+
+        // Active Vibration dot (Teal)
+        const v = Math.sqrt(curPt[1]*curPt[1] + curPt[2]*curPt[2] + curPt[3]*curPt[3]);
+        const cyVibe = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
+        splineCtx.fillStyle = '#00f0d2';
+        splineCtx.beginPath();
+        splineCtx.arc(cx, cyVibe, 4 * dpr, 0, Math.PI * 2);
+        splineCtx.fill();
+        splineCtx.strokeStyle = '#ffffff';
+        splineCtx.lineWidth = 1 * dpr;
+        splineCtx.stroke();
       }}
     }}
 
@@ -1323,10 +1584,10 @@ def generate_html(default_view='live'):
       xyzCtx.clearRect(0, 0, w, h);
 
       const isMobile = (w / dpr) < 580;
-      const marginLeft = (isMobile ? 40 : 66) * dpr;
-      const marginRight = (isMobile ? 10 : 16) * dpr;
+      const marginLeft = (isMobile ? 44 : 64) * dpr;
+      const marginRight = (isMobile ? 34 : 52) * dpr;
       const marginTop = 14 * dpr;
-      const marginBottom = 14 * dpr;
+      const marginBottom = (isMobile ? 18 : 22) * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
@@ -1341,7 +1602,35 @@ def generate_html(default_view='live'):
       xyzCtx.beginPath();
       xyzCtx.moveTo(marginLeft, marginTop);
       xyzCtx.lineTo(marginLeft, h - marginBottom);
+      xyzCtx.moveTo(w - marginRight, marginTop);
+      xyzCtx.lineTo(w - marginRight, h - marginBottom);
       xyzCtx.stroke();
+
+      let points;
+      let curRelIdx = 0;
+      const isFull = (currentMode === 'historic' && chartSpanMode.xyz === 'full');
+
+      if (currentMode === 'live') {{
+        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
+          [0, -0.74, 1.40, -9.40, 105.6],
+          [2000, -0.74, 1.40, -9.40, 105.6]
+        ];
+        curRelIdx = points.length - 1;
+      }} else if (isFull) {{
+        points = ACTIVE_DATA;
+        curRelIdx = currentIndex;
+      }} else {{
+        const winSize = 40;
+        const startIdx = Math.max(0, currentIndex - (winSize / 2));
+        const endIdx = Math.min(ACTIVE_DATA.length - 1, startIdx + winSize);
+        points = ACTIVE_DATA.slice(startIdx, endIdx + 1);
+        curRelIdx = currentIndex - startIdx;
+      }}
+
+      // Time grid & labels across the bottom (in full historical mode)
+      if (isFull) {{
+        drawTimeGrid(xyzCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
+      }}
 
       // Baseline grid lines (cleanly spaced, zero gutter collisions)
       const hLines = isMobile ? [
@@ -1386,29 +1675,15 @@ def generate_html(default_view='live'):
       xyzCtx.stroke();
       xyzCtx.setLineDash([]);
 
-      let points;
-      let curRelIdx = 0;
-      if (currentMode === 'live') {{
-        points = LIVE_BUFFER.length > 1 ? LIVE_BUFFER : [
-          [0, -0.74, 1.40, -9.40, 105.6],
-          [2000, -0.74, 1.40, -9.40, 105.6]
-        ];
-        curRelIdx = points.length - 1;
-      }} else {{
-        const winSize = 40;
-        const startIdx = Math.max(0, currentIndex - (winSize / 2));
-        const endIdx = Math.min(ACTIVE_DATA.length - 1, startIdx + winSize);
-        points = ACTIVE_DATA.slice(startIdx, endIdx + 1);
-        curRelIdx = currentIndex - startIdx;
-      }}
-
       if (points.length < 2) return;
+
+      const strokeW = (isFull && points.length > 500) ? (1.5 * dpr) : (2 * dpr);
 
       // Plot Az (Purple)
       if (axisVisible.z) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#a78bfa';
-        xyzCtx.lineWidth = 2 * dpr;
+        xyzCtx.lineWidth = strokeW;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const az = points[i][3];
@@ -1422,7 +1697,7 @@ def generate_html(default_view='live'):
       if (axisVisible.y) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#fb923c';
-        xyzCtx.lineWidth = 2 * dpr;
+        xyzCtx.lineWidth = strokeW;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ay = points[i][2];
@@ -1436,7 +1711,7 @@ def generate_html(default_view='live'):
       if (axisVisible.x) {{
         xyzCtx.beginPath();
         xyzCtx.strokeStyle = '#00f0d2';
-        xyzCtx.lineWidth = 2 * dpr;
+        xyzCtx.lineWidth = strokeW;
         for (let i = 0; i < points.length; i++) {{
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ax = points[i][1];
@@ -1446,29 +1721,48 @@ def generate_html(default_view='live'):
         xyzCtx.stroke();
       }}
 
-      // Active cursor dots
+      // Active cursor dots & vertical scrubber line
       if (curRelIdx >= 0 && curRelIdx < points.length) {{
         const cx = marginLeft + ((curRelIdx / (points.length - 1)) * plotW);
-        if (axisVisible.x) {{
-          const cyX = yZero - (points[curRelIdx][1] * scaleXY);
-          xyzCtx.fillStyle = '#00f0d2';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyX, 3.5 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-        }}
-        if (axisVisible.y) {{
-          const cyY = yZero - (points[curRelIdx][2] * scaleXY);
-          xyzCtx.fillStyle = '#fb923c';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyY, 3.5 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-        }}
+
+        // Vertical Scrubber Cursor Line
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        xyzCtx.lineWidth = 1.5 * dpr;
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(cx, marginTop);
+        xyzCtx.lineTo(cx, marginTop + plotH);
+        xyzCtx.stroke();
+
+        const pt = points[curRelIdx];
         if (axisVisible.z) {{
-          const cyZ = yGravity - ((points[curRelIdx][3] + 9.81) * scaleZ);
+          const cyZ = yGravity - ((pt[3] + 9.81) * scaleZ);
           xyzCtx.fillStyle = '#a78bfa';
           xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyZ, 3.5 * dpr, 0, Math.PI * 2);
+          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
           xyzCtx.fill();
+          xyzCtx.strokeStyle = '#ffffff';
+          xyzCtx.lineWidth = 1 * dpr;
+          xyzCtx.stroke();
+        }}
+        if (axisVisible.x) {{
+          const cyX = yZero - (pt[1] * scaleXY);
+          xyzCtx.fillStyle = '#00f0d2';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+          xyzCtx.strokeStyle = '#ffffff';
+          xyzCtx.lineWidth = 1 * dpr;
+          xyzCtx.stroke();
+        }}
+        if (axisVisible.y) {{
+          const cyY = yZero - (pt[2] * scaleXY);
+          xyzCtx.fillStyle = '#fb923c';
+          xyzCtx.beginPath();
+          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+          xyzCtx.fill();
+          xyzCtx.strokeStyle = '#ffffff';
+          xyzCtx.lineWidth = 1 * dpr;
+          xyzCtx.stroke();
         }}
       }}
 
@@ -1489,10 +1783,10 @@ def generate_html(default_view='live'):
       areaCtx.clearRect(0, 0, w, h);
 
       const isMobile = (w / dpr) < 580;
-      const marginLeft = (isMobile ? 36 : 58) * dpr;
-      const marginRight = (isMobile ? 10 : 16) * dpr;
+      const marginLeft = (isMobile ? 44 : 64) * dpr;
+      const marginRight = (isMobile ? 34 : 52) * dpr;
       const marginTop = 18 * dpr;
-      const marginBottom = 16 * dpr;
+      const marginBottom = (isMobile ? 18 : 22) * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
 
@@ -1525,7 +1819,14 @@ def generate_html(default_view='live'):
       areaCtx.beginPath();
       areaCtx.moveTo(marginLeft, marginTop);
       areaCtx.lineTo(marginLeft, h - marginBottom);
+      areaCtx.moveTo(w - marginRight, marginTop);
+      areaCtx.lineTo(w - marginRight, h - marginBottom);
       areaCtx.stroke();
+
+      // Time grid & labels across the bottom (in historical mode)
+      if (currentMode === 'historic') {{
+        drawTimeGrid(areaCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
+      }}
 
       // Horizontal Y-Axis Numeric Rulers in Left Gutter
       const yTicks = isMobile ? scaleConf.ticksMobile : scaleConf.ticks;
@@ -1612,7 +1913,7 @@ def generate_html(default_view='live'):
       // Top curve stroke
       areaCtx.beginPath();
       areaCtx.strokeStyle = '#00f0d2';
-      areaCtx.lineWidth = 1.8 * dpr;
+      areaCtx.lineWidth = (total > 500) ? (1.5 * dpr) : (1.8 * dpr);
       for (let i = 0; i < total; i++) {{
         const x = marginLeft + ((i / (total - 1)) * plotW);
         const y = getY(dataSeries[i][4]);
@@ -1626,7 +1927,7 @@ def generate_html(default_view='live'):
       const curRms = dataSeries[curPointIdx][4];
       const curY = getY(curRms);
 
-      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.8)';
+      areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
       areaCtx.lineWidth = 1.5 * dpr;
       areaCtx.beginPath();
       areaCtx.moveTo(curX, marginTop);
@@ -1637,6 +1938,9 @@ def generate_html(default_view='live'):
       areaCtx.beginPath();
       areaCtx.arc(curX, curY, 4 * dpr, 0, Math.PI * 2);
       areaCtx.fill();
+      areaCtx.strokeStyle = '#ffffff';
+      areaCtx.lineWidth = 1 * dpr;
+      areaCtx.stroke();
 
       // Dynamic Anti-Collision Placement: Always draw baseline & peak on OPPOSITE side of active cursor, AFTER curves are drawn!
       const isCursorOnLeft = (total > 1) ? ((curPointIdx / (total - 1)) < 0.5) : true;
@@ -1691,9 +1995,10 @@ def generate_html(default_view='live'):
 
     function onScrub(val) {{
       currentIndex = parseInt(val, 10);
+      if (!ACTIVE_DATA || !ACTIVE_DATA[currentIndex]) return;
       const curRec = ACTIVE_DATA[currentIndex];
       const minutes = (((curRec[0] - ACTIVE_DATA[0][0]) / 60000)).toFixed(1);
-      scrubLabel.innerText = `${{minutes}}m`;
+      if (scrubLabel) scrubLabel.innerText = `${{minutes}}m`;
       applyRecord(curRec, false);
       drawSpline();
       drawXyz();
@@ -1901,6 +2206,9 @@ def generate_html(default_view='live'):
       setInterval(checkRigHeartbeat, 1000);
       checkRigHeartbeat();
       discoverFirebaseSessions();
+      setupCanvasScrubbing(splineCvs);
+      setupCanvasScrubbing(xyzCvs);
+      setupCanvasScrubbing(areaCvs);
     }});
   </script>
 </body>
