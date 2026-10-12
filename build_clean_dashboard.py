@@ -16,12 +16,16 @@ def load_csv(path):
                 pass
     return rows
 
+csv_0800 = 'data/wash_cycle_2026-10-12_0800.csv'
+data_0800 = load_csv(csv_0800) if os.path.exists(csv_0800) else []
+
 csv_1019 = 'data/wash_cycle_2026-10-11_1019.csv' if os.path.exists('data/wash_cycle_2026-10-11_1019.csv') else 'data/wash_1019.csv'
 data_1019 = load_csv(csv_1019)
 data_1009 = load_csv('data/testing/wash_cycle_2026-10-11_1009.csv')
 data_1020 = load_csv('data/testing/wash_cycle_2026-10-11_1020.csv')
 data_wifi = load_csv('data/wifi_test_log.csv')
 
+json_0800 = json.dumps(data_0800)
 json_1019 = json.dumps(data_1019)
 json_1009 = json.dumps(data_1009)
 json_1020 = json.dumps(data_1020)
@@ -622,6 +626,7 @@ def generate_html(default_view='live'):
             <option value="live">📡 Live Rig Telemetry (50 Hz)</option>
           </optgroup>
           <optgroup label="Saved Wash Cycles" id="group-preset-sessions">
+            <option value="preset_wash_0800">📊 12 Oct 2026, 08:00 AM (103m Full Wash)</option>
             <option value="preset_wash_1019">📊 11 Oct 2026, 10:19 AM (24m Wash)</option>
             <option value="preset_wash_1009">📊 11 Oct 2026, 10:09 AM (Pre-Wash)</option>
             <option value="preset_wash_1020">📊 11 Oct 2026, 10:20 AM (Spin Test)</option>
@@ -766,12 +771,18 @@ def generate_html(default_view='live'):
   <div id="toast" class="toast-notification">Notification</div>
 
   <script>
+    const WASH_DATA_0800 = {json_0800};
     const WASH_DATA = {json_1019};
     const WASH_DATA_1009 = {json_1009};
     const WASH_DATA_1020 = {json_1020};
     const WIFI_TEST_DATA = {json_wifi};
 
     const PRESET_SESSIONS = {{
+      'preset_wash_0800': {{
+        name: '12 Oct 2026, 08:00 AM',
+        displayName: '📊 12 Oct 2026, 08:00 AM (103m Full Wash)',
+        data: WASH_DATA_0800
+      }},
       'preset_wash_1019': {{
         name: '11 Oct 2026, 10:19 AM',
         displayName: '📊 11 Oct 2026, 10:19 AM (24m Wash)',
@@ -795,9 +806,9 @@ def generate_html(default_view='live'):
     }};
 
     let LOADED_SESSIONS = Object.assign({{}}, PRESET_SESSIONS);
-    let activeSessionKey = 'preset_wash_1019';
-    let activeSessionName = '11 Oct 2026, 10:19 AM';
-    let ACTIVE_DATA = WASH_DATA;
+    let activeSessionKey = 'preset_wash_0800';
+    let activeSessionName = '12 Oct 2026, 08:00 AM';
+    let ACTIVE_DATA = WASH_DATA_0800.length > 0 ? WASH_DATA_0800 : WASH_DATA;
 
     let currentMode = '{default_view}'; // 'live' or 'historic'
     let currentIndex = 0;

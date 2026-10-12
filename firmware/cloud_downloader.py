@@ -32,11 +32,22 @@ def download_sessions():
             if not batches:
                 continue
 
-            if session_id.startswith("wash_"):
+            # Determine appropriate filename
+            if session_id == "wash_1019":
+                # Check batch count to distinguish between 11 Oct (422 batches) and 12 Oct morning run (1216 batches)
+                count = len(batches) if isinstance(batches, (dict, list)) else 0
+                if count > 500:
+                    fname = "wash_cycle_2026-10-12_0800.csv"
+                else:
+                    fname = "wash_cycle_2026-10-11_1019.csv"
+            elif session_id.startswith("wash_202"):
+                fname = f"{session_id}.csv"
+            elif session_id.startswith("wash_"):
                 suffix = session_id.replace("wash_", "")
                 fname = f"wash_cycle_2026-10-11_{suffix}.csv"
             else:
                 fname = f"{session_id}.csv"
+
             csv_file = os.path.join(data_dir, fname)
             print(f"--> Processing session: {session_id} -> {fname}")
             

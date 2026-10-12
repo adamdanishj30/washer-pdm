@@ -390,6 +390,16 @@ void setup() {
   initI2S();
   setupWiFi();
 
+  // If WiFi connected, synchronize real-world NTP time (UTC+8) for collision-free sessions
+  if (WiFi.status() == WL_CONNECTED) {
+    configTime(8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 3000)) {
+      strftime(session_id, sizeof(session_id), "wash_%Y%m%d_%H%M%S", &timeinfo);
+      Serial.printf("[NTP] Real-world Session ID created: %s\n", session_id);
+    }
+  }
+
   // Launch Cloud & Web task on Core 0
   xTaskCreatePinnedToCore(
     cloudTask,
