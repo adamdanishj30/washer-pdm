@@ -165,17 +165,36 @@ flowchart TD
 
 ## 5. Unified Dataset Schema (Target Format)
 
-The final merged CSV output stored in Google Drive (`G:\My Drive\PdM SideProject\data\wash_cycle_YYYY-MM-DD_HHMM.csv`) will feature the following unified format:
+The final merged CSV output stored in Google Drive (`G:\My Drive\PdM SideProject\data\wash_cycle_YYYY-MM-DD_HHMM.csv`) will feature the following **13-column unified schema**, including ground-truth **Operational Phase** and inferred **Load Class**:
 
 ```csv
-timestamp_iso,timestamp_ms,phase,machine_state,power_w,voltage_v,current_ma,accel_x,accel_y,accel_z,vibe_mag,audio_rms
-2026-10-12T08:00:10Z,1791794410000,weightSensing,running,85.4,240.1,380,-0.42,1.15,-9.50,9.58,110.2
-2026-10-12T08:03:00Z,1791794580000,wash,running,2010.5,238.4,8450,-0.65,1.38,-9.42,9.54,82.4
-2026-10-12T08:45:15Z,1791797115000,drain,running,42.1,239.8,190,-0.12,0.85,-9.65,9.69,215.8
-2026-10-12T08:52:00Z,1791797520000,rinse,running,145.2,239.0,620,-1.10,1.80,-9.35,9.58,125.0
-2026-10-12T09:26:30Z,1791799590000,spin,running,542.8,236.8,2290,-3.45,4.12,-11.20,12.42,1036.5
-2026-10-12T09:42:50Z,1791800570000,finished,idle,2.1,241.0,20,-0.38,1.16,-9.43,9.51,68.0
+timestamp_iso,timestamp_ms,phase,machine_state,load_class,power_w,voltage_v,current_ma,accel_x,accel_y,accel_z,vibe_mag,audio_rms
+2026-10-12T08:00:10Z,1791794410000,weightSensing,running,MEDIUM,85.4,240.1,380,-0.42,1.15,-9.50,9.58,110.2
+2026-10-12T08:03:00Z,1791794580000,wash,running,MEDIUM,2010.5,238.4,8450,-0.65,1.38,-9.42,9.54,82.4
+2026-10-12T08:45:15Z,1791797115000,drain,running,MEDIUM,42.1,239.8,190,-0.12,0.85,-9.65,9.69,215.8
+2026-10-12T08:52:00Z,1791797520000,rinse,running,MEDIUM,145.2,239.0,620,-1.10,1.80,-9.35,9.58,125.0
+2026-10-12T09:26:30Z,1791799590000,spin,running,MEDIUM,542.8,236.8,2290,-3.45,4.12,-11.20,12.42,1036.5
+2026-10-12T09:42:50Z,1791800570000,finished,idle,MEDIUM,2.1,241.0,20,-0.38,1.16,-9.43,9.51,68.0
 ```
+
+### Automated `load_class` Classification Methodology:
+The `load_class` attribute categorizes the laundry mass into three distinct engineering brackets:
+- **`LIGHT`** ($< 3\text{ kg}$): Small loads (e.g. activewear, few shirts). Low baseline unbalance risk.
+- **`MEDIUM`** ($3 - 6\text{ kg}$): Typical daily laundry loads (mixed clothing). Moderate unbalance baseline.
+- **`HEAVY`** ($6 - 10\text{ kg}$): Heavy loads (bed sheets, duvet covers, wet bath towels). Naturally high centrifugal vibration baseline.
+
+#### How `load_class` is Computed Automatically (Zero Manual Work):
+1. **Primary Sensor (Tapo P110 Dry-Tumble Power):**  
+   During the 90-second dry `weightSensing` phase, the drum accelerates back and forth. The average active power ($\bar{P}$) required to overcome rotational inertia ($I = m r^2$) directly correlates with drum mass:
+   - $\bar{P}_{\text{sensing}} < 120\text{ W} \implies$ **`LIGHT`**
+   - $120\text{ W} \le \bar{P}_{\text{sensing}} \le 220\text{ W} \implies$ **`MEDIUM`**
+   - $\bar{P}_{\text{sensing}} > 220\text{ W} \implies$ **`HEAVY`**
+2. **Secondary Corroboration (SmartThings Dynamic Delta):**  
+   Immediately following `weightSensing`, SmartThings updates `completionTime` and `samsungce.washerWaterLevel`. A sharp downward time reduction ($-30$ to $-50$ mins) confirms a `LIGHT` load, while full time and high water level confirms `HEAVY`.
+3. **Machine Learning Impact:**  
+   In predictive maintenance algorithms, vibration thresholds are dynamically scaled against `load_class`:
+   $$\text{Vibration Baseline Anomaly Threshold} = f(\text{load\_class}, \text{phase})$$
+   This prevents heavy loads from triggering false alarm unbalance warnings.
 
 ---
 
