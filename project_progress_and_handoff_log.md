@@ -108,9 +108,17 @@
 
 ## 5. Next Immediate Action Items (Roadmap)
 
-1. **Phase 3: Machine Deployment & Data Logging (100% Autonomous!)**
-   * Unplug micro-USB and plug the Type-C cable back into the expansion board.
+1. **Phase 3: Machine Deployment & Autonomous Cloud-to-Drive Data Logging**
    * Mount the enclosure to the Samsung WW10TP44DSX washing machine using 3M VHB tape.
    * Plug Type-C into any 5V USB wall plug outside.
-   * Whenever your father runs laundry, data automatically records to Google Firebase!
-   * Monitor from anywhere via [`cloud_dashboard.html`](file:///G:/My%20Drive/PdM%20SideProject/cloud_dashboard.html) or run [`firmware/cloud_downloader.py`](file:///G:/My%20Drive/PdM%20SideProject/firmware/cloud_downloader.py) whenever you want the full CSV!
+   * Telemetry streams automatically to Google Firebase RTDB during wash cycles.
+   * **Offline Auto-Sync to Google Drive:** As soon as ESP32 powers down or goes offline for > 20s:
+     - Cloud Method: `google_apps_script_drive_sync.js` (runs 24/7 on Google Cloud, saves CSV to Drive, sends Gmail alert).
+     - Local Method: `run_auto_sync_daemon.bat` / `firmware/auto_drive_sync_daemon.py` (auto-saves CSV to `data/` and recompiles dashboard).
+
+2. **Phase 4: Multimodal Power (Watts) & Phase Integration (Tapo P110 + SmartThings)**
+   * Complete architecture and handoff specification documented in: [`tapo_and_smartthings_pdm_handoff.md`](file:///G:/My%20Drive/PdM%20SideProject/tapo_and_smartthings_pdm_handoff.md).
+   * **Tapo P110 Smart Plug:** Ingests real-time Watt usage ($W$), Voltage ($V$), Current ($mA$) at 1 Hz via local network API.
+   * **Samsung SmartThings API:** Ingests internal machine cycle phase (`washerJobState`: `weightSensing`, `wash`, `drain`, `rinse`, `spin`, `finished`) via Personal Access Token (PAT).
+   * **Unified 12-Column CSV Dataset:** Merges Kinematic ($A_x, A_y, A_z$), Acoustic ($RMS$), Electrical ($W$), and Ground Truth Operational Phase for phase-conditioned ML anomaly detection.
+   * **Dashboard Integration:** Adds Power curve and colored Phase timeline progression ribbon to Card 1 and Card 3.

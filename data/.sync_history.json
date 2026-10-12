@@ -1,0 +1,20 @@
+{
+  "wash_1009": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-12_1009.csv",
+    "synced_at": "2026-10-12T17:29:27.395458",
+    "points": 65
+  },
+  "wash_1019": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-12_1019.csv",
+    "synced_at": "2026-10-12T17:29:27.876896",
+    "points": 1217
+  },
+  "wash_1020": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-12_1020.csv",
+    "synced_at": "2026-10-12T17:29:28.266154",
+    "points": 11
+  }
+}

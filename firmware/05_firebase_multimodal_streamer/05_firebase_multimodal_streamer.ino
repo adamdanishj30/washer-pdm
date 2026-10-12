@@ -331,9 +331,9 @@ void cloudTask(void* parameter) {
       if (fabs(vibe_mag - 9.81) > 2.5 || rms > 150.0) machine_state = "RUNNING";
       if (fabs(vibe_mag - 9.81) > 8.0) machine_state = "SPIN_CYCLE";
 
-      char liveJson[256];
+      char liveJson[320];
       snprintf(liveJson, sizeof(liveJson),
-        "{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"vibe\":%.2f,\"rms\":%.1f,\"state\":\"%s\",\"session\":\"%s\",\"cnt\":%lu,\"uptime\":%lu}",
+        "{\"ts\":{\".sv\":\"timestamp\"},\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"vibe\":%.2f,\"rms\":%.1f,\"state\":\"%s\",\"session\":\"%s\",\"cnt\":%lu,\"uptime\":%lu}",
         ax, ay, az, vibe_mag, rms, machine_state, session_id, cnt, (millis() - boot_time_ms) / 1000);
 
       HTTPClient https;
@@ -356,9 +356,9 @@ void cloudTask(void* parameter) {
       ax = g_ax; ay = g_ay; az = g_az; rms = g_rms;
       portEXIT_CRITICAL(&telemetryMux);
 
-      char batchJson[192];
+      char batchJson[220];
       snprintf(batchJson, sizeof(batchJson),
-        "{\"t\":%lu,\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"rms\":%.1f}",
+        "{\"t\":%lu,\"ts\":{\".sv\":\"timestamp\"},\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"rms\":%.1f}",
         millis(), ax, ay, az, rms);
 
       HTTPClient https;
