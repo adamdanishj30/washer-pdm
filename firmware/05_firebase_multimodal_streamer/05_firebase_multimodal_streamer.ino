@@ -18,17 +18,18 @@
 #include <driver/i2s.h>
 #include <math.h>
 
-// --- WiFi Credentials ---
-const char* WIFI_SSID = "leo";
-const char* WIFI_PASS = "jj67680205";
-
-// Fallback Hotspot if Home WiFi is unavailable
-const char* AP_SSID = "Washer-PdM-Rig";
-const char* AP_PASS = "pdm123456";
-
-// --- Firebase Configuration ---
-const char* FIREBASE_HOST = "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app";
-const char* FIREBASE_AUTH = "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V";
+// --- Credentials & Configuration ---
+#if __has_include("secrets.h")
+  #include "secrets.h"
+#else
+  // Fallback defaults if secrets.h is not found
+  const char* WIFI_SSID = "leo";
+  const char* WIFI_PASS = "jj67680205";
+  const char* AP_SSID = "Washer-PdM-Rig";
+  const char* AP_PASS = "pdm123456";
+  const char* FIREBASE_HOST = "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app";
+  const char* FIREBASE_AUTH = "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V";
+#endif
 
 // --- UDP Configuration ---
 WiFiUDP udp;
@@ -63,8 +64,9 @@ volatile float g_rms = 0.0;
 volatile unsigned long g_sample_count = 0;
 
 // Session Tracking
-char session_id[32];
+char session_id[48];
 unsigned long boot_time_ms = 0;
+bool g_ntp_synced = false;
 
 // --- Embedded Web Dashboard ---
 const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
@@ -316,6 +318,16 @@ void cloudTask(void* parameter) {
     server.handleClient();
     ArduinoOTA.handle();
 
+    // Ensure real-world date & time is acquired as soon as NTP is ready
+    if (!g_ntp_synced && WiFi.status() == WL_CONNECTED) {
+      struct tm timeinfo;
+      if (getLocalTime(&timeinfo, 500)) {
+        strftime(session_id, sizeof(session_id), "wash_%Y-%m-%d_%H%M%S", &timeinfo);
+        g_ntp_synced = true;
+        Serial.printf("\n[NTP SYNCED IN BACKGROUND] Session ID: %s\n", session_id);
+      }
+    }
+
     // 1. Update Firebase /live.json every 2.0 seconds
     if (WiFi.status() == WL_CONNECTED && millis() - last_firebase_live >= 2000) {
       last_firebase_live = millis();
@@ -384,7 +396,7 @@ void setup() {
   Serial.println("\n=== Autonomous Cloud Telemetry Rig (Firebase) ===");
 
   boot_time_ms = millis();
-  snprintf(session_id, sizeof(session_id), "wash_%lu", boot_time_ms);
+  snprintf(session_id, sizeof(session_id), "wash_offline_%lu", boot_time_ms);
 
   initMPU();
   initI2S();
@@ -392,11 +404,21 @@ void setup() {
 
   // If WiFi connected, synchronize real-world NTP time (UTC+8) for collision-free sessions
   if (WiFi.status() == WL_CONNECTED) {
-    configTime(8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    configTime(8 * 3600, 0, "pool.ntp.org", "time.google.com", "time.cloudflare.com");
+    Serial.print("[NTP] Synchronizing date & time (UTC+8)");
     struct tm timeinfo;
-    if (getLocalTime(&timeinfo, 3000)) {
-      strftime(session_id, sizeof(session_id), "wash_%Y%m%d_%H%M%S", &timeinfo);
-      Serial.printf("[NTP] Real-world Session ID created: %s\n", session_id);
+    for (int retry = 0; retry < 16; retry++) {
+      if (getLocalTime(&timeinfo, 500)) {
+        strftime(session_id, sizeof(session_id), "wash_%Y-%m-%d_%H%M%S", &timeinfo);
+        g_ntp_synced = true;
+        Serial.printf("\n[NTP OK] Collision-free Date & Time Session ID: %s\n", session_id);
+        break;
+      }
+      Serial.print(".");
+      delay(250);
+    }
+    if (!g_ntp_synced) {
+      Serial.println("\n[WARN] NTP initial sync timed out, background task will retry.");
     }
   }
 

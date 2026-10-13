@@ -26,12 +26,28 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
-FIREBASE_HOST = "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app"
-FIREBASE_AUTH = "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V"
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 SYNC_HISTORY_FILE = os.path.join(DATA_DIR, ".sync_history.json")
+
+def _load_env_file(env_path):
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("\"'")
+                        if k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+_load_env_file(os.path.join(BASE_DIR, ".env"))
+
+FIREBASE_HOST = os.environ.get("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
+FIREBASE_AUTH = os.environ.get("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
 
 
 def load_sync_history():
@@ -85,14 +101,16 @@ def format_session_filename(session_id, first_timestamp_ms=None):
     """
     Generate clean, standardized filename: wash_cycle_YYYY-MM-DD_HHMM.csv
     """
-    if session_id.startswith("wash_202") and len(session_id) >= 18:
-        # e.g., wash_20261012_080000 -> wash_cycle_2026-10-12_0800.csv
-        try:
-            raw_ts = session_id.replace("wash_", "")
-            dt = datetime.strptime(raw_ts[:15], "%Y%m%d_%H%M%S")
-            return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
-        except Exception:
-            pass
+    if session_id.startswith("wash_202"):
+        clean_id = session_id.replace("wash_", "")
+        for fmt in ("%Y-%m-%d_%H%M%S", "%Y-%m-%d_%H%M", "%Y%m%d_%H%M%S", "%Y%m%d_%H%M"):
+            try:
+                sample_len = len(datetime.now().strftime(fmt))
+                dt = datetime.strptime(clean_id[:sample_len], fmt)
+                return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
+            except Exception:
+                pass
+        return f"wash_cycle_{clean_id}.csv"
 
     if first_timestamp_ms and first_timestamp_ms > 1700000000000:
         dt = datetime.fromtimestamp(first_timestamp_ms / 1000.0)

@@ -4,7 +4,21 @@ import os
 import sys
 import time
 
-FIREBASE_HOST = "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app"
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_file = os.path.join(base_dir, ".env")
+if os.path.exists(env_file):
+    try:
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    if k.strip() not in os.environ:
+                        os.environ[k.strip()] = v.strip().strip("\"'")
+    except Exception:
+        pass
+
+FIREBASE_HOST = os.environ.get("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
@@ -41,10 +55,13 @@ def download_sessions():
                 else:
                     fname = "wash_cycle_2026-10-11_1019.csv"
             elif session_id.startswith("wash_202"):
+                clean_id = session_id.replace("wash_", "")
+                fname = f"wash_cycle_{clean_id}.csv"
+            elif session_id.startswith("wash_offline_"):
                 fname = f"{session_id}.csv"
             elif session_id.startswith("wash_"):
                 suffix = session_id.replace("wash_", "")
-                fname = f"wash_cycle_2026-10-11_{suffix}.csv"
+                fname = f"wash_cycle_{suffix}.csv"
             else:
                 fname = f"{session_id}.csv"
 

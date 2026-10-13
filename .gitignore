@@ -17,3 +17,12 @@ Thumbs.db
 
 # Windows Hardware Drivers
 CP210x_Universal_Windows_Driver/
+
+# Antigravity ECC framework assets
+.agents/*
+!.agents/ecc-install-state.json
+
+# Environment and Secrets (ECC Security Rule)
+secrets.h
+.env
+.env.local

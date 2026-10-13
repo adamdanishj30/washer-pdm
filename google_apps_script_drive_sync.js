@@ -26,8 +26,10 @@
  * =========================================================================
  */
 
-const FIREBASE_HOST = "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app";
-const FIREBASE_AUTH = "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V";
+// Credentials: reads from Script Properties if configured, with local defaults
+const SCRIPT_PROPS = PropertiesService.getScriptProperties();
+const FIREBASE_HOST = SCRIPT_PROPS.getProperty("FIREBASE_HOST") || "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app";
+const FIREBASE_AUTH = SCRIPT_PROPS.getProperty("FIREBASE_AUTH") || "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V";
 const DRIVE_FOLDER_NAME = "PdM SideProject"; // Target Google Drive folder
 const SEND_EMAIL_NOTIFICATION = true;       // Set to false if you don't want emails
 
@@ -145,9 +147,15 @@ function archiveSessionToDrive(sessionId) {
   }
   
   // Determine standard file name: wash_cycle_YYYY-MM-DD_HHMM.csv
-  const now = new Date();
-  const dateStr = Utilities.formatDate(now, "GMT+8", "yyyy-MM-dd_HHmm");
-  const fileName = `wash_cycle_${dateStr}.csv`;
+  let fileName;
+  if (sessionId.startsWith("wash_202")) {
+    const cleanId = sessionId.replace("wash_", "");
+    fileName = `wash_cycle_${cleanId}.csv`;
+  } else {
+    const now = new Date();
+    const dateStr = Utilities.formatDate(now, "GMT+8", "yyyy-MM-dd_HHmm");
+    fileName = `wash_cycle_${dateStr}.csv`;
+  }
   
   // Build CSV content
   let csvContent = "timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n";
