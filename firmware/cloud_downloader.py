@@ -30,17 +30,12 @@ def format_ts_filename(prefix, epoch_ms=None):
     return None
 
 def write_rows_to_csv(filepath, rows):
-    has_pwr = any("pwr" in r or "power" in r for r in rows)
+    """Writes standardized 6-column session CSV (including power_w)."""
     with open(filepath, "w", encoding="utf-8") as f:
-        if has_pwr:
-            f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\n")
-            for r in rows:
-                p = r.get("pwr") if "pwr" in r else r.get("power", 0.0)
-                f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)},{p:.1f}\n")
-        else:
-            f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n")
-            for r in rows:
-                f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)}\n")
+        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\n")
+        for r in rows:
+            p = r.get("pwr") if "pwr" in r else r.get("power", 0.0)
+            f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)},{p:.1f}\n")
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
