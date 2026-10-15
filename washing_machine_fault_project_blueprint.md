@@ -5,9 +5,13 @@ This document serves as a complete project handover blueprint for an AI/LLM assi
 ---
 
 ## 1. Project Overview & Objective
-* **Target System:** Outdoor household washing machine (subject to environmental moisture/wind-driven rain).
-* **Objective:** Build an end-to-end unsupervised/semi-supervised anomaly detection system to identify mechanical faults (unbalanced loads, loose structural components, bearing wear) using physical vibration data.
-* **Context:** Final Year Project / Advanced Intelligent Systems Side Project.
+* **Target System:** Front-load washing machine (Samsung WW10TP44DSX/FQ 10kg) and rotating electromechanical machinery.
+* **Core Objective:** Build an end-to-end multimodal predictive maintenance (PdM) & prognostics system:
+  1. **Physical Anomaly Detection:** Real-time identification of mechanical faults (unbalanced loads, suspension damper fatigue, tub bearing wear, drain pump cavitation) using vibration kinematics (MPU-6050) and acoustic sound pressure (INMP441).
+  2. **Prognostic Machine Health & Remaining Useful Life (RUL):** Track machine degradation over operational cycles to forecast *when* components will fail, transitioning from reactive "run-to-failure" to proactive maintenance.
+  3. **Parasitic Energy Waste Prevention:** Correlate mechanical friction and misalignment with active power draw (Tapo P110 smart plug). Degraded machinery draws 15%–35% excess electrical power to maintain target RPM; this system measures and flags the resulting energy leeching.
+  4. **Cost & E-Waste Reduction:** Intervene at Point P on the P-F interval (early harmonic indicators) to enable cheap preventative component replacement (RM 25–50) instead of catastrophic motor/tub replacement (RM 800–1,800+) or appliance scrapping.
+* **Context:** University FYP / Advanced Intelligent Systems Project / Sime Darby Property Hackathon ("Township of Tomorrow" Sustainability & Smart Facility Management).
 
 ---
 
@@ -56,14 +60,26 @@ This document serves as a complete project handover blueprint for an AI/LLM assi
 1. **Time-Domain Features:** Root Mean Square (RMS), Peak-to-Peak Amplitude, Kurtosis, and Variance calculated over rolling time windows.
 2. **Frequency-Domain Features:** Execute a **Fast Fourier Transform (FFT)** on the ESP32 or the server to extract dominant frequencies and spectral energy bins. This shifts the focus from time-amplitude to vibration harmonics.
 
-### Machine Learning Modeling (Unsupervised Anomaly Detection)
-Because actual mechanical failure data is heavily imbalanced (rare), the model must learn what is *normal* and flag anomalies by exclusion.
-* **Baseline Models:** Isolation Forest, One-Class Support Vector Machine (One-Class SVM).
-* **Deep Learning Options:** Convolutional Neural Networks (CNN) trained on spectrogram charts, or LSTM-based Autoencoders where a high reconstruction error denotes an anomaly.
+### Machine Learning Modeling (Unsupervised Anomaly Detection & Prognostics)
+Because actual mechanical failure data is heavily imbalanced (rare), the model must learn what is *normal* and flag anomalies and gradual degradation:
+* **Baseline Detection Models:** Isolation Forest, One-Class Support Vector Machine (One-Class SVM), Mahalanobis Distance on rolling multi-feature vectors.
+* **Deep Learning Options:** Convolutional Neural Networks (CNN) trained on mel-spectrograms of combined acoustic+vibration audio, or LSTM-based Autoencoders where reconstruction error acts as an anomaly score.
+* **Prognostic Health Degradation & Remaining Useful Life (RUL):**
+  * **Health Index (HI) Mapping:** Normalize composite anomaly score into an intuitive 0%–100% Machine Health Index.
+  * **Degradation Trendline / RUL Forecasting:** Exponential smoothing or Weibull survival regression on the multi-week degradation trajectory to predict cycles/days remaining before hitting critical fault threshold.
+* **Parasitic Energy & Friction Loss Tracking:**
+  * Cross-reference active wattage ($W$) from Tapo P110 against rotational spin speed and vibration harmonic amplitude.
+  * Baseline energy envelope calculated per wash cycle phase (`washerJobState`). Any wattage deviation above baseline with elevated vibration indicates mechanical drag (unlubricated bearings, worn dampener drag, or impeller friction), quantifying excess kWh and carbon waste.
 
 ---
 
 ## 6. Prompt Engineering Hand-off Context
 *When giving this to an AI to generate code, use this baseline system layout:*
-* **MPU-6050 Connection:** I2C Communication (`SDA` to ESP32 Pin 21, `SCL` to ESP32 Pin 22 by default).
-* **Target ML Library:** Python (`scikit-learn`, `pandas`, `numpy`, `scipy`) for server-side processing, or `EloquentTinyML` / `TensorFlow Lite for Microcontrollers` if attempting on-chip edge AI inference.
+* **Sensors & Hardware:**
+  * MPU-6050 (I2C: `SDA` -> Pin 21, `SCL` -> Pin 22) @ 50 Hz.
+  * INMP441 (I2S DMA: `WS` -> Pin 25, `SCK` -> Pin 33, `SD` -> Pin 32) @ 16 kHz sampling $\rightarrow$ RMS.
+  * Tapo P110 Smart Plug: Polled at 1 Hz via local KLAP Wi-Fi protocol (`python-kasa`) for $W, V, mA$.
+  * Samsung SmartThings REST API: Ingests ground-truth `washerJobState` (`wash`, `rinse`, `spin`).
+* **Target ML / Data Libraries:** Python (`scikit-learn`, `pandas`, `numpy`, `scipy`, `lifelines` for survival/RUL modeling), or `EloquentTinyML` / `TensorFlow Lite for Microcontrollers` for on-chip edge inference.
+* **Core Value Equation for Presentations:**
+  $$\text{Early Detection (Point P)} \rightarrow \text{Preventative Fix (RM 25–50)} \ll \text{Catastrophic Failure (Point F: RM 1,500+)} + \text{15–35% Energy Saved}$$

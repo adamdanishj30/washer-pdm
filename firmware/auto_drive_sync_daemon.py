@@ -128,7 +128,7 @@ def export_session_to_csv(session_id, batches):
     """
     rows = []
     if isinstance(batches, dict):
-        for b_id, b_data in sorted(batches.items(), key=lambda x: str(x[0])):
+        for b_id, b_data in sorted(batches.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else str(x[0])):
             if isinstance(b_data, dict) and "ax" in b_data:
                 rows.append(b_data)
     elif isinstance(batches, list):
@@ -140,19 +140,38 @@ def export_session_to_csv(session_id, batches):
         print(f"  [SKIP] Session '{session_id}' has insufficient data ({len(rows)} points).")
         return None
 
-    first_t = rows[0].get("t", 0)
-    filename = format_session_filename(session_id, first_t)
+    # Check for real epoch timestamp (ts > 1700000000000)
+    first_ts = None
+    for r in rows:
+        ts_val = r.get("ts")
+        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+            first_ts = ts_val
+            break
+    if first_ts is None:
+        first_ts = rows[0].get("t", 0)
+
+    filename = format_session_filename(session_id, first_ts)
     csv_path = os.path.join(DATA_DIR, filename)
 
-    # Avoid overwriting existing distinct session file
+    # Check history to avoid false skipping on colliding legacy IDs
+    history = load_sync_history()
+    sess_history = history.get(session_id, {})
+    prev_first_ts = sess_history.get("first_ts")
+    prev_last_t = sess_history.get("last_t", 0)
+    current_last_t = rows[-1].get("t", 0)
+
+    # Avoid overwriting existing distinct session file unless current has more data or different first_ts
     if os.path.exists(csv_path):
-        existing_size = os.path.getsize(csv_path)
-        # If the file already exists and is complete, don't overwrite unless current has more data
-        with open(csv_path, "r", encoding="utf-8") as f:
-            existing_lines = sum(1 for _ in f) - 1
-        if existing_lines >= len(rows):
-            print(f"  [INFO] Session '{session_id}' already synced to '{filename}' ({existing_lines} records).")
-            return csv_path
+        if prev_first_ts and first_ts != prev_first_ts and first_ts > 1700000000000:
+            dt = datetime.fromtimestamp(first_ts / 1000.0)
+            filename = f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M%S')}_{session_id}.csv"
+            csv_path = os.path.join(DATA_DIR, filename)
+        else:
+            with open(csv_path, "r", encoding="utf-8") as f:
+                existing_lines = sum(1 for _ in f) - 1
+            if existing_lines >= len(rows) and current_last_t <= prev_last_t:
+                print(f"  [INFO] Session '{session_id}' already synced to '{filename}' ({existing_lines} records).")
+                return csv_path
 
     # Write clean CSV
     with open(csv_path, "w", encoding="utf-8") as f:
@@ -194,23 +213,55 @@ def check_and_sync_all_unarchived():
 
         synced_count = 0
         for s_id in shallow_sessions.keys():
-            if s_id in history and history[s_id].get("completed", False):
+            batches = get_firebase_json(f"sessions/{s_id}.json")
+            if not batches:
                 continue
 
-            print(f"\n[SYNC] Fetching session '{s_id}' from Firebase...")
-            batches = get_firebase_json(f"sessions/{s_id}.json")
-            if batches:
-                csv_path = export_session_to_csv(s_id, batches)
-                if csv_path:
-                    history[s_id] = {
-                        "completed": True,
-                        "file": os.path.basename(csv_path),
-                        "synced_at": datetime.now().isoformat(),
-                        "points": len(batches) if isinstance(batches, (list, dict)) else 0
-                    }
-                    save_sync_history(history)
-                    mark_session_archived_in_firebase(s_id)
-                    synced_count += 1
+            items = []
+            if isinstance(batches, dict):
+                items = [v for k, v in sorted(batches.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else str(x[0])) if isinstance(v, dict) and "ax" in v]
+            elif isinstance(batches, list):
+                items = [v for v in batches if isinstance(v, dict) and "ax" in v]
+
+            if len(items) < 3:
+                continue
+
+            cur_first_ts = None
+            for r in items:
+                ts_val = r.get("ts")
+                if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+                    cur_first_ts = ts_val
+                    break
+            if cur_first_ts is None:
+                cur_first_ts = items[0].get("t", 0)
+
+            cur_last_t = items[-1].get("t", 0)
+
+            sess_hist = history.get(s_id, {})
+            prev_synced = sess_hist.get("completed", False)
+            prev_first_ts = sess_hist.get("first_ts")
+            prev_last_t = sess_hist.get("last_t", 0)
+            prev_points = sess_hist.get("points", 0)
+
+            # Do not skip if points increased, or if last_t is greater, or if first_ts changed
+            is_identical = prev_synced and (prev_points >= len(items)) and (prev_last_t == cur_last_t) and (prev_first_ts == cur_first_ts)
+            if is_identical:
+                continue
+
+            print(f"\n[SYNC] Fetching session '{s_id}' from Firebase ({len(items)} points)...")
+            csv_path = export_session_to_csv(s_id, batches)
+            if csv_path:
+                history[s_id] = {
+                    "completed": True,
+                    "file": os.path.basename(csv_path),
+                    "synced_at": datetime.now().isoformat(),
+                    "points": len(items),
+                    "first_ts": cur_first_ts,
+                    "last_t": cur_last_t
+                }
+                save_sync_history(history)
+                mark_session_archived_in_firebase(s_id)
+                synced_count += 1
 
         return synced_count
     except Exception as e:
@@ -264,7 +315,14 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                 has_advanced = (last_cnt is not None and cur_cnt != last_cnt) or \
                                (last_uptime is not None and cur_uptime != last_uptime)
 
-                if has_advanced or last_seen_time == 0:
+                if last_seen_time == 0:
+                    last_seen_time = now
+                    last_cnt = cur_cnt
+                    last_uptime = cur_uptime
+                    # Baseline captured; wait for active packet advancement
+                    continue
+
+                if has_advanced:
                     last_seen_time = now
                     last_cnt = cur_cnt
                     last_uptime = cur_uptime
@@ -290,11 +348,25 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                             if batches:
                                 csv_path = export_session_to_csv(active_session_id, batches)
                                 if csv_path:
+                                    b_list = list(batches.values()) if isinstance(batches, dict) else (batches or [])
+                                    valid_b = [b for b in b_list if isinstance(b, dict) and "ax" in b]
+                                    b_first_ts = None
+                                    for b in valid_b:
+                                        ts_val = b.get("ts")
+                                        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+                                            b_first_ts = ts_val
+                                            break
+                                    if b_first_ts is None and valid_b:
+                                        b_first_ts = valid_b[0].get("t", 0)
+                                    b_last_t = valid_b[-1].get("t", 0) if valid_b else 0
+
                                     history[active_session_id] = {
                                         "completed": True,
                                         "file": os.path.basename(csv_path),
                                         "synced_at": datetime.now().isoformat(),
-                                        "points": len(batches) if isinstance(batches, (list, dict)) else 0
+                                        "points": len(valid_b),
+                                        "first_ts": b_first_ts,
+                                        "last_t": b_last_t
                                     }
                                     save_sync_history(history)
                                     mark_session_archived_in_firebase(active_session_id)

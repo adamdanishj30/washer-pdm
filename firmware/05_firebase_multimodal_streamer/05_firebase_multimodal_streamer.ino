@@ -67,6 +67,7 @@ volatile unsigned long g_sample_count = 0;
 char session_id[48];
 unsigned long boot_time_ms = 0;
 bool g_ntp_synced = false;
+bool g_session_locked = false;
 
 // --- Embedded Web Dashboard ---
 const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
@@ -268,6 +269,8 @@ void initI2S() {
 void setupWiFi() {
   Serial.printf("Connecting to WiFi: %s ...\n", WIFI_SSID);
   WiFi.mode(WIFI_AP_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(false);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
   unsigned long start = millis();
@@ -318,14 +321,22 @@ void cloudTask(void* parameter) {
     server.handleClient();
     ArduinoOTA.handle();
 
-    // Ensure real-world date & time is acquired as soon as NTP is ready
-    if (!g_ntp_synced && WiFi.status() == WL_CONNECTED) {
+    // Ensure real-world date & time is acquired as soon as NTP is ready (before session is locked)
+    if (!g_ntp_synced && !g_session_locked && WiFi.status() == WL_CONNECTED) {
       struct tm timeinfo;
       if (getLocalTime(&timeinfo, 500)) {
         strftime(session_id, sizeof(session_id), "wash_%Y-%m-%d_%H%M%S", &timeinfo);
         g_ntp_synced = true;
         Serial.printf("\n[NTP SYNCED IN BACKGROUND] Session ID: %s\n", session_id);
       }
+    }
+
+    // Auto-reconnect if Wi-Fi dropped mid-cycle
+    static unsigned long last_reconnect_attempt = 0;
+    if (WiFi.status() != WL_CONNECTED && millis() - last_reconnect_attempt >= 15000) {
+      last_reconnect_attempt = millis();
+      Serial.println("[WIFI] Connection lost. Attempting auto-reconnect...");
+      WiFi.reconnect();
     }
 
     // 1. Update Firebase /live.json every 2.0 seconds
@@ -362,6 +373,7 @@ void cloudTask(void* parameter) {
     if (WiFi.status() == WL_CONNECTED && millis() - last_firebase_batch >= 5000) {
       last_firebase_batch = millis();
       batch_counter++;
+      g_session_locked = true; // Lock session ID once the first batch is queued
 
       float ax, ay, az, rms;
       portENTER_CRITICAL(&telemetryMux);
@@ -396,7 +408,7 @@ void setup() {
   Serial.println("\n=== Autonomous Cloud Telemetry Rig (Firebase) ===");
 
   boot_time_ms = millis();
-  snprintf(session_id, sizeof(session_id), "wash_offline_%lu", boot_time_ms);
+  snprintf(session_id, sizeof(session_id), "wash_offline_%08X", (unsigned int)esp_random());
 
   initMPU();
   initI2S();

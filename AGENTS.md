@@ -25,3 +25,8 @@ This project contains the complete multimodal IoT edge rig, cloud streaming pipe
 4. **Security & Secrets:**
    - Never expose live Firebase database write secrets or Wi-Fi keys in public repositories.
    - Isolate device tokens into external configuration files or environment variables.
+
+5. **Prognostics & Predictive AI (RUL & Energy Optimization):**
+   - The ML roadmap targets continuous **Machine Health Index (0%–100%)** and **Remaining Useful Life (RUL)** forecasting rather than binary fault alarms.
+   - Correlate vibration harmonics and acoustic RMS with Tapo P110 active power ($W$) to quantify **parasitic energy waste** caused by mechanical friction (worn bearings/dampers).
+   - Frame solutions around the **P-F Interval**: early component-level replacement (RM 25–50) prevents catastrophic motor/tub failures (RM 800–1,800+) and unnecessary e-waste.

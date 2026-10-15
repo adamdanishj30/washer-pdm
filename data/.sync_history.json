@@ -13,8 +13,14 @@
   },
   "wash_1020": {
     "completed": true,
-    "file": "wash_cycle_2026-10-12_1020.csv",
-    "synced_at": "2026-10-12T17:29:28.266154",
-    "points": 11
+    "file": "wash_cycle_2026-10-15_1020.csv",
+    "synced_at": "2026-10-15T00:41:42.999273",
+    "points": 277
+  },
+  "wash_1019_2026-10-15_morning": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-15_morning.csv",
+    "synced_at": "2026-10-15T22:49:43.000000",
+    "points": 1216
   }
 }

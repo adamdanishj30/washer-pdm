@@ -98,12 +98,6 @@ function checkRigAndSyncToDrive() {
  */
 function archiveSessionToDrive(sessionId) {
   const props = PropertiesService.getScriptProperties();
-  const archivedKey = `archived_${sessionId}`;
-  
-  if (props.getProperty(archivedKey) === "true") {
-    Logger.log(`Session ${sessionId} already archived. Skipping duplicate.`);
-    return;
-  }
   
   Logger.log(`Fetching session '${sessionId}' data from Firebase...`);
   let sessionData = null;
@@ -145,12 +139,35 @@ function archiveSessionToDrive(sessionId) {
     Logger.log(`Session ${sessionId} has insufficient data (${rows.length} points).`);
     return;
   }
+
+  // Find real epoch timestamp if available (ts > 1700000000000)
+  let firstTs = null;
+  for (let i = 0; i < rows.length; i++) {
+    if (typeof rows[i].ts === "number" && rows[i].ts > 1700000000000) {
+      firstTs = rows[i].ts;
+      break;
+    }
+  }
+  if (!firstTs) {
+    firstTs = rows[0].t || 0;
+  }
+
+  // De-duplication check: include firstTs and row count so colliding legacy IDs are never blocked
+  const archivedKey = `archived_${sessionId}_${firstTs}_${rows.length}`;
+  if (props.getProperty(archivedKey) === "true") {
+    Logger.log(`Session ${sessionId} (firstTs: ${firstTs}, pts: ${rows.length}) already archived. Skipping duplicate.`);
+    return;
+  }
   
   // Determine standard file name: wash_cycle_YYYY-MM-DD_HHMM.csv
   let fileName;
   if (sessionId.startsWith("wash_202")) {
     const cleanId = sessionId.replace("wash_", "");
     fileName = `wash_cycle_${cleanId}.csv`;
+  } else if (typeof firstTs === "number" && firstTs > 1700000000000) {
+    const dateObj = new Date(firstTs);
+    const dateStr = Utilities.formatDate(dateObj, "GMT+8", "yyyy-MM-dd_HHmm");
+    fileName = `wash_cycle_${dateStr}.csv`;
   } else {
     const now = new Date();
     const dateStr = Utilities.formatDate(now, "GMT+8", "yyyy-MM-dd_HHmm");
@@ -177,12 +194,13 @@ function archiveSessionToDrive(sessionId) {
   
   // Mark archived in ScriptProperties and Firebase
   props.setProperty(archivedKey, "true");
+  const archiveDate = new Date();
   try {
     UrlFetchApp.fetch(`${FIREBASE_HOST}/archived_sessions/${sessionId}.json?auth=${FIREBASE_AUTH}`, {
       method: "put",
       contentType: "application/json",
       payload: JSON.stringify({
-        archived_at: now.toISOString(),
+        archived_at: archiveDate.toISOString(),
         filename: fileName,
         points: rows.length,
         drive_url: file.getUrl()

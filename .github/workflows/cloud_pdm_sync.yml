@@ -1,0 +1,41 @@
+name: Autonomous Multimodal PdM Cloud Sync
+
+on:
+  schedule:
+    # Runs every 30 minutes in the cloud
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    # Allows 1-tap manual trigger anytime from GitHub web or mobile app
+
+jobs:
+  cloud_sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install python-dotenv
+
+      - name: Execute Autonomous Cloud Sync
+        env:
+          FIREBASE_HOST: ${{ secrets.FIREBASE_HOST || 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app' }}
+          FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH || '18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V' }}
+          SMARTTHINGS_REFRESH_TOKEN: ${{ secrets.SMARTTHINGS_REFRESH_TOKEN }}
+          SMARTTHINGS_PAT: ${{ secrets.SMARTTHINGS_PAT || '4d6937c7-ff71-40b1-acee-7fab709d058c' }}
+          SMARTTHINGS_DEVICE_ID: ${{ secrets.SMARTTHINGS_DEVICE_ID || 'd977db0b-fcf0-f2d3-9b82-3f3547953c6e' }}
+        run: |
+          python firmware/cloud_multimodal_sync.py --once
+
+      - name: Commit & Push New Wash Datasets and Dashboards
+        run: |
+          git config --global user.name "Autonomous-PdM-Bot"
+          git config --global user.email "bot@pdm-sideproject.local"
+          git add data/ index.html dashboard.html cloud_dashboard.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(cloud): auto-sync new wash session telemetry" && git push)

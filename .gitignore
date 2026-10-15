@@ -12,8 +12,12 @@ __pycache__/
 # OS and Editor files
 .DS_Store
 Thumbs.db
+desktop.ini
+**/desktop.ini
+.~lock.*
 .vscode/
 .idea/
+firmware/tapo-esp32-ref/
 
 # Windows Hardware Drivers
 CP210x_Universal_Windows_Driver/
