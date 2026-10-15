@@ -409,6 +409,24 @@ To eliminate confusion between actual laundry wash cycles and bench/boot diagnos
      - Changed continuous multimodal recording interval `--interval` default to `60.0`s and `--duration` to `3600.0`s (1 hour).
   3. Total API call footprint during a 90-minute wash cycle reduced by **97%** to strictly **~45 to 60 calls total**, completely eliminating cloud throttling risk while providing clean 1-minute ground-truth phase tracking.
 
+### 10.7 Operational Handoff: System Ready for Next Laundry Run ("Just Wait")
+- **Current System Status:**
+  - **Tapo P110 Smart Plug:** Online, streaming active power ($W$), voltage, current, and energy consumption into Firebase RTDB (`/tapo_live.json`, `/live.json`). Force-ON watchdog daemon active in background (`task-1328`).
+  - **Samsung SmartThings API:** OAuth automated refresh active; 1-minute rate-limited phase extraction armed.
+  - **Data Architecture:** 100% clean. All session CSVs standardized to 6 columns (`timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w`). Files segregated into `data/real_sessions/` and `data/testing_data/`.
+  - **Dashboards:** Updated with separate optgroups (`🧺 Real Wash Sessions` vs `🧪 Testing & Bench Calibration`).
+- **User Action for Next Laundry Wash:**
+  1. **Plug in ESP32:** Ensure the ESP32 sensor rig on the washer is powered via USB so that MPU-6050 & INMP441 sensors are active.
+  2. **Do Laundry Normally:** Turn on washer, select desired cycle, and press Start.
+  3. **Zero-Touch Capture:** The ESP32 and Tapo automatically record telemetry into Firebase under a timestamped wash session.
+- **Post-Wash Inspection (Whenever Desired):**
+  - Run the cloud downloader to save the session to disk and refresh dashboards:
+    ```powershell
+    py -3.12 firmware/cloud_downloader.py
+    ```
+  - Open [`index.html`](file:///g:/My%20Drive/PdM%20SideProject/index.html) or [`historical.html`](file:///g:/My%20Drive/PdM%20SideProject/historical.html) to view the graphs.
+
+
 
 
 
