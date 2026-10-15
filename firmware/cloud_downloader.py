@@ -44,7 +44,10 @@ def write_rows_to_csv(filepath, rows):
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
-    os.makedirs(data_dir, exist_ok=True)
+    real_dir = os.path.join(data_dir, "real_sessions")
+    test_dir = os.path.join(data_dir, "testing_data")
+    os.makedirs(real_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
 
     print("=" * 60)
     print("   FIREBASE CLOUD TELEMETRY DOWNLOADER (PDM RIG)   ")
@@ -151,9 +154,13 @@ def download_sessions():
                     else:
                         fname = f"{session_id}.csv"
 
-                csv_file = os.path.join(data_dir, fname)
+                # Classify session: test vs real wash (< 150 points = bench/pre-wash test)
+                is_test = session_id.startswith("wash_offline_") or len(seg_rows) < 150 or "test" in fname.lower() or "1009" in fname
+                target_folder = test_dir if is_test else real_dir
+                csv_file = os.path.join(target_folder, fname)
                 write_rows_to_csv(csv_file, seg_rows)
-                print(f"    Saved segment {seg_idx + 1}/{len(segments)} ({len(seg_rows)} records) -> {fname}")
+                rel_folder = "testing_data" if is_test else "real_sessions"
+                print(f"    Saved segment {seg_idx + 1}/{len(segments)} ({len(seg_rows)} records) -> data/{rel_folder}/{fname}")
 
         print("\n[COMPLETE] All cloud sessions successfully downloaded and synced to CSV!")
 

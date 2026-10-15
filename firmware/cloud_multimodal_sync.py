@@ -251,14 +251,20 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
     if not raw_batches:
         return None
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    real_dir = DATA_DIR / "real_sessions"
+    test_dir = DATA_DIR / "testing_data"
+    real_dir.mkdir(parents=True, exist_ok=True)
+    test_dir.mkdir(parents=True, exist_ok=True)
+
     load_class, est_kg, avg_pwr = compute_weight_and_class(raw_batches, st_info)
 
-    # Clean filename
+    # Clean filename & route
     clean_id = session_id.replace("wash_", "")
-    target_csv = DATA_DIR / f"wash_cycle_{clean_id}.csv"
+    is_test = session_id.startswith("wash_offline_") or len(raw_batches) < 40
+    target_dir = test_dir if is_test else real_dir
+    target_csv = target_dir / f"wash_cycle_{clean_id}.csv"
 
-    print(f"\n>>> Compiling session '{session_id}' -> {target_csv.name}")
+    print(f"\n>>> Compiling session '{session_id}' -> {target_csv.relative_to(BASE_DIR)}")
     print(f"    Load Classification: {load_class} (~{est_kg} kg | Sensing Pwr: {avg_pwr} W)")
 
     with open(target_csv, "w", encoding="utf-8") as f:

@@ -28,62 +28,87 @@ def load_csv(path):
 def discover_all_sessions():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, 'data')
+    real_dir = os.path.join(data_dir, 'real_sessions')
+    test_dir = os.path.join(data_dir, 'testing_data')
     sessions = {}
     options = []
     
-    if os.path.exists(data_dir):
-        files = sorted(os.listdir(data_dir), reverse=True)
+    # 1. Real Wash Sessions (from data/real_sessions)
+    real_options = []
+    if os.path.exists(real_dir):
+        files = sorted(os.listdir(real_dir), reverse=True)
         for fname in files:
             if fname.endswith('.csv') and not fname.startswith('.'):
-                fpath = os.path.join(data_dir, fname)
+                fpath = os.path.join(real_dir, fname)
                 rows = load_csv(fpath)
                 if not rows or len(rows) < 3:
                     continue
-                s_key = 'preset_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
+                s_key = 'preset_real_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
                 pts_cnt = len(rows)
                 duration_m = round((rows[-1][0] - rows[0][0]) / 60000.0) if pts_cnt > 1 else 0
                 
-                if '2026-10-15' in fname:
-                    disp = f"📊 15 Oct 2026, 12:41 AM (23m Live Wash, {pts_cnt} pts)"
+                if 'morning' in fname:
+                    disp = f"🧺 15 Oct 2026 Morning Wash ({duration_m}m, {pts_cnt} pts)"
+                elif '2026-10-15_1020' in fname:
+                    disp = f"🧺 15 Oct 2026, 12:41 AM ({duration_m}m Live Wash, {pts_cnt} pts)"
                 elif '2026-10-12_0800' in fname:
-                    disp = f"📊 12 Oct 2026, 08:00 AM (103m Full Wash, {pts_cnt} pts)"
+                    disp = f"🧺 12 Oct 2026, 08:00 AM (103m Full Wash, {pts_cnt} pts)"
                 elif '2026-10-12_1019' in fname:
-                    disp = f"📊 12 Oct 2026, 10:19 AM (101m Wash, {pts_cnt} pts)"
+                    disp = f"🧺 12 Oct 2026, 10:19 AM (101m Wash, {pts_cnt} pts)"
                 elif '2026-10-11_1019' in fname:
-                    disp = f"📊 11 Oct 2026, 10:19 AM (24m Wash, {pts_cnt} pts)"
-                elif '2026-10-12_1009' in fname:
-                    disp = f"📊 12 Oct 2026, 10:09 AM (Pre-Wash, {pts_cnt} pts)"
-                elif '2026-10-12_1020' in fname:
-                    disp = f"📊 12 Oct 2026, 10:20 AM (Spin Test, {pts_cnt} pts)"
-                elif 'wifi_test' in fname:
-                    disp = f"📊 Wi-Fi Telemetry Stream Test ({pts_cnt} pts)"
+                    disp = f"🧺 11 Oct 2026, 10:19 AM (24m Wash, {pts_cnt} pts)"
                 else:
-                    disp = f"📊 {fname} ({duration_m}m, {pts_cnt} pts)"
+                    disp = f"🧺 Wash: {fname} ({duration_m}m, {pts_cnt} pts)"
 
                 sessions[s_key] = {
                     'name': fname.replace('.csv', ''),
                     'displayName': disp,
-                    'data': rows
+                    'data': rows,
+                    'category': 'real'
                 }
-                options.append(f'<option value="{s_key}">{disp}</option>')
+                real_options.append(f'<option value="{s_key}">{disp}</option>')
                 
-    test_dir = os.path.join(data_dir, 'testing')
+    if real_options:
+        options.append('<optgroup label="🧺 Real Wash Sessions">')
+        options.extend(real_options)
+        options.append('</optgroup>')
+
+    # 2. Testing & Calibration Data (from data/testing_data)
+    test_options = []
     if os.path.exists(test_dir):
-        for fname in sorted(os.listdir(test_dir)):
+        for fname in sorted(os.listdir(test_dir), reverse=True):
             if fname.endswith('.csv') and not fname.startswith('.'):
                 fpath = os.path.join(test_dir, fname)
                 rows = load_csv(fpath)
                 if rows:
                     s_key = 'preset_test_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
-                    disp = f"📊 Test: {fname} ({len(rows)} pts)"
-                    if s_key not in sessions:
-                        sessions[s_key] = {
-                            'name': fname.replace('.csv', ''),
-                            'displayName': disp,
-                            'data': rows
-                        }
-                        options.append(f'<option value="{s_key}">{disp}</option>')
-                        
+                    pts_cnt = len(rows)
+                    if 'wifi_test' in fname:
+                        disp = f"🧪 Wi-Fi Telemetry Stream Test ({pts_cnt} pts)"
+                    elif '0123' in fname or '0127' in fname:
+                        disp = f"🧪 Boot Offline Dump Test ({pts_cnt} pts)"
+                    elif 'snapshot' in fname:
+                        disp = f"🧪 Live Snapshot Test ({pts_cnt} pts)"
+                    elif '1009' in fname:
+                        disp = f"🧪 Bench Pre-Wash Test ({pts_cnt} pts)"
+                    elif '1020' in fname:
+                        disp = f"🧪 Bench Spin Test ({pts_cnt} pts)"
+                    else:
+                        disp = f"🧪 Test: {fname} ({pts_cnt} pts)"
+
+                    sessions[s_key] = {
+                        'name': fname.replace('.csv', ''),
+                        'displayName': disp,
+                        'data': rows,
+                        'category': 'test'
+                    }
+                    test_options.append(f'<option value="{s_key}">{disp}</option>')
+                    
+    if test_options:
+        options.append('<optgroup label="🧪 Testing & Bench Calibration">')
+        options.extend(test_options)
+        options.append('</optgroup>')
+
     return sessions, '\n            '.join(options)
 
 PRESET_SESSIONS_DICT, PRESET_OPTIONS_HTML = discover_all_sessions()
@@ -718,9 +743,7 @@ def generate_html(default_view='live'):
           <optgroup label="Real-Time Telemetry">
             <option value="live">📡 Live Rig Telemetry (50 Hz)</option>
           </optgroup>
-          <optgroup label="Saved Wash Cycles" id="group-preset-sessions">
-            {PRESET_OPTIONS_HTML}
-          </optgroup>
+          {PRESET_OPTIONS_HTML}
           <optgroup label="Custom Loaded Files" id="group-custom-sessions" style="display: none;"></optgroup>
           <optgroup label="Cloud Firebase Sessions" id="group-cloud-sessions" style="display: none;"></optgroup>
         </select>
