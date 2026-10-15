@@ -1275,6 +1275,26 @@
       }
     }
 
+    let liveTapoPower = null;
+    let liveTapoVoltage = null;
+    let liveTapoCurrent = null;
+
+    async function checkTapoHeartbeat() {
+      try {
+        const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/tapo_live.json');
+        const d = await res.json();
+        if (d && (d.power_w !== undefined || d.power !== undefined)) {
+          liveTapoPower = (d.power_w !== undefined) ? Number(d.power_w) : Number(d.power);
+          liveTapoVoltage = Number(d.voltage_v || d.voltage || 240.0);
+          liveTapoCurrent = Number(d.current_ma || 0.0);
+          const elWatts = document.getElementById('energy-head-watts');
+          if (elWatts && currentMode === 'live') {
+            elWatts.innerText = liveTapoPower.toFixed(1);
+          }
+        }
+      } catch (e) {}
+    }
+
     async function checkRigHeartbeat() {
       try {
         const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
@@ -1304,7 +1324,9 @@
 
           // Push into Live rolling buffer
           if (!isLivePaused && isRigOnline) {
-            const pwr = (d.power !== undefined && d.power !== null) ? d.power : (d.pwr !== undefined ? d.pwr : 0.0);
+            const pwr = (d.power !== undefined && d.power !== null) 
+              ? Number(d.power) 
+              : (d.pwr !== undefined ? Number(d.pwr) : (liveTapoPower !== null ? liveTapoPower : 0.0));
             const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms, pwr];
             LIVE_BUFFER.push(newRec);
             if (LIVE_BUFFER.length > 80) LIVE_BUFFER.shift();
@@ -2423,6 +2445,8 @@
       resizeCanvases();
       setInterval(checkRigHeartbeat, 1000);
       checkRigHeartbeat();
+      setInterval(checkTapoHeartbeat, 1000);
+      checkTapoHeartbeat();
       discoverFirebaseSessions();
       setupCanvasScrubbing(splineCvs);
       setupCanvasScrubbing(xyzCvs);

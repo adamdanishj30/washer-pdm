@@ -32,16 +32,29 @@ FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-defaul
 FIREBASE_AUTH = os.getenv("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
 
 def push_to_firebase(payload: dict) -> bool:
-    """Push real-time Tapo power telemetry to Firebase RTDB node /tapo_live.json."""
+    """Push real-time Tapo power telemetry to Firebase RTDB node /tapo_live.json and patch /live.json."""
     url = f"{FIREBASE_HOST}/tapo_live.json?auth={FIREBASE_AUTH}"
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
+    ok = False
     try:
         with urllib.request.urlopen(req, timeout=3) as resp:
-            return resp.status in (200, 204)
+            ok = resp.status in (200, 204)
     except Exception as e:
         print(f"[FIREBASE ERROR] Could not push to {url}: {e}")
-        return False
+
+    # Also patch /live.json so dashboards receive live power immediately
+    if "power_w" in payload:
+        try:
+            patch_url = f"{FIREBASE_HOST}/live.json?auth={FIREBASE_AUTH}"
+            patch_data = json.dumps({"power": payload["power_w"]}).encode("utf-8")
+            patch_req = urllib.request.Request(patch_url, data=patch_data, method="PATCH", headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(patch_req, timeout=2):
+                pass
+        except Exception:
+            pass
+
+    return ok
 
 def get_parser():
     parser = argparse.ArgumentParser(description="Tapo P110 to Firebase Realtime Streamer")
@@ -100,7 +113,7 @@ async def run_mock_streamer(interval: float):
 
 async def run_live_streamer(ip: str, user: str, password: str, interval: float):
     import kasa
-    from kasa import Device, Credentials
+    from kasa import Discover, Credentials
     from kasa.interfaces.energy import Energy
 
     print("\n" + "=" * 65)
@@ -114,9 +127,13 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
 
     credentials = Credentials(user, password) if user and password else None
 
-    print(f"\nConnecting to Tapo P110 at {ip}...")
+    print(f"\nConnecting to Tapo P110 at {ip} via Discover...")
     try:
-        device = await Device.connect(host=ip, credentials=credentials)
+        devs = await Discover.discover(target=ip, credentials=credentials)
+        if not devs or ip not in devs:
+            print(f"[ERROR] Tapo P110 at {ip} did not respond to discovery query!")
+            return
+        device = devs[ip]
         await device.update()
         print(f"[CONNECTED] {device.alias} ({device.model}) | Power: {'ON' if device.is_on else 'OFF'}")
     except Exception as e:
@@ -126,7 +143,7 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
         print("2. Is the Device Account created in Tapo App (Me -> Third-Party Services -> Device Account)?")
         return
 
-    energy = device.modules.get(Energy)
+    energy = device.modules.get('Energy') or device.modules.get(Energy)
     if not energy:
         print("[ERROR] Energy metering module not found on this device!")
         return
@@ -165,7 +182,11 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
             print(f"[WARN] Read error: {e}, reconnecting in 2s...")
             await asyncio.sleep(2.0)
             try:
-                device = await Device.connect(host=ip, credentials=credentials)
+                devs = await Discover.discover(target=ip, credentials=credentials)
+                if devs and ip in devs:
+                    device = devs[ip]
+                    await device.update()
+                    energy = device.modules.get('Energy') or device.modules.get(Energy)
             except Exception:
                 pass
 

@@ -16,7 +16,7 @@ env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 import kasa
-from kasa import Device, Credentials
+from kasa import Discover, Credentials
 from kasa.interfaces.energy import Energy
 
 async def test_tapo_telemetry(ip: str, username: str = None, password: str = None):
@@ -30,7 +30,11 @@ async def test_tapo_telemetry(ip: str, username: str = None, password: str = Non
         print("[TAPO P110] No credentials provided, attempting connection...")
 
     try:
-        device = await Device.connect(host=ip, credentials=credentials)
+        devs = await Discover.discover(target=ip, credentials=credentials)
+        if not devs or ip not in devs:
+            print(f"[ERROR] Device at {ip} not found via discovery!")
+            return
+        device = devs[ip]
         await device.update()
         
         print("\n" + "=" * 50)
@@ -45,7 +49,7 @@ async def test_tapo_telemetry(ip: str, username: str = None, password: str = Non
             print("[ERROR] Connected device does not report energy metering support!")
             return
 
-        energy = device.modules.get(Energy)
+        energy = device.modules.get('Energy') or device.modules.get(Energy)
         if not energy:
             print("[ERROR] Energy module not found on device!")
             return
