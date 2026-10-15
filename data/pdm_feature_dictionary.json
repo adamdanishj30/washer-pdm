@@ -1,0 +1,112 @@
+{
+  "dataset_name": "Samsung WW10TP44DSX Multimodal Predictive Maintenance Dataset",
+  "description": "Unified 18-feature prognostic dataset combining kinematics, acoustics, electrical power, and ground-truth machine states.",
+  "pdm_framework": "P-F Interval Prognostics & Remaining Useful Life (RUL) Modeling",
+  "features": {
+    "timestamp_ms": {
+      "type": "integer",
+      "unit": "ms",
+      "desc": "Unix epoch millisecond timestamp"
+    },
+    "iso_time": {
+      "type": "string",
+      "desc": "UTC ISO 8601 formatted datetime"
+    },
+    "phase": {
+      "type": "categorical",
+      "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin)"
+    },
+    "machine_state": {
+      "type": "categorical",
+      "desc": "Machine running state (stop, run, pause)"
+    },
+    "target_rpm": {
+      "type": "integer",
+      "unit": "RPM",
+      "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"
+    },
+    "water_temperature": {
+      "type": "categorical",
+      "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"
+    },
+    "accel_x": {
+      "type": "float",
+      "unit": "m/s^2",
+      "desc": "Transverse lateral drum acceleration"
+    },
+    "accel_y": {
+      "type": "float",
+      "unit": "m/s^2",
+      "desc": "Vertical acceleration (direct damper shock indicator)"
+    },
+    "accel_z": {
+      "type": "float",
+      "unit": "m/s^2",
+      "desc": "Axial fore/aft acceleration (spider arm stability)"
+    },
+    "vibe_magnitude": {
+      "type": "float",
+      "unit": "m/s^2",
+      "desc": "Euclidean resultant 3-axis vibration magnitude"
+    },
+    "audio_rms": {
+      "type": "float",
+      "unit": "RMS",
+      "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction)"
+    },
+    "power_w": {
+      "type": "float",
+      "unit": "W",
+      "desc": "Tapo P110 active electrical motor & heater power"
+    },
+    "voltage_v": {
+      "type": "float",
+      "unit": "V",
+      "desc": "Tapo P110 mains electrical supply voltage"
+    },
+    "current_ma": {
+      "type": "float",
+      "unit": "mA",
+      "desc": "Tapo P110 electrical load current"
+    },
+    "today_energy_wh": {
+      "type": "float",
+      "unit": "Wh",
+      "desc": "Cumulative electrical energy consumed today"
+    },
+    "estimated_load_kg": {
+      "type": "float",
+      "unit": "kg",
+      "desc": "AI estimated dry laundry mass from motor tumble inertia"
+    },
+    "load_class": {
+      "type": "categorical",
+      "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"
+    },
+    "parasitic_drag_w": {
+      "type": "float",
+      "unit": "W",
+      "desc": "Mechanical friction energy waste above baseline"
+    },
+    "parasitic_drag_pct": {
+      "type": "float",
+      "unit": "%",
+      "desc": "Percentage excess energy waste caused by friction"
+    },
+    "bearing_health_index": {
+      "type": "float",
+      "unit": "%",
+      "desc": "Continuous tub bearing health (100 = new, <40 = fail)"
+    },
+    "damper_health_index": {
+      "type": "float",
+      "unit": "%",
+      "desc": "Continuous suspension damper health"
+    },
+    "machine_health_index": {
+      "type": "float",
+      "unit": "%",
+      "desc": "Composite overall Machine Health Index (0-100%)"
+    }
+  }
+}

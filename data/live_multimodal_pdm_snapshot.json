@@ -1,0 +1,66 @@
+{
+  "timestamp_ms": 1792082904845,
+  "iso_time": "2026-10-15T16:48:24.845811+00:00",
+  "smartthings": {
+    "washer_job_state": "none",
+    "machine_state": "stop",
+    "target_rpm": 1200,
+    "spin_level_str": "1200",
+    "water_temperature": "cold",
+    "water_level": "normal",
+    "progress_pct": 1,
+    "operation_time_min": 58,
+    "remaining_time_min": 58,
+    "scheduled_phases": [
+      {
+        "phaseName": "wash",
+        "timeInMin": 4
+      },
+      {
+        "phaseName": "rinse",
+        "timeInMin": 9
+      },
+      {
+        "phaseName": "spin",
+        "timeInMin": 6
+      }
+    ],
+    "cumulative_water_ml": 30896000,
+    "detergent_remaining": "unknown",
+    "softener_remaining": "unknown",
+    "kids_lock": "unlocked",
+    "smartthings_synced_at": "2026-10-15T16:48:24.552716+00:00"
+  },
+  "tapo": {
+    "power_w": 5.12,
+    "voltage_v": 241.2,
+    "current_ma": 29.0,
+    "today_energy_wh": 7.0,
+    "is_on": true,
+    "device_name": "Washer Energy Tracker",
+    "model": "P110",
+    "tapo_synced_at": "2026-10-15T16:48:24.800200+00:00"
+  },
+  "esp32": {
+    "accel_x": -0.74,
+    "accel_y": 1.43,
+    "accel_z": -9.46,
+    "vibration_magnitude": 9.6,
+    "audio_rms": 90.9,
+    "esp32_session": "wash_1019",
+    "esp32_uptime_s": 7509,
+    "esp32_sample_cnt": 356664,
+    "esp32_state": "IDLE",
+    "esp32_synced_at": "2026-10-15T16:48:24.845811+00:00"
+  },
+  "pdm_prognostics": {
+    "estimated_load_kg": 5.0,
+    "load_class": "MEDIUM",
+    "expected_power_w": 4.5,
+    "parasitic_drag_w": 0.6,
+    "parasitic_drag_pct": 13.8,
+    "bearing_health_index": 100.0,
+    "damper_health_index": 100.0,
+    "machine_health_index": 100.0
+  }
+}
