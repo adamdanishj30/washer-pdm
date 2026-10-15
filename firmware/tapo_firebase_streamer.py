@@ -155,6 +155,14 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
     while True:
         try:
             await device.update()
+
+            # FORCE-ON GUARD: Auto-revert accidental physical button presses or misclicks
+            if not device.is_on:
+                now_str = datetime.datetime.now().strftime("%H:%M:%S")
+                print(f"\n[FORCE-ON GUARD {now_str}] Plug was turned OFF! Forcing relay back ON immediately...", flush=True)
+                await device.turn_on()
+                await device.update()
+
             power_w = energy.current_consumption or 0.0
             voltage_v = energy.voltage or 0.0
             current_a = energy.current or 0.0
