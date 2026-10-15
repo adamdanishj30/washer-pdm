@@ -183,6 +183,12 @@ def query_smartthings():
             spin_speed = (main.get("custom.washerSpinLevel", {}).get("washerSpinLevel", {}).get("value") or
                           main.get("samsungce.washerSpinLevel", {}).get("spinLevel", {}).get("value", "unknown"))
             water_level = main.get("samsungce.washerWaterLevel", {}).get("waterLevel", {}).get("value", "Auto")
+            water_temp = main.get("custom.washerWaterTemperature", {}).get("washerWaterTemperature", {}).get("value", "cold")
+            rinse_cycles = main.get("custom.washerRinseCycles", {}).get("washerRinseCycles", {}).get("value", "0")
+            detergent = main.get("samsungce.autoDispenseDetergent", {}).get("remainingAmount", {}).get("value", "unknown")
+            softener = main.get("samsungce.autoDispenseSoftener", {}).get("remainingAmount", {}).get("value", "unknown")
+            kids_lock = main.get("samsungce.kidsLock", {}).get("lockState", {}).get("value", "unlocked")
+            cum_water = main.get("samsungce.waterConsumptionReport", {}).get("waterConsumption", {}).get("value", {}).get("cumulativeAmount", 0)
 
             return {
                 "job_state": job_state,
@@ -193,6 +199,12 @@ def query_smartthings():
                 "cycle": cycle,
                 "spin_speed": spin_speed,
                 "water_level": water_level,
+                "water_temp": water_temp,
+                "rinse_cycles": rinse_cycles,
+                "detergent_remaining": detergent,
+                "softener_remaining": softener,
+                "kids_lock": kids_lock,
+                "cumulative_water_l": round(cum_water / 1000.0, 1) if cum_water else 0.0,
                 "updated_at": datetime.now().isoformat()
             }
     except Exception as e:

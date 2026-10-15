@@ -72,6 +72,7 @@ def fetch_smartthings_state() -> dict:
             s_op = main.get("samsungce.washerOperatingState", {})
             spin = main.get("custom.washerSpinLevel", {})
             temp = main.get("custom.washerWaterTemperature", {})
+            rinse = main.get("custom.washerRinseCycles", {})
             water = main.get("samsungce.washerWaterLevel", {})
             water_rep = main.get("samsungce.waterConsumptionReport", {})
             detergent = main.get("samsungce.autoDispenseDetergent", {})
@@ -84,20 +85,34 @@ def fetch_smartthings_state() -> dict:
             except Exception:
                 target_rpm = 0
 
+            rinse_val = rinse.get("washerRinseCycles", {}).get("value")
+            try:
+                rinse_cycles = int(rinse_val) if rinse_val is not None and str(rinse_val).isdigit() else 0
+            except Exception:
+                rinse_cycles = 0
+
+            cum_water_ml = water_rep.get("waterConsumption", {}).get("value", {}).get("cumulativeAmount", 0)
+
             return {
                 "washer_job_state": op.get("washerJobState", {}).get("value", "none"),
                 "machine_state": op.get("machineState", {}).get("value", "stop"),
-                "target_rpm": target_rpm,
-                "spin_level_str": spin_val or "none",
-                "water_temperature": temp.get("washerWaterTemperature", {}).get("value", "cold"),
-                "water_level": water.get("waterLevel", {}).get("value") or "normal",
                 "progress_pct": s_op.get("progress", {}).get("value", 0),
                 "operation_time_min": s_op.get("operationTime", {}).get("value", 0),
                 "remaining_time_min": s_op.get("remainingTime", {}).get("value", 0),
                 "scheduled_phases": s_op.get("scheduledPhases", {}).get("value", []),
-                "cumulative_water_ml": water_rep.get("waterConsumption", {}).get("value", {}).get("cumulativeAmount", 0),
+                "target_rpm": target_rpm,
+                "spin_level_str": spin_val or "none",
+                "water_temperature": temp.get("washerWaterTemperature", {}).get("value", "cold"),
+                "rinse_cycles": rinse_cycles,
+                "water_level": water.get("waterLevel", {}).get("value") or "normal",
                 "detergent_remaining": detergent.get("remainingAmount", {}).get("value", "unknown"),
+                "detergent_density": detergent.get("density", {}).get("value", "high"),
+                "detergent_amount": detergent.get("amount", {}).get("value", "standard"),
                 "softener_remaining": softener.get("remainingAmount", {}).get("value", "unknown"),
+                "softener_density": softener.get("density", {}).get("value", "normal"),
+                "softener_amount": softener.get("amount", {}).get("value", "standard"),
+                "cumulative_water_ml": cum_water_ml,
+                "cumulative_water_l": round(cum_water_ml / 1000.0, 1),
                 "kids_lock": lock.get("lockState", {}).get("value", "unlocked"),
                 "smartthings_synced_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
             }
@@ -239,15 +254,18 @@ def save_feature_dictionary():
     dict_file = DATA_DIR / "pdm_feature_dictionary.json"
     schema = {
         "dataset_name": "Samsung WW10TP44DSX Multimodal Predictive Maintenance Dataset",
-        "description": "Unified 18-feature prognostic dataset combining kinematics, acoustics, electrical power, and ground-truth machine states.",
+        "description": "Unified 31-feature prognostic dataset combining kinematics, acoustics, electrical power, and ground-truth machine states.",
         "pdm_framework": "P-F Interval Prognostics & Remaining Useful Life (RUL) Modeling",
         "features": {
             "timestamp_ms": {"type": "integer", "unit": "ms", "desc": "Unix epoch millisecond timestamp"},
             "iso_time": {"type": "string", "desc": "UTC ISO 8601 formatted datetime"},
-            "phase": {"type": "categorical", "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin)"},
+            "phase": {"type": "categorical", "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin, finish)"},
             "machine_state": {"type": "categorical", "desc": "Machine running state (stop, run, pause)"},
+            "progress_pct": {"type": "integer", "unit": "%", "desc": "Current cycle completion progress (0% - 100%)"},
+            "remaining_time_min": {"type": "integer", "unit": "min", "desc": "Estimated remaining cycle time in minutes"},
             "target_rpm": {"type": "integer", "unit": "RPM", "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"},
             "water_temperature": {"type": "categorical", "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"},
+            "rinse_cycles": {"type": "integer", "unit": "count", "desc": "Configured wash rinse cycles (0 to 5)"},
             "accel_x": {"type": "float", "unit": "m/s^2", "desc": "Transverse lateral drum acceleration"},
             "accel_y": {"type": "float", "unit": "m/s^2", "desc": "Vertical acceleration (direct damper shock indicator)"},
             "accel_z": {"type": "float", "unit": "m/s^2", "desc": "Axial fore/aft acceleration (spider arm stability)"},
@@ -259,6 +277,10 @@ def save_feature_dictionary():
             "today_energy_wh": {"type": "float", "unit": "Wh", "desc": "Cumulative electrical energy consumed today"},
             "month_energy_kwh": {"type": "float", "unit": "kWh", "desc": "Cumulative electrical energy consumed this month"},
             "is_on": {"type": "boolean", "desc": "Smart plug power relay state (true/false)"},
+            "detergent_remaining": {"type": "categorical", "desc": "Auto-dispenser detergent reservoir level (unknown, normal, low)"},
+            "softener_remaining": {"type": "categorical", "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"},
+            "cumulative_water_l": {"type": "float", "unit": "L", "desc": "Cumulative water consumption report in Liters"},
+            "kids_lock": {"type": "categorical", "desc": "Child safety lock status (locked, unlocked)"},
             "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "AI estimated dry laundry mass from motor tumble inertia"},
             "load_class": {"type": "categorical", "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"},
             "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
@@ -277,9 +299,11 @@ def append_to_prediction_csv(row: dict):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     csv_file = DATA_DIR / "pdm_multimodal_prediction_dataset.csv"
     headers = [
-        "timestamp_ms", "iso_time", "phase", "machine_state", "target_rpm", "water_temperature",
+        "timestamp_ms", "iso_time", "phase", "machine_state", "progress_pct", "remaining_time_min",
+        "target_rpm", "water_temperature", "rinse_cycles",
         "accel_x", "accel_y", "accel_z", "vibe_magnitude", "audio_rms",
         "power_w", "voltage_v", "current_ma", "today_energy_wh", "month_energy_kwh", "is_on",
+        "detergent_remaining", "softener_remaining", "cumulative_water_l", "kids_lock",
         "estimated_load_kg", "load_class", "parasitic_drag_w", "parasitic_drag_pct",
         "bearing_health_index", "damper_health_index", "machine_health_index"
     ]
@@ -325,8 +349,11 @@ async def capture_snapshot() -> dict:
         "iso_time": iso_now,
         "phase": st.get("washer_job_state", "none"),
         "machine_state": st.get("machine_state", "stop"),
+        "progress_pct": st.get("progress_pct", 0),
+        "remaining_time_min": st.get("remaining_time_min", 0),
         "target_rpm": st.get("target_rpm", 0),
         "water_temperature": st.get("water_temperature", "cold"),
+        "rinse_cycles": st.get("rinse_cycles", 0),
         "accel_x": esp.get("accel_x", 0.0),
         "accel_y": esp.get("accel_y", 0.0),
         "accel_z": esp.get("accel_z", 0.0),
@@ -338,6 +365,10 @@ async def capture_snapshot() -> dict:
         "today_energy_wh": tapo.get("today_energy_wh", 0.0),
         "month_energy_kwh": tapo.get("month_energy_kwh", 0.0),
         "is_on": tapo.get("is_on", True),
+        "detergent_remaining": st.get("detergent_remaining", "unknown"),
+        "softener_remaining": st.get("softener_remaining", "unknown"),
+        "cumulative_water_l": st.get("cumulative_water_l", 0.0),
+        "kids_lock": st.get("kids_lock", "unlocked"),
         "estimated_load_kg": pdm["estimated_load_kg"],
         "load_class": pdm["load_class"],
         "parasitic_drag_w": pdm["parasitic_drag_w"],
