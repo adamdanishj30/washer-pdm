@@ -386,9 +386,58 @@ py -3.12 firmware/cloud_multimodal_sync.py --interval 10
 | `SMARTTHINGS_DEVICE_ID` | `d977db0b-fcf0-f2d3-9b82-3f3547953c6e` (WW10TP44DSX) |
 | `SMARTTHINGS_ACCESS_TOKEN` | Managed automatically via OAuth2 refresh token |
 | `SMARTTHINGS_REFRESH_TOKEN` | Stored in `.env` and `credentials.json` |
-| `TAPO_IP` | Set to Tapo P110 LAN IP (e.g. `192.168.0.XX`) |
-| `TAPO_DEVICE_USER` | Local Tapo Device Account username |
-| `TAPO_DEVICE_PASS` | Local Tapo Device Account password |
+| `TAPO_IP` | `192.168.0.142` (Verified online via port 80 KLAP) |
+| `TAPO_DEVICE_USER` | `adamdanishjamaludin@gmail.com` |
+| `TAPO_DEVICE_PASS` | Configured in `.env` |
 
 ---
-*This handoff document is fully preserved in `g:\My Drive\PdM SideProject	apo_and_smartthings_pdm_handoff.md` and serves as the master implementation reference for Phase 4 & Phase 5.*
+
+## 10. Operational Status, Force-ON Guard & Prediction Datasets (October 16, 2026)
+
+### 10.1 Live Telemetry & Verification Completed
+- **Tapo P110 Device:** Online at `192.168.0.142` (MAC: `D4-D6-DF-53-99-E7`, Firmware 1.4.8).
+- **Physical Test:** Verified live active load with mobile phone charging (~24.5 W fast charging tapering to ~11.5 W at 241.0 V).
+- **Live Streamer:** `firmware/tapo_firebase_streamer.py` running in background daemon mode pushing to `/tapo_live.json` and patching `/live.json` every 1 second.
+- **Card 4 Dashboard:** Fully deployed across `index.html`, `dashboard.html`, and `cloud_dashboard.html`. Features live active power, cycle energy, TNB cost estimator, laundry load mass classifier, and bearing drag indicator.
+
+### 10.2 Accidental Power-Off Protection ("Force-ON Guard")
+1. **The Physical Reality:** On Tapo P110 hardware, the side button directly trips the microcontroller relay; TP-Link does not provide an electronic disable switch for the physical button.
+2. **Automated Force-ON Watchdog:** Built directly into `firmware/tapo_firebase_streamer.py` and `firmware/06_standalone_tapo_streamer/tapo_device.h`:
+   - Checks `device.is_on` every 1 second.
+   - If accidentally clicked OFF (by hands, pets, or laundry baskets), it immediately logs `[FORCE-ON GUARD]` and commands the relay back **ON** within 1–2 seconds.
+3. **App Level Recommendation:**
+   - In Tapo App $\rightarrow$ **Smart Actions** $\rightarrow$ Create Automation: *When Tapo P110 Turned Off $\rightarrow$ Turn On*.
+   - In Tapo App $\rightarrow$ Device Settings $\rightarrow$ Set **Power-On State** to **"Always ON"**.
+
+### 10.3 Electrical Load Capacity Analysis (Can P110 Handle Washer Draw?)
+- **Tapo P110 UK Rating:** **13 A / 2,990 Watts continuous** (BS 1363).
+- **Samsung WW10TP44DSX:**
+  - Standard wash/tumble: **120 W – 250 W** (<10% capacity).
+  - High-speed spin (1400 RPM): **450 W – 650 W** (<22% capacity).
+  - Maximum peak with 90°C water heater active: **2,000 W – 2,400 W** (~10 A).
+- **Safety Margin:** Operating margin is **+600 W to +1,000 W** headroom.
+- **Operating Rule:** The Tapo P110 functions strictly as a **passive inline power monitor** (permanently ON). Never toggle the plug off while the machine is running to prevent relay contact arcing.
+
+### 10.4 Multimodal Prediction Datasets & Capture Engine
+A synchronous 3-API capture engine has been implemented in [`firmware/capture_pdm_dataset.py`](file:///g:/My%20Drive/PdM%20SideProject/firmware/capture_pdm_dataset.py):
+1. **[`data/pdm_multimodal_prediction_dataset.csv`](file:///g:/My%20Drive/PdM%20SideProject/data/pdm_multimodal_prediction_dataset.csv):** 22-column unified table for training ML models:
+   - `timestamp_ms`, `iso_time`, `phase`, `machine_state`, `target_rpm`, `water_temperature`
+   - `accel_x`, `accel_y`, `accel_z`, `vibe_magnitude`, `audio_rms`
+   - `power_w`, `voltage_v`, `current_ma`, `today_energy_wh`
+   - `estimated_load_kg`, `load_class`, `parasitic_drag_w`, `parasitic_drag_pct`
+   - `bearing_health_index`, `damper_health_index`, `machine_health_index`
+2. **[`data/live_multimodal_pdm_snapshot.json`](file:///g:/My%20Drive/PdM%20SideProject/data/live_multimodal_pdm_snapshot.json):** Full JSON state snapshot across SmartThings, Tapo, and ESP32.
+3. **[`data/pdm_feature_dictionary.json`](file:///g:/My%20Drive/PdM%20SideProject/data/pdm_feature_dictionary.json):** Data contract documenting data types, valid ranges, and PdM engineering purposes.
+
+### 10.5 Hardware Readiness for Zero-PC Standalone Mode
+- The physical ESP32 rig at `192.168.0.171` is actively streaming vibration and sound (Firmware 05).
+- Firmware 06 (`06_standalone_tapo_streamer`) is fully compiled on disk at `firmware/06_standalone_tapo_streamer/build/06_standalone_tapo_streamer.ino.bin`.
+- Once connected to PC via USB, run:
+  ```powershell
+  py -3.12 firmware/06_standalone_tapo_streamer/flash_firmware.py --port COM3
+  ```
+  to transfer Tapo polling directly onto the ESP32 board, eliminating the PC dependency.
+
+---
+*This handoff document is fully preserved in `g:\My Drive\PdM SideProject\tapo_and_smartthings_pdm_handoff.md` and serves as the master implementation reference for Phase 4 & Phase 5.*
+

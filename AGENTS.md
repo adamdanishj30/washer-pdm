@@ -15,6 +15,7 @@ This project contains the complete multimodal IoT edge rig, cloud streaming pipe
 
 2. **Data Pipeline Conventions:**
    - Raw logs must adhere to `timestamp_ms,accel_x,accel_y,accel_z,audio_rms`.
+   - Multimodal prediction datasets adhere to the 22-column schema in `data/pdm_feature_dictionary.json` (capturing kinematics, acoustics, electrical power, and SmartThings ground truth).
    - Wash sessions use ISO date timestamps (`wash_cycle_YYYY-MM-DD_HHMM.csv`).
    - Ground truth labels (`washerJobState`) should condition anomaly thresholds rather than triggering raw magnitude alerts during spin cycles.
 

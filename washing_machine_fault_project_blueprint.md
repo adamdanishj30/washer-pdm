@@ -83,3 +83,13 @@ Because actual mechanical failure data is heavily imbalanced (rare), the model m
 * **Target ML / Data Libraries:** Python (`scikit-learn`, `pandas`, `numpy`, `scipy`, `lifelines` for survival/RUL modeling), or `EloquentTinyML` / `TensorFlow Lite for Microcontrollers` for on-chip edge inference.
 * **Core Value Equation for Presentations:**
   $$\text{Early Detection (Point P)} \rightarrow \text{Preventative Fix (RM 25–50)} \ll \text{Catastrophic Failure (Point F: RM 1,500+)} + \text{15–35% Energy Saved}$$
+
+---
+
+## 7. Current Project Deployment Status (Phase 4 Live & Prediction Datasets Ready)
+* **ESP32 Edge Rig:** Mounted on Samsung washer, streaming 3-axis vibration ($a_x, a_y, a_z$) and acoustic RMS to Firebase RTDB.
+* **Tapo P110 Energy Plug:** Online at `192.168.0.142`, streaming active power ($W$), voltage ($V$), and current ($mA$) with automated **Force-ON Watchdog Guard**.
+* **SmartThings API:** Permanent auto-refresh OAuth2 token exchange configured for zero-expiry cycle phase (`washerJobState`) tracking.
+* **Frontend Dashboards:** Interactive 4-card responsive UI (`index.html`, `dashboard.html`, `cloud_dashboard.html`) including **Card 4: Electrical Power & Energy Consumption Diagnostics**.
+* **Unified ML Datasets:** Generated in `data/pdm_multimodal_prediction_dataset.csv` (22 columns) accompanied by formal feature contract in `data/pdm_feature_dictionary.json` and real-time capture engine in `firmware/capture_pdm_dataset.py`.
+

@@ -313,3 +313,33 @@ py -3.12 firmware/cloud_multimodal_sync.py --interval 10
    - **RUL (Remaining Useful Life in operational hours / wash cycles)**
    - **Parasitic Energy Waste ($W_{\text{excess}}$)** by comparing mechanical friction vs nominal baseline.
 
+---
+
+## 9. Session 9: Live Tapo Telemetry, Force-ON Watchdog Guard & Prediction Datasets (October 16, 2026)
+
+### 9.1 Live Tapo P110 Verification & Streamer
+- **Hardware Verified:** Tapo P110 online at `192.168.0.142` (MAC: `D4-D6-DF-53-99-E7`, UK Type G, BS 1363 13A/2990W max).
+- **Physical Charging Test:** Connected mobile phone charger to Tapo P110 plug. Verified real-time telemetry:
+  - Active Power: ~24.5 W fast charging tapering to ~11.5 W as battery charged.
+  - Grid Voltage: 240.8 V – 241.5 V.
+  - Current: ~96 mA – 183 mA.
+- **Python-Kasa 0.7+ Compatibility:** Upgraded `firmware/tapo_firebase_streamer.py` and `firmware/test_tapo.py` to use modern `Discover.discover` API and `dev.modules['Energy']`.
+
+### 9.2 Real-Time Card 4 Dashboard Deployment
+- **Dashboard Upgrade:** Integrated **Card 4: Electrical Power & Energy Consumption Diagnostics** into `index.html`, `dashboard.html`, and `cloud_dashboard.html`.
+- **Dynamic Firebase Bridge:** Added `checkTapoHeartbeat()` fetching `/tapo_live.json` directly every 1000ms, ensuring live power values update instantaneously on the frontend even when ESP32 runs older firmware.
+- **Visual Features:** Live active power badge, cumulative kWh tracker, TNB electricity cost calculator, laundry weight classifier, and bearing friction drag warning.
+
+### 9.3 Accidental Power-Off Protection ("Force-ON Guard")
+- **Hardware Behavior:** Tapo P110 side button connects directly to internal relay without electronic software disable capability.
+- **Automated Watchdog Guard:** Added automatic state monitoring in `firmware/tapo_firebase_streamer.py`. If the plug is turned OFF by accidental touch, pet, or app misclick, the watchdog detects `not device.is_on` within 1 second and immediately commands `await device.turn_on()`.
+- **App Configuration:** Documented Tapo Smart Action auto-turn-on automation and "Power-On State: Always ON" configuration.
+
+### 9.4 Multimodal Prediction Datasets & Capture Engine
+- **Engine Created:** [`firmware/capture_pdm_dataset.py`](file:///g:/My%20Drive/PdM%20SideProject/firmware/capture_pdm_dataset.py) executes synchronous 3-API pull from SmartThings, Tapo P110, and ESP32.
+- **Datasets Generated in `data/`:**
+  - `data/pdm_multimodal_prediction_dataset.csv`: 22-column ML training table.
+  - `data/live_multimodal_pdm_snapshot.json`: Hierarchical live state snapshot.
+  - `data/pdm_feature_dictionary.json`: Formal feature engineering contract documenting types, units, and PdM physical interpretations.
+
+

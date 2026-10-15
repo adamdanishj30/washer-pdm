@@ -17,7 +17,8 @@
 | **6** | **Waterproof ABS Project Box** | baba168.my | `158x90x60mm` | RM 16.30 | IP65 weather-sealed enclosure to mount hardware rigidly on chassis. |
 | **7** | **PG7 Cable Glands (5pcs)** | CASSETECH | `WHITE PG7` | RM 2.50 | Creates an airtight, waterproof rubber seal around the USB power wire. |
 | **8** | **3M Original VHB Mounting Tape** | 3M shop | `2.5cm x 3m` (0.8mm thick) | RM 14.61 | Ultra-stiff viscoelastic bond to transmit high-frequency vibration. |
-| **Total** | | | | **~RM 125.95** | |
+| **9** | **TP-Link Tapo P110 Smart Plug** | TP-Link MY | `UK Type G 3-Pin (BS 1363)` | RM 45.00 | Real-time electrical energy, active power ($W$), voltage, current via local KLAP. |
+| **Total** | | | | **~RM 170.95** | |
 
 ---
 
