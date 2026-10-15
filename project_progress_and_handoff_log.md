@@ -342,4 +342,62 @@ py -3.12 firmware/cloud_multimodal_sync.py --interval 10
   - `data/live_multimodal_pdm_snapshot.json`: Hierarchical live state snapshot.
   - `data/pdm_feature_dictionary.json`: Formal feature engineering contract documenting types, units, and PdM physical interpretations.
 
+---
+
+## 10. Session 10: Complete SmartThings Cloud API Audit, Data Segregation Architecture, and Universal Power Telemetry Standardization (October 16, 2026, 02:15 +08:00)
+
+### 10.1 100% Tracking of All 11 Samsung SmartThings Parameters (Table 1 Audit)
+- **Target Device:** Samsung WW10TP44DSX/FQ (`DA_WM_TP2_20_COMMON`, UUID `d977db0b-fcf0-f2d3-9b82-3f3547953c6e`).
+- **Audit Verification:** All 11 parameters specified in the SmartThings Cloud API specification table were audited, mapped, and confirmed actively streaming into the multimodal pipeline:
+  1. `washerJobState`: `"none"`, `"weightSensing"`, `"wash"`, `"rinse"`, `"spin"`, `"finish"` (conditioned anomaly baseline).
+  2. `machineState`: `"stop"`, `"run"`, `"pause"`.
+  3. `progress`: Current cycle completion percentage (`0%` – `100%`).
+  4. `operationTime` & `remainingTime`: Total and estimated remaining duration in minutes, with nested `scheduledPhases` breakdown (e.g. Wash: 24m, Rinse: 27m, Spin: 5m).
+  5. `washerSpinLevel`: Target centrifugal RPM (`0`, `400`, `800`, `1000`, `1200`, `1400` RPM).
+  6. `washerWaterTemperature`: Target wash temperature (`cold`, `20°C`, `30°C`, `40°C`, `60°C`, `90°C`).
+  7. `washerRinseCycles`: Target rinse count (`custom.washerRinseCycles`: `0` to `5` rinses, live value: `4`).
+  8. `autoDispenseDetergent`: Reservoir level (`unknown`/`normal`/`low`), detergent density (`high`), and dosage (`standard`).
+  9. `autoDispenseSoftener`: Reservoir level (`unknown`/`normal`/`low`), softener density (`normal`), and dosage (`standard`).
+  10. `waterConsumptionReport`: Cumulative water consumption report ($30,896,000\text{ mL} = 30,896.0\text{ L} = 30.896\text{ m}^3$).
+  11. `kidsLock`: Child safety lock state (`locked`, `unlocked`).
+- **Schema Contracts Updated:**
+  - Expanded [`data/pdm_multimodal_prediction_dataset.csv`](file:///g:/My%20Drive/PdM%20SideProject/data/pdm_multimodal_prediction_dataset.csv) to a 31-column multimodal prognostic dataset.
+  - Updated [`data/pdm_feature_dictionary.json`](file:///g:/My%20Drive/PdM%20SideProject/data/pdm_feature_dictionary.json) defining types, units, and physical failure modes for all 31 features.
+  - Synchronized [`firmware/capture_pdm_dataset.py`](file:///g:/My%20Drive/PdM%20SideProject/firmware/capture_pdm_dataset.py) and [`firmware/cloud_multimodal_sync.py`](file:///g:/My%20Drive/PdM%20SideProject/firmware/cloud_multimodal_sync.py).
+
+### 10.2 Clean Data Segregation Architecture (`real_sessions/` vs `testing_data/`)
+To eliminate confusion between actual laundry wash cycles and bench/boot diagnostic logs, the file system was permanently restructured:
+- **`data/real_sessions/`** (Genuine Wash Sessions):
+  - `wash_cycle_2026-10-12_0800.csv` (1,543 records, 103 min full wash)
+  - `wash_cycle_2026-10-12_1019.csv` (1,216 records, 101 min wash)
+  - `wash_cycle_2026-10-15_morning.csv` (1,216 records, morning wash)
+  - `wash_cycle_2026-10-11_1019.csv` (422 records, 24 min wash)
+  - `wash_cycle_2026-10-15_1020.csv` (276 records, 23 min live wash)
+- **`data/testing_data/`** (Bench Calibration & Diagnostic Traces):
+  - `wash_cycle_2026-10-16_0123.csv` (11 records, boot buffer dump)
+  - `wash_cycle_2026-10-16_0127.csv` (17 records, boot buffer dump)
+  - `wash_cycle_1009.csv`, `wash_cycle_2026-10-11_*.csv`, `wash_cycle_2026-10-12_*.csv` (pre-wash bench tests)
+  - `wash_cycle_2026-10-15_live_snapshot.csv`, `wifi_test_log.csv` (connection & snapshot tests)
+- **Root `data/`**: Cleanly reserved for master ML training contracts (`pdm_multimodal_prediction_dataset.csv`, `live_multimodal_pdm_snapshot.json`, `pdm_feature_dictionary.json`, `.sync_history.json`).
+
+### 10.3 Universal 6-Column Telemetry Standardization (`power_w`)
+- **Problem Diagnosed:** When opening older testing/session CSVs recorded between October 11–15, only 5 columns existed (`timestamp_ms,accel_x,accel_y,accel_z,audio_rms`), because the Tapo P110 hardware was only installed on October 16.
+- **Resolution Applied:**
+  1. Standardized all CSVs across both `real_sessions/` and `testing_data/` to a uniform 6-column schema:
+     $$\text{timestamp\_ms}, \text{accel\_x}, \text{accel\_y}, \text{accel\_z}, \text{audio\_rms}, \text{power\_w}$$
+  2. Legacy sessions (pre-Tapo) were backfilled with `0.0` for `power_w`, preserving timeline continuity without column mismatch errors.
+  3. Modified [`firmware/cloud_downloader.py`](file:///g:/My%20Drive/PdM%20SideProject/firmware/cloud_downloader.py): `write_rows_to_csv()` now guarantees `power_w` is permanently included in every downloaded session.
+  4. Integrated automatic classifier in `cloud_downloader.py`: sessions with $< 150$ records or boot offline traces are automatically routed to `data/testing_data/`, while full wash sessions ($> 150$ records) route to `data/real_sessions/`.
+
+### 10.4 Dashboard Categorization (HTML Optgroups)
+- Updated [`build_clean_dashboard.py`](file:///g:/My%20Drive/PdM%20SideProject/build_clean_dashboard.py) so the session selection dropdown categorizes data into clear `<optgroup>` sections:
+  - **🧺 Real Wash Sessions**: Prominently displays genuine wash runs with date, duration in minutes, and point counts.
+  - **🧪 Testing & Bench Calibration**: Separately groups diagnostic bench logs and buffer dumps.
+- Rebuilt all web interfaces ([`index.html`](file:///g:/My%20Drive/PdM%20SideProject/index.html), [`historical.html`](file:///g:/My%20Drive/PdM%20SideProject/historical.html), [`dashboard.html`](file:///g:/My%20Drive/PdM%20SideProject/dashboard.html), [`cloud_dashboard.html`](file:///g:/My%20Drive/PdM%20SideProject/cloud_dashboard.html)).
+
+### 10.5 Current Operational Rig State & Best Practices
+- **Active Daemons:** `task-1328` running `py -3.12 firmware/tapo_firebase_streamer.py` (polling Tapo P110 every ~1.2s, updating `/tapo_live.json`, patching `/live.json`, and enforcing the Force-ON safety guard).
+- **Physical ESP32 Rig:** Standalone Firmware 06 is deployed. Ensure the ESP32 is plugged into power during wash cycles so that Core 1 acquires 50 Hz MPU-6050 and 16 kHz INMP441 audio, and Core 0 transmits synchronized batches to Firebase RTDB.
+
+
 
