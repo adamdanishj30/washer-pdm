@@ -30,17 +30,10 @@ def format_ts_filename(prefix, epoch_ms=None):
     return None
 
 def write_rows_to_csv(filepath, rows):
-    has_pwr = any("pwr" in r or "power" in r for r in rows)
     with open(filepath, "w", encoding="utf-8") as f:
-        if has_pwr:
-            f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\n")
-            for r in rows:
-                p = r.get("pwr") if "pwr" in r else r.get("power", 0.0)
-                f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)},{p:.1f}\n")
-        else:
-            f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n")
-            for r in rows:
-                f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)}\n")
+        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n")
+        for r in rows:
+            f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)}\n")
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
@@ -156,14 +149,6 @@ def download_sessions():
                 print(f"    Saved segment {seg_idx + 1}/{len(segments)} ({len(seg_rows)} records) -> {fname}")
 
         print("\n[COMPLETE] All cloud sessions successfully downloaded and synced to CSV!")
-
-        # Automatically rebuild dashboards so the newly downloaded sessions appear in UI
-        try:
-            import subprocess
-            subprocess.run([sys.executable, os.path.join(base_dir, "build_clean_dashboard.py")], check=True)
-            print("[DASHBOARD] Clean dashboards updated with newly downloaded sessions!")
-        except Exception as e:
-            print(f"[WARN] Could not rebuild dashboard: {e}")
 
     except Exception as e:
         print(f"[ERROR] Could not fetch sessions from Firebase: {e}")

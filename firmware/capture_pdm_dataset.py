@@ -122,12 +122,14 @@ async def fetch_tapo_telemetry() -> dict:
         voltage_v = float(em.voltage or 240.0)
         current_a = float(em.current or 0.0)
         today_wh = float((em.consumption_today or 0.0) * 1000.0)
+        month_kwh = float(em.consumption_this_month or 0.0)
 
         return {
             "power_w": round(power_w, 2),
             "voltage_v": round(voltage_v, 1),
             "current_ma": round(current_a * 1000.0, 1),
             "today_energy_wh": round(today_wh, 1),
+            "month_energy_kwh": round(month_kwh, 3),
             "is_on": dev.is_on,
             "device_name": dev.alias,
             "model": dev.model,
@@ -255,6 +257,8 @@ def save_feature_dictionary():
             "voltage_v": {"type": "float", "unit": "V", "desc": "Tapo P110 mains electrical supply voltage"},
             "current_ma": {"type": "float", "unit": "mA", "desc": "Tapo P110 electrical load current"},
             "today_energy_wh": {"type": "float", "unit": "Wh", "desc": "Cumulative electrical energy consumed today"},
+            "month_energy_kwh": {"type": "float", "unit": "kWh", "desc": "Cumulative electrical energy consumed this month"},
+            "is_on": {"type": "boolean", "desc": "Smart plug power relay state (true/false)"},
             "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "AI estimated dry laundry mass from motor tumble inertia"},
             "load_class": {"type": "categorical", "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"},
             "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
@@ -275,7 +279,7 @@ def append_to_prediction_csv(row: dict):
     headers = [
         "timestamp_ms", "iso_time", "phase", "machine_state", "target_rpm", "water_temperature",
         "accel_x", "accel_y", "accel_z", "vibe_magnitude", "audio_rms",
-        "power_w", "voltage_v", "current_ma", "today_energy_wh",
+        "power_w", "voltage_v", "current_ma", "today_energy_wh", "month_energy_kwh", "is_on",
         "estimated_load_kg", "load_class", "parasitic_drag_w", "parasitic_drag_pct",
         "bearing_health_index", "damper_health_index", "machine_health_index"
     ]
@@ -332,6 +336,8 @@ async def capture_snapshot() -> dict:
         "voltage_v": tapo.get("voltage_v", 240.0),
         "current_ma": tapo.get("current_ma", 0.0),
         "today_energy_wh": tapo.get("today_energy_wh", 0.0),
+        "month_energy_kwh": tapo.get("month_energy_kwh", 0.0),
+        "is_on": tapo.get("is_on", True),
         "estimated_load_kg": pdm["estimated_load_kg"],
         "load_class": pdm["load_class"],
         "parasitic_drag_w": pdm["parasitic_drag_w"],

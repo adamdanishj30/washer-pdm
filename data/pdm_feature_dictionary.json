@@ -74,6 +74,15 @@
       "unit": "Wh",
       "desc": "Cumulative electrical energy consumed today"
     },
+    "month_energy_kwh": {
+      "type": "float",
+      "unit": "kWh",
+      "desc": "Cumulative electrical energy consumed this month"
+    },
+    "is_on": {
+      "type": "boolean",
+      "desc": "Smart plug power relay state (true/false)"
+    },
     "estimated_load_kg": {
       "type": "float",
       "unit": "kg",

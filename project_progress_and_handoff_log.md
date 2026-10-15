@@ -26,11 +26,11 @@
 ## 2. Software & Toolchain Status
 
 * **OS:** Windows 10 / 11
-* **Host Driver:** Silicon Labs CP210x Universal Windows Driver active on **`COM3`** (`USB\VID_10C4&PID_EA60`).
+* **Host Driver:** Silicon Labs CP210x Universal Windows Driver active on **`COM6`** (`USB\VID_10C4&PID_EA60`).
 * **Arduino IDE Version:** 2.3.10
 * **ESP32 Core Package:** `esp32:esp32@3.3.12` installed.
-* **Firmware:** [`firmware/02_multimodal_telemetry_test/02_multimodal_telemetry_test.ino`](file:///G:/My%20Drive/PdM%20SideProject/firmware/02_multimodal_telemetry_test/02_multimodal_telemetry_test.ino) flashed and verified.
-* **Automation Tool:** [`firmware/auto_flash_and_stream.py`](file:///G:/My%20Drive/PdM%20SideProject/firmware/auto_flash_and_stream.py) operational.
+* **Firmware:** [`firmware/06_standalone_tapo_streamer/06_standalone_tapo_streamer.ino`](file:///G:/My%20Drive/PdM%20SideProject/firmware/06_standalone_tapo_streamer/06_standalone_tapo_streamer.ino) flashed directly via esptool to ESP32 on `COM6`.
+* **Zero-PC Standalone Telemetry:** Verified streaming kinematic vibration, audio RMS, and direct Tapo P110 active power ($W$) to Firebase RTDB `/live.json` autonomously every 2.0s.
 
 ---
 

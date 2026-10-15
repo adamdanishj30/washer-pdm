@@ -30,3 +30,5 @@ CP210x_Universal_Windows_Driver/
 secrets.h
 .env
 .env.local
+
+*.zip

@@ -1,2 +1,4 @@
-timestamp_ms,iso_time,phase,machine_state,target_rpm,water_temperature,accel_x,accel_y,accel_z,vibe_magnitude,audio_rms,power_w,voltage_v,current_ma,today_energy_wh,estimated_load_kg,load_class,parasitic_drag_w,parasitic_drag_pct,bearing_health_index,damper_health_index,machine_health_index
-1792082904845,2026-10-15T16:48:24.845811+00:00,none,stop,1200,cold,-0.74,1.43,-9.46,9.6,90.9,5.12,241.2,29.0,7.0,5.0,MEDIUM,0.6,13.8,100.0,100.0,100.0
+timestamp_ms,iso_time,phase,machine_state,target_rpm,water_temperature,accel_x,accel_y,accel_z,vibe_magnitude,audio_rms,power_w,voltage_v,current_ma,today_energy_wh,month_energy_kwh,is_on,estimated_load_kg,load_class,parasitic_drag_w,parasitic_drag_pct,bearing_health_index,damper_health_index,machine_health_index
+1792082904845,2026-10-15T16:48:24.845811+00:00,none,stop,1200,cold,-0.74,1.43,-9.46,9.6,90.9,5.12,241.2,29.0,7.0,0.018,True,5.0,MEDIUM,0.6,13.8,100.0,100.0,100.0
+1792085633225,2026-10-15T17:33:53.225817+00:00,none,stop,1200,cold,-0.65,1.45,-9.4,9.54,3893.7,1.2,242.4,46.0,8.0,0.018,True,5.0,MEDIUM,0.0,0.0,15.0,100.0,49.0
+1792086081383,2026-10-15T17:41:21.383366+00:00,none,stop,1200,cold,-0.65,1.45,-9.4,9.54,3893.7,1.2,241.9,46.0,8.0,0.018,True,5.0,MEDIUM,0.0,0.0,15.0,100.0,49.0

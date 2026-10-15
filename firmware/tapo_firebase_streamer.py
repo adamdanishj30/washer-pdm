@@ -168,6 +168,7 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
             current_a = energy.current or 0.0
             current_ma = current_a * 1000.0
             today_wh = (energy.consumption_today or 0.0) * 1000.0
+            month_kwh = energy.consumption_this_month or 0.0
 
             payload = {
                 "ts": {".sv": "timestamp"},
@@ -175,6 +176,7 @@ async def run_live_streamer(ip: str, user: str, password: str, interval: float):
                 "voltage_v": round(voltage_v, 1),
                 "current_ma": round(current_ma, 1),
                 "today_energy_wh": round(today_wh, 1),
+                "month_energy_kwh": round(month_kwh, 3),
                 "is_on": device.is_on,
                 "alias": device.alias,
                 "model": device.model,
