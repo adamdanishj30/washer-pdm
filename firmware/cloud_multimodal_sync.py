@@ -211,6 +211,22 @@ def query_smartthings():
         print(f"[SMARTTHINGS ERR] Could not fetch washer status: {e}")
         return None
 
+_last_st_call = 0.0
+_cached_st_data = None
+
+def get_smartthings_status(min_interval_s: float = 60.0):
+    """Fetches SmartThings status with a 60-second minimum interval throttle to protect API quotas."""
+    global _last_st_call, _cached_st_data
+    now = time.time()
+    if _cached_st_data is not None and (now - _last_st_call) < min_interval_s:
+        return _cached_st_data
+    
+    data = query_smartthings()
+    if data:
+        _cached_st_data = data
+        _last_st_call = now
+    return _cached_st_data or data
+
 def compute_weight_and_class(batches: list, st_info: dict = None) -> tuple:
     """
     Computes load class (LIGHT, MEDIUM, HEAVY) and estimated weight (kg)
@@ -326,7 +342,7 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
 def run_sync_iteration():
     """Performs one complete cloud sync step."""
     live = query_firebase("live.json")
-    st = query_smartthings()
+    st = get_smartthings_status(min_interval_s=60.0)
 
     if st:
         # Mirror live SmartThings state to Firebase /live_phase.json
@@ -370,7 +386,7 @@ def run_sync_iteration():
 def main():
     parser = argparse.ArgumentParser(description="Cloud Multimodal PdM Auto-Sync Engine")
     parser.add_argument("--once", action="store_true", help="Run a single sync check and exit")
-    parser.add_argument("--interval", type=float, default=10.0, help="Poll interval in seconds (default: 10s)")
+    parser.add_argument("--interval", type=float, default=60.0, help="Poll interval in seconds (default: 60s / 1 min)")
     args = parser.parse_args()
 
     print("=" * 65)

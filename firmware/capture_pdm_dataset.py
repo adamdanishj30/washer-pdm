@@ -426,8 +426,8 @@ def main():
     parser = argparse.ArgumentParser(description="Multimodal Predictive Maintenance Data Capture Engine")
     parser.add_argument("--snapshot", action="store_true", default=True, help="Capture one-shot snapshot")
     parser.add_argument("--record", action="store_true", help="Continuously record frames")
-    parser.add_argument("--interval", type=float, default=2.0, help="Recording interval in seconds (default: 2.0s)")
-    parser.add_argument("--duration", type=float, default=60.0, help="Recording duration in seconds (default: 60.0s)")
+    parser.add_argument("--interval", type=float, default=60.0, help="Recording interval in seconds (default: 60.0s / 1 min)")
+    parser.add_argument("--duration", type=float, default=3600.0, help="Recording duration in seconds (default: 3600.0s / 1 hour)")
     args = parser.parse_args()
 
     if args.record:
