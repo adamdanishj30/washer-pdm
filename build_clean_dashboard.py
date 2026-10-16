@@ -2179,7 +2179,7 @@ def generate_html(default_view='live'):
 
       // Timeline axis grid in historical mode
       if (currentMode === 'historic' && total > 1) {{
-        drawTimelineAxisGrid(energyCtx, dataSeries[0][0], dataSeries[total - 1][0], marginLeft, marginRight, marginTop, plotW, plotH, w, h, dpr, isMobile);
+        drawTimeGrid(energyCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
       }}
 
       // Spin guideline (400W)
@@ -2369,8 +2369,11 @@ def generate_html(default_view='live'):
           const ay = parseFloat(parts[2]);
           const az = parseFloat(parts[3]);
           const rms = parseFloat(parts[4]);
+          const pwr = (parts.length >= 6 && parts[5] !== '') ? parseFloat(parts[5]) : null;
           if (!isNaN(t) && !isNaN(ax) && !isNaN(ay) && !isNaN(az) && !isNaN(rms)) {{
-            records.push([Math.round(t), ax, ay, az, rms]);
+            const rec = [Math.round(t), ax, ay, az, rms];
+            if (pwr !== null && !isNaN(pwr)) rec.push(pwr);
+            records.push(rec);
           }}
         }}
       }}
@@ -2464,7 +2467,10 @@ def generate_html(default_view='live'):
         const items = Array.isArray(batches) ? batches : Object.values(batches);
         items.forEach(b => {{
           if (b && typeof b === 'object' && b.t !== undefined) {{
-            rows.push([b.t, b.ax || 0, b.ay || 0, b.az || -9.8, b.rms || 0]);
+            const pwr = (b.power !== undefined && b.power !== null) ? b.power : (b.pwr !== undefined ? b.pwr : null);
+            const r = [b.t, b.ax || 0, b.ay || 0, b.az || -9.8, b.rms || 0];
+            if (pwr !== null && !isNaN(pwr)) r.push(pwr);
+            rows.push(r);
           }}
         }});
         rows.sort((a, b) => a[0] - b[0]);
@@ -2487,17 +2493,19 @@ def generate_html(default_view='live'):
 
     // Export Active CSV
     function exportActiveCsv() {{
-      let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms\\n';
+      let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\\n';
       let exportName = 'telemetry.csv';
       if (currentMode === 'live') {{
-        const src = LIVE_BUFFER.length > 0 ? LIVE_BUFFER : [[Date.now(), -0.74, 1.40, -9.40, 105.6]];
+        const src = LIVE_BUFFER.length > 0 ? LIVE_BUFFER : [[Date.now(), -0.74, 1.40, -9.40, 105.6, 0.0]];
         src.forEach(r => {{
-          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}}\\n`;
+          const p = (r.length >= 6 && r[5] !== null && r[5] !== undefined) ? r[5] : 0.0;
+          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}},${{p.toFixed(1)}}\\n`;
         }});
         exportName = `live_stream_${{Date.now()}}.csv`;
       }} else {{
         ACTIVE_DATA.forEach(r => {{
-          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}}\\n`;
+          const p = (r.length >= 6 && r[5] !== null && r[5] !== undefined) ? r[5] : 0.0;
+          csv += `${{r[0]}},${{r[1]}},${{r[2]}},${{r[3]}},${{r[4]}},${{p.toFixed(1)}}\\n`;
         }});
         exportName = `${{activeSessionName.replace(/[^a-zA-Z0-9_-]/g, '_')}}.csv`;
       }}
