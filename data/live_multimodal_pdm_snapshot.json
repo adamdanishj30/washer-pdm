@@ -53,7 +53,7 @@
     "accel_y": 1.45,
     "accel_z": -9.4,
     "vibration_magnitude": 9.54,
-    "audio_rms": 3893.7,
+    "audio_rms": 249.2,
     "esp32_session": "wash_offline_B177B499",
     "esp32_uptime_s": 109,
     "esp32_sample_cnt": 5114,
@@ -66,8 +66,8 @@
     "expected_power_w": 4.5,
     "parasitic_drag_w": 0.0,
     "parasitic_drag_pct": 0.0,
-    "bearing_health_index": 15.0,
+    "bearing_health_index": 96.5,
     "damper_health_index": 100.0,
-    "machine_health_index": 49.0
+    "machine_health_index": 97.9
   }
 }

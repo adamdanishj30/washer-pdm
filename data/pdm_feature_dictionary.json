@@ -66,8 +66,17 @@
     },
     "audio_rms": {
       "type": "float",
-      "unit": "RMS",
-      "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction)"
+      "unit": "Canonical RMS",
+      "canonical_range": [0.0, 1200.0],
+      "baseline_by_phase": {
+        "none_or_stop": [10.0, 150.0],
+        "wash": [150.0, 350.0],
+        "rinse": [180.0, 450.0],
+        "spin": [600.0, 1100.0]
+      },
+      "firmware_formula": "INMP441 I2S DMA: (sample >> 8), sqrt(mean(s^2)) / 1000.0 (Divisor: 256,000)",
+      "ml_standardization": "Phase-conditioned Z-score or log1p scaling to eliminate spin false alarms",
+      "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction & cavitation indicator)"
     },
     "power_w": {
       "type": "float",

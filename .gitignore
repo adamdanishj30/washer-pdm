@@ -32,3 +32,4 @@ secrets.h
 .env.local
 
 *.zip
+*.bak_unscaled

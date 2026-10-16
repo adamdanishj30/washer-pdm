@@ -167,6 +167,8 @@ def fetch_esp32_telemetry() -> dict:
             ay = float(data.get("ay", 0.0))
             az = float(data.get("az", 0.0))
             rms = float(data.get("rms", 0.0))
+            if rms > 2500.0:
+                rms /= (256000.0 / 16384.0)  # Auto-rectify if on amplified scale
             vibe = float(data.get("vibe", math.sqrt(ax*ax + ay*ay + az*az)))
             return {
                 "accel_x": round(ax, 2),

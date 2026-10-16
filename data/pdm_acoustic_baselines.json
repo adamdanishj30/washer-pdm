@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "canonical_reference_rms": 120.0,
+  "global_stats": {
+    "mean": 172.11,
+    "std": 121.79,
+    "median": 144.85,
+    "p95": 401.4,
+    "count": 5530
+  },
+  "phase_conditioned_baselines": {
+    "idle": {
+      "mean": 162.65,
+      "std": 110.63,
+      "median": 140.0,
+      "p95": 349.2,
+      "count": 5058
+    },
+    "sensing": {
+      "mean": 180.0,
+      "std": 35.0,
+      "median": 175.0,
+      "p95": 240.0,
+      "count": 0
+    },
+    "wash": {
+      "mean": 258.44,
+      "std": 163.53,
+      "median": 242.0,
+      "p95": 558.2,
+      "count": 450
+    },
+    "rinse": {
+      "mean": 240.0,
+      "std": 50.0,
+      "median": 230.0,
+      "p95": 330.0,
+      "count": 0
+    },
+    "spin": {
+      "mean": 581.19,
+      "std": 173.46,
+      "median": 569.25,
+      "p95": 849.0,
+      "count": 22
+    }
+  }
+}

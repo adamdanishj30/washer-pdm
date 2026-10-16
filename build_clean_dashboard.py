@@ -47,7 +47,9 @@ def discover_all_sessions():
                 pts_cnt = len(rows)
                 duration_m = round((rows[-1][0] - rows[0][0]) / 60000.0) if pts_cnt > 1 else 0
                 
-                if 'morning' in fname:
+                if '2026-10-16_0857' in fname:
+                    disp = f"🧺 16 Oct 2026, 08:57 AM ({duration_m}m Multimodal Wash, {pts_cnt} pts)"
+                elif 'morning' in fname:
                     disp = f"🧺 15 Oct 2026 Morning Wash ({duration_m}m, {pts_cnt} pts)"
                 elif '2026-10-15_1020' in fname:
                     disp = f"🧺 15 Oct 2026, 12:41 AM ({duration_m}m Live Wash, {pts_cnt} pts)"
@@ -85,8 +87,12 @@ def discover_all_sessions():
                     pts_cnt = len(rows)
                     if 'wifi_test' in fname:
                         disp = f"🧪 Wi-Fi Telemetry Stream Test ({pts_cnt} pts)"
-                    elif '0123' in fname or '0127' in fname:
-                        disp = f"🧪 Boot Offline Dump Test ({pts_cnt} pts)"
+                    elif '0852' in fname:
+                        disp = f"🧪 16 Oct Bench Power Test ({pts_cnt} pts)"
+                    elif '0127' in fname:
+                        disp = f"🧪 16 Oct Offline Dump Test 2 ({pts_cnt} pts)"
+                    elif '0123' in fname:
+                        disp = f"🧪 16 Oct Offline Dump Test 1 ({pts_cnt} pts)"
                     elif 'snapshot' in fname:
                         disp = f"🧪 Live Snapshot Test ({pts_cnt} pts)"
                     elif '1009' in fname:
@@ -2128,35 +2134,63 @@ def generate_html(default_view='live'):
       if (!dataSeries || dataSeries.length === 0) return;
       const total = dataSeries.length;
 
+      // Check if dataset contains genuine positive measured power
+      let hasRealPower = false;
+      for (let i = 0; i < total; i++) {{
+        const row = dataSeries[i];
+        if (row && row.length >= 6 && row[5] !== null && row[5] !== undefined && !isNaN(row[5]) && row[5] > 0.05) {{
+          hasRealPower = true;
+          break;
+        }}
+      }}
+
+      // Dynamic subtitle update reflecting data source
+      const subEnergy = document.getElementById('sub-energy');
+      if (subEnergy) {{
+        if (hasRealPower) {{
+          subEnergy.innerHTML = 'TP-Link Tapo P110 (1 Hz KLAP Telemetry) &bull; Active motor load, cycle energy, and parasitic friction';
+        }} else {{
+          subEnergy.innerHTML = 'Physical Kinematic &amp; Acoustic Model (Estimated) &bull; Inferred motor load, cycle energy, and friction';
+        }}
+      }}
+
       // Extract power series (or infer from physical telemetry)
       function getPowerAt(idx) {{
         const r = dataSeries[idx];
-        if (r && r.length >= 6 && r[5] !== null && r[5] !== undefined && !isNaN(r[5])) {{
-          return r[5];
-        }}
         if (!r) return 0.0;
+        if (hasRealPower) {{
+          if (r.length >= 6 && r[5] !== null && r[5] !== undefined && !isNaN(r[5])) {{
+            return Math.max(0.0, r[5]);
+          }}
+          return 0.0;
+        }}
+        // Fallback physical inference (kinematic vibration + acoustic RMS)
         const vibe = Math.sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3]);
         const rms = r[4];
         if (vibe > 10.5) return Math.min(680.0, 420.0 + (vibe - 10.5) * 65.0 + (rms * 0.08));
-        if (rms > 200.0) return 130.0 + Math.sin(idx * 0.3) * 60.0 + (rms * 0.15);
+        if (rms > 160.0) return 130.0 + Math.sin(idx * 0.3) * 60.0 + (rms * 0.15);
         if (idx < 25) return 85.0 + Math.sin(idx * 0.5) * 45.0; // dry tumble sensing
         return 4.5; // standby idle
       }}
 
-      let maxPwrObserved = 100.0;
+      let maxPwrObserved = 0.0;
       let sumPwr = 0.0;
       for (let i = 0; i < total; i++) {{
         const p = getPowerAt(i);
         if (p > maxPwrObserved) maxPwrObserved = p;
         sumPwr += p;
       }}
-      const avgPwr = sumPwr / total;
+      if (maxPwrObserved < 50.0) maxPwrObserved = 50.0;
+      const avgPwr = total > 0 ? (sumPwr / total) : 0.0;
 
       let pwrMax = 700;
       let ticks = [600, 450, 300, 150, 0];
-      if (maxPwrObserved > 650) {{
+      if (maxPwrObserved > 1100) {{
         pwrMax = 2200;
         ticks = [2000, 1500, 1000, 500, 0];
+      }} else if (maxPwrObserved > 650) {{
+        pwrMax = 1000;
+        ticks = [1000, 800, 600, 400, 200, 0];
       }}
       const getY = (val) => marginTop + plotH - ((Math.max(0, Math.min(pwrMax, val)) / pwrMax) * plotH);
 
@@ -2349,6 +2383,7 @@ def generate_html(default_view='live'):
           drawSpline();
           drawXyz();
           drawArea();
+          drawEnergy();
         }}, 80);
       }} else {{
         clearInterval(playInterval);
@@ -2364,12 +2399,13 @@ def generate_html(default_view='live'):
         if (!line) continue;
         const parts = line.split(',').map(s => s.trim());
         if (parts.length >= 5) {{
-          const t = parseFloat(parts[0]);
-          const ax = parseFloat(parts[1]);
-          const ay = parseFloat(parts[2]);
-          const az = parseFloat(parts[3]);
-          const rms = parseFloat(parts[4]);
-          const pwr = (parts.length >= 6 && parts[5] !== '') ? parseFloat(parts[5]) : null;
+          const t = parseFloat(parts[0].replace(/['"]/g, ''));
+          const ax = parseFloat(parts[1].replace(/['"]/g, ''));
+          const ay = parseFloat(parts[2].replace(/['"]/g, ''));
+          const az = parseFloat(parts[3].replace(/['"]/g, ''));
+          const rms = parseFloat(parts[4].replace(/['"]/g, ''));
+          const pwrStr = (parts.length >= 6) ? parts[5].replace(/['"]/g, '').trim() : '';
+          const pwr = (pwrStr !== '' && !isNaN(parseFloat(pwrStr))) ? parseFloat(pwrStr) : null;
           if (!isNaN(t) && !isNaN(ax) && !isNaN(ay) && !isNaN(az) && !isNaN(rms)) {{
             const rec = [Math.round(t), ax, ay, az, rms];
             if (pwr !== null && !isNaN(pwr)) rec.push(pwr);

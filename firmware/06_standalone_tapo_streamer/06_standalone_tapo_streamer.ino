@@ -335,17 +335,20 @@ void loop() {
       float ay = (float)raw_ay / 2048.0 * 9.80665;
       float az = (float)raw_az / 2048.0 * 9.80665;
 
-      // 2. Read INMP441 Microphone DMA Buffer
+      // 2. Read INMP441 Microphone DMA Buffer (Standardized Scale: Matches Firmware 05 & ML Dataset)
       size_t bytes_read = 0;
-      i2s_read(I2S_PORT, audio_buffer, sizeof(audio_buffer), &bytes_read, 0);
+      float rms = 0.0;
+      i2s_read(I2S_PORT, (char *)audio_buffer, sizeof(audio_buffer), &bytes_read, 0);
 
-      float sum_sq = 0.0;
-      int samples = bytes_read / sizeof(int32_t);
-      for (int i = 0; i < samples; i++) {
-        int32_t val = audio_buffer[i] >> 14;
-        sum_sq += (float)val * (float)val;
+      if (bytes_read > 0) {
+        int samples = bytes_read / sizeof(int32_t);
+        double sum = 0.0;
+        for (int i = 0; i < samples; i++) {
+          int32_t s = audio_buffer[i] >> 8;
+          sum += ((double)s * (double)s);
+        }
+        rms = sqrt(sum / (samples > 0 ? samples : 1)) / 1000.0;
       }
-      float rms = (samples > 0) ? sqrt(sum_sq / samples) : 0.0;
 
       // Update Shared State Thread-Safely
       portENTER_CRITICAL(&telemetryMux);

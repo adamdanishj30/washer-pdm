@@ -30,12 +30,18 @@ def format_ts_filename(prefix, epoch_ms=None):
     return None
 
 def write_rows_to_csv(filepath, rows):
-    """Writes standardized 6-column session CSV (including power_w)."""
+    """Writes standardized 6-column session CSV (including power_w) with acoustic scale rectification."""
+    rms_vals = [float(r.get("rms", 0.0)) for r in rows if "rms" in r and r.get("rms") is not None]
+    median_rms = sorted(rms_vals)[len(rms_vals)//2] if rms_vals else 0.0
+    scale_factor = (256000.0 / 16384.0) if median_rms > 1200.0 else 1.0
+
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\n")
         for r in rows:
             p = r.get("pwr") if "pwr" in r else r.get("power", 0.0)
-            f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{r.get('rms', 0.0)},{p:.1f}\n")
+            raw_rms = float(r.get("rms", 0.0))
+            clean_rms = round(raw_rms / scale_factor, 1)
+            f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{clean_rms:.1f},{p:.1f}\n")
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
