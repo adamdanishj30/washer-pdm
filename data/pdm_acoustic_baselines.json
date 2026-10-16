@@ -2,19 +2,19 @@
   "version": "1.0.0",
   "canonical_reference_rms": 120.0,
   "global_stats": {
-    "mean": 172.11,
-    "std": 121.79,
-    "median": 144.85,
-    "p95": 401.4,
-    "count": 5530
+    "mean": 188.54,
+    "std": 136.07,
+    "median": 162.2,
+    "p95": 466.7,
+    "count": 3987
   },
   "phase_conditioned_baselines": {
     "idle": {
-      "mean": 162.65,
-      "std": 110.63,
-      "median": 140.0,
-      "p95": 349.2,
-      "count": 5058
+      "mean": 177.13,
+      "std": 125.23,
+      "median": 155.9,
+      "p95": 407.4,
+      "count": 3515
     },
     "sensing": {
       "mean": 180.0,

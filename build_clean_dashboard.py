@@ -53,8 +53,6 @@ def discover_all_sessions():
                     disp = f"🧺 15 Oct 2026 Morning Wash ({duration_m}m, {pts_cnt} pts)"
                 elif '2026-10-15_1020' in fname:
                     disp = f"🧺 15 Oct 2026, 12:41 AM ({duration_m}m Live Wash, {pts_cnt} pts)"
-                elif '2026-10-12_0800' in fname:
-                    disp = f"🧺 12 Oct 2026, 08:00 AM (103m Full Wash, {pts_cnt} pts)"
                 elif '2026-10-12_1019' in fname:
                     disp = f"🧺 12 Oct 2026, 10:19 AM (101m Wash, {pts_cnt} pts)"
                 elif '2026-10-11_1019' in fname:
@@ -85,7 +83,9 @@ def discover_all_sessions():
                 if rows:
                     s_key = 'preset_test_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
                     pts_cnt = len(rows)
-                    if 'wifi_test' in fname:
+                    if '2026-10-12_0800' in fname:
+                        disp = f"🧪 12 Oct Bench / Idle Run ({pts_cnt} pts)"
+                    elif 'wifi_test' in fname:
                         disp = f"🧪 Wi-Fi Telemetry Stream Test ({pts_cnt} pts)"
                     elif '0852' in fname:
                         disp = f"🧪 16 Oct Bench Power Test ({pts_cnt} pts)"
