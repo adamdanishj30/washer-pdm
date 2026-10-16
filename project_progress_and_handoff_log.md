@@ -426,6 +426,56 @@ To eliminate confusion between actual laundry wash cycles and bench/boot diagnos
     ```
   - Open [`index.html`](file:///g:/My%20Drive/PdM%20SideProject/index.html) or [`historical.html`](file:///g:/My%20Drive/PdM%20SideProject/historical.html) to view the graphs.
 
+---
+
+## 11. Sime Darby Hackathon Strategic Roadmap & Township Scalability Architecture (Option 2 Positioning)
+
+### 11.1 Context & Hackathon Alignment
+* **Event:** Sime Darby Property Hackathon — *"Township of Tomorrow: Where people, businesses and nature thrive together through innovation, technology and sustainable living."*
+* **Core Challenge Criteria Fit:**
+  1. **Planet $\rightarrow$ 02 Circular Economy (reuse, don't waste) [Primary Fit]:** Extends asset operating lifespan by 5–10 years by intervening at Point P along the P-F Interval (replacing RM 25 consumable dampers/bearings before catastrophic drum/motor destruction), eliminating 70 kg appliance e-waste and compressor metal scrap.
+  2. **Planet $\rightarrow$ 03 Energy Efficiency [Primary Fit]:** Quantifies and eliminates parasitic friction drag (+15% to +35% excess electrical load) caused by unlubricated bearings and worn suspension dampers.
+  3. **People $\rightarrow$ 05 Digital Living [Enabling Technology]:** Provides transparent, real-time Machine Health Index (0%–100%) and Remaining Useful Life (RUL) forecasting to residents' and facility managers' phones.
+  4. **Business / Township OpEx Reduction:** Replaces labor-intensive, human-error-prone manual inspection rounds across commercial buildings with centralized, automated predictive maintenance triage.
+
+### 11.2 Strategic Decision: Why "Option 2" Wins
+* **Option 1 (Washer Only):** Too narrow for a township developer; judges ask why a community builder should care about a single household appliance.
+* **Option 2 (Proven Prototype as Testbed + Scalable Township Platform):** The winning hackathon strategy:
+  - **The Ground Truth Proof:** A fully deployed, physical IoT rig (dual-core ESP32, MPU-6050, INMP441, Tapo P110, SmartThings) with real datasets and live web dashboard (`https://washer-pdm.pages.dev`).
+  - **The Scalable Vision:** Demonstrates that rotating electromechanical degradation physics is universal across all township machinery.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   THE TOWNSHIP PDM PLATFORM                            │
+│                                                                        │
+│   [ MICRO: The Proven Testbed ]         [ MACRO: The Township Vision ] │
+│   • Home Appliance (Samsung Washer)     • Mosques, Suraus & Clubhouses │
+│   • Dual-core ESP32 Edge Processing     • Commercial Malls & Offices   │
+│   • Kinematics + Acoustics + Tapo P110  • Township Water Pump Stations │
+│   • Real Data & Live Web Dashboard      • 20–30+ Centralized HVACs     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 Commercial Facility Management Expansion (Mosques, Malls, Suraus)
+* **The Operational Problem:** In community mosques, suraus, commercial malls (e.g. KL East Mall), and township clubhouses, 20–30 commercial split-unit or rooftop HVAC compressors operate continuously. Failures cause severe public disruption (Friday prayer overheating, mall tenant downtime), while unmaintained compressors waste thousands of kWh silently.
+* **The Solution:** Non-intrusive, clip-on multimodal edge pods attached to compressor housings.
+* **The Benefit:** 
+  - Centralized township facility dashboard monitors all 30 units across the township on one screen.
+  - Automated triage: Technicians are dispatched strictly to the specific compressor showing harmonic imbalance, bearing fatigue, or motor drag before breakdown occurs.
+
+### 11.4 Residential Smart Living (Township of Tomorrow Residents)
+* Integrated into the Sime Darby Township mobile app.
+* Homeowners receive seamless notifications:
+  > *"Washing Machine Health Index: 62% (Bearing drag detected). Replacing the RM 25 damper now saves RM 1,200 in motor repairs and prevents 70 kg of landfill e-waste."*
+* Option to book certified township maintenance technicians directly through the app.
+
+### 11.5 Pitch Structure & Key Talking Points for Judges
+1. **The Hook:** "Friction is the silent killer of energy and hardware in modern townships."
+2. **The Physics:** "Whether a 1,400 RPM washer drum or a 50 kW central mall chiller, rotating mechanics fail identically: micro-vibrations $\rightarrow$ acoustic friction $\rightarrow$ electrical drag $\rightarrow$ catastrophic breakdown."
+3. **The Proof (Live Demo):** Showcase `https://washer-pdm.pages.dev`, demonstrating real-time vibration waveforms, standardized acoustic decibels, and Tapo P110 active power telemetry from genuine wash cycles.
+4. **The Township Impact:** Show the financial and sustainability ROI: RM 25 component repair vs. RM 1,500 replacement + 15–35% energy waste eliminated across township commercial assets.
+
+
 
 
 

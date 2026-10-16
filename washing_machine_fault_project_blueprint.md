@@ -90,6 +90,50 @@ Because actual mechanical failure data is heavily imbalanced (rare), the model m
 * **ESP32 Edge Rig:** Mounted on Samsung washer, streaming 3-axis vibration ($a_x, a_y, a_z$) and acoustic RMS to Firebase RTDB.
 * **Tapo P110 Energy Plug:** Online at `192.168.0.142`, streaming active power ($W$), voltage ($V$), and current ($mA$) with automated **Force-ON Watchdog Guard**.
 * **SmartThings API:** Permanent auto-refresh OAuth2 token exchange configured for zero-expiry cycle phase (`washerJobState`) tracking.
-* **Frontend Dashboards:** Interactive 4-card responsive UI (`index.html`, `dashboard.html`, `cloud_dashboard.html`) including **Card 4: Electrical Power & Energy Consumption Diagnostics**.
+* **Frontend Dashboards:** Interactive 4-card responsive UI (`index.html`, `dashboard.html`, `cloud_dashboard.html`, and live deployed Cloudflare Pages at `https://washer-pdm.pages.dev`) including **Card 4: Electrical Power & Energy Consumption Diagnostics**.
 * **Unified ML Datasets:** Generated in `data/pdm_multimodal_prediction_dataset.csv` (22 columns) accompanied by formal feature contract in `data/pdm_feature_dictionary.json` and real-time capture engine in `firmware/capture_pdm_dataset.py`.
+
+---
+
+## 8. Sime Darby Hackathon Strategic Vision: From Home Appliance to Township Infrastructure (Option 2 Positioning)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   THE TOWNSHIP PDM PLATFORM                            │
+│                                                                        │
+│   [ MICRO: The Proven Testbed ]         [ MACRO: The Township Vision ] │
+│   • Home Appliance (Samsung Washer)     • Mosques, Suraus & Clubhouses │
+│   • Dual-core ESP32 Edge Processing     • Commercial Malls & Offices   │
+│   • Kinematics + Acoustics + Tapo P110  • Township Water Pump Stations │
+│   • Real Data & Live Web Dashboard      • 20–30+ Centralized HVACs     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Option 2 is the Winning Strategy:
+Instead of presenting this solely as a single washing machine monitor (too narrow for a township developer), we present the washing machine as our **fully functioning, ground-truth physical testbed** that validates our universal predictive maintenance architecture for **Sime Darby's Township of Tomorrow**.
+
+### Universal Physical Principle:
+Rotating electromechanical machinery shares identical degradation physics:
+$$\text{Micro-Vibration Harmonics} \longrightarrow \text{Acoustic Friction} \longrightarrow \text{Parasitic Electrical Drag} \longrightarrow \text{Catastrophic Breakdown}$$
+This physics applies equally to:
+1. **A 1,400 RPM washing machine drum motor.**
+2. **A 50 kW central air-conditioner compressor in a township mosque or community hall.**
+3. **Centrifugal water pumps in township reservoirs and drainage networks.**
+
+### Two-Tier Deployment Model:
+1. **Commercial & Communal Infrastructure (Mosques, Malls, Suraus):**
+   - **The Pain Point:** Community facilities contain 20–30 separate HVAC split units or rooftop compressors. Technicians only discover faults after breakdown (unbearable heat during Friday prayers or weekend mall crowds) or after months of unnoticed electricity leeching.
+   - **The Solution:** Low-cost, non-intrusive edge sensor pods clip onto compressor housings.
+   - **The Operator Benefit:** One unified facility management screen. Automated anomaly triage replaces tedious manual 1-by-1 physical rounds, directing technicians strictly to the specific unit exhibiting bearing fatigue or compressor drag.
+
+2. **Residential Smart Living (Township Residents):**
+   - Directly integrates into the Sime Darby Township mobile app.
+   - Residents receive transparent appliance health notifications: *"Washing machine damper degraded (62% health). Early RM 25 replacement prevents RM 1,200 motor failure and saves 70 kg of landfill e-waste."*
+
+### Hackathon Theme Alignment:
+* **Planet $\rightarrow$ 02 Circular Economy:** Extends asset lifespan by 5–10 years via early component intervention along the P-F Interval.
+* **Planet $\rightarrow$ 03 Energy Efficiency:** Eliminates hidden parasitic motor drag (+15% to +35% excess wattage), lowering township grid load.
+* **People $\rightarrow$ 05 Digital Living:** Empowers residents with predictive asset intelligence, eliminating stressful repair surprises.
+* **Business $\rightarrow$ OpEx Reduction:** Slashes commercial facility management maintenance costs across Sime Darby township developments.
+
 

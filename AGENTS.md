@@ -31,3 +31,11 @@ This project contains the complete multimodal IoT edge rig, cloud streaming pipe
    - The ML roadmap targets continuous **Machine Health Index (0%–100%)** and **Remaining Useful Life (RUL)** forecasting rather than binary fault alarms.
    - Correlate vibration harmonics and acoustic RMS with Tapo P110 active power ($W$) to quantify **parasitic energy waste** caused by mechanical friction (worn bearings/dampers).
    - Frame solutions around the **P-F Interval**: early component-level replacement (RM 25–50) prevents catastrophic motor/tub failures (RM 800–1,800+) and unnecessary e-waste.
+
+6. **Township Scalability & Hackathon Architecture (Option 2 Positioning):**
+   - Position the washing machine multimodal rig as the rigorous **Micro Proof-of-Concept Testbed** for a broader **Macro Township Asset Health Platform** (Sime Darby "Township of Tomorrow").
+   - Rotating electromechanical failure physics (vibration harmonics, acoustic sound pressure, parasitic electrical drag) is identical across home appliances and commercial township infrastructure (20–30 central HVAC compressors in mosques, suraus, commercial malls, clubhouses, and water pump stations).
+   - Core competition alignment:
+     - **Planet $\rightarrow$ 02 Circular Economy (Reuse, don't waste):** Extending asset lifespan by 5–10 years via early component triage (saving 70 kg appliance e-waste and industrial compressor scrap).
+     - **Planet $\rightarrow$ 03 Energy Efficiency:** Eliminating mechanical friction & parasitic energy waste across residential and commercial township utility grids.
+     - **People $\rightarrow$ 05 Digital Living:** Replacing surprise breakdowns and emergency repairs with proactive mobile asset health transparency for residents and centralized automated triage for township facility managers.
