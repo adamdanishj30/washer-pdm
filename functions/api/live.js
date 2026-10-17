@@ -24,11 +24,11 @@ export async function onRequestGet(context) {
           'Content-Type': 'application/json; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Cache-Control': 'public, max-age=4, s-maxage=4'
+          'Cache-Control': 'public, max-age=2, s-maxage=2'
         }
       });
 
-      // Store in Cloudflare edge cache for 4 seconds
+      // Store in Cloudflare edge cache for 2 seconds
       context.waitUntil(cache.put(cacheKey, response.clone()));
     } catch (err) {
       return new Response(JSON.stringify({ error: err.message }), {

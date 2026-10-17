@@ -333,6 +333,11 @@
       color: var(--teal-accent);
       box-shadow: 0 0 8px rgba(0, 240, 210, 0.2);
     }
+    .span-btn:disabled, .span-btn.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: auto;
+    }
 
     canvas {
       width: 100%;
@@ -771,6 +776,11 @@
           <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
         </div>
         <div class="timeline-stats-container">
+          <!-- Sync Rate Selector (Default 5s, 2s available only when rig is live) -->
+          <div class="view-toggle-pill" id="tog-live-rate" style="display: none;">
+            <button class="span-btn active" id="btn-rate-5s" onclick="setLiveSyncRate(5000)" title="Eco Sync: 5-second interval (Default, quota safe)">5s Eco</button>
+            <button class="span-btn disabled" id="btn-rate-2s" onclick="setLiveSyncRate(2000)" title="Fast Sync: 2-second interval (Available only when rig is live)">⚡ 2s Fast</button>
+          </div>
           <span class="axis-toggle-clean" style="color: var(--teal-accent);">
             Current: <strong id="timeline-head-rms">105.6</strong> RMS
           </span>
@@ -778,7 +788,7 @@
             Spike: <strong id="timeline-head-spike">1.0x</strong>
           </span>
           <span class="time-readout-pill" id="lbl-curr-time">
-            LIVE (50 Hz)
+            LIVE (5s)
           </span>
         </div>
       </div>
@@ -962,6 +972,11 @@
     let isUserInactive = false;
     let inactivityTimer = null;
     let livePollTimeoutId = null;
+
+    let userSelectedRate = 5000; // Default 5 seconds
+    const togLiveRate = document.getElementById('tog-live-rate');
+    const btnRate5s = document.getElementById('btn-rate-5s');
+    const btnRate2s = document.getElementById('btn-rate-2s');
 
     const wrapScrubber = document.getElementById('wrap-scrubber');
     const btnPrimaryAction = document.getElementById('btn-primary-action');
@@ -1242,13 +1257,15 @@
         btnSecondarySwitch.innerText = `Switch to Historical: ${activeSessionName}`;
         titleTimeline.innerText = 'Live Rig Telemetry Stream';
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
-        lblCurrTime.innerText = 'LIVE (5s)';
+        lblCurrTime.innerText = userSelectedRate === 2000 ? 'LIVE (2s)' : 'LIVE (5s)';
+        if (togLiveRate) togLiveRate.style.display = 'inline-flex';
         updateRigStatusUI(isRigOnline);
         updateChartSubtitles();
         if (inactivityBanner && !isUserInactive) inactivityBanner.style.display = 'none';
         recordUserActivity();
         checkRigHeartbeat();
       } else {
+        if (togLiveRate) togLiveRate.style.display = 'none';
         if (livePollTimeoutId) {
           clearTimeout(livePollTimeoutId);
           livePollTimeoutId = null;
@@ -1285,16 +1302,33 @@
     function updateRigStatusUI(online) {
       if (currentMode === 'live') {
         if (online) {
+          if (btnRate2s) {
+            btnRate2s.disabled = false;
+            btnRate2s.classList.remove('disabled');
+            btnRate2s.title = 'Fast Sync: 2-second interval (Rig is online)';
+          }
+          const syncLabel = userSelectedRate === 2000 ? '2s' : '5s';
           if (statusBadge) statusBadge.className = 'status-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot';
-          if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (5s Sync)';
+          if (lblStatusText) lblStatusText.innerText = `Live Rig Active (${syncLabel} Sync)`;
 
           if (statusBadgeMob) statusBadgeMob.className = 'status-badge mobile-status-tag';
           if (statusDotMob) statusDotMob.className = 'status-dot';
-          if (lblStatusTextMob) lblStatusTextMob.innerText = 'Live 5s';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = `Live ${syncLabel}`;
+
+          if (lblCurrTime) lblCurrTime.innerText = `LIVE (${syncLabel})`;
 
           if (offlineBanner) offlineBanner.style.display = 'none';
         } else {
+          if (btnRate2s) {
+            btnRate2s.disabled = true;
+            btnRate2s.classList.add('disabled');
+            btnRate2s.title = '2s Fast Sync is only available when the rig is live';
+            if (userSelectedRate === 2000) {
+              btnRate2s.classList.remove('active');
+              if (btnRate5s) btnRate5s.classList.add('active');
+            }
+          }
           if (statusBadge) statusBadge.className = 'status-badge offline-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot dot-offline';
           if (lblStatusText) lblStatusText.innerText = 'Live Rig Offline (No Input)';
@@ -1302,6 +1336,8 @@
           if (statusBadgeMob) statusBadgeMob.className = 'status-badge offline-badge mobile-status-tag';
           if (statusDotMob) statusDotMob.className = 'status-dot dot-offline';
           if (lblStatusTextMob) lblStatusTextMob.innerText = 'Offline';
+
+          if (lblCurrTime) lblCurrTime.innerText = 'LIVE (Offline)';
 
           if (offlineBanner) offlineBanner.style.display = 'flex';
         }
@@ -1356,6 +1392,31 @@
       window.addEventListener(evt, recordUserActivity, { passive: true });
     });
 
+    function setLiveSyncRate(rate) {
+      if (rate === 2000) {
+        if (!isRigOnline) {
+          showToast('⚠️ 2s Fast Sync is only available when the rig is live and transmitting.');
+          return;
+        }
+        userSelectedRate = 2000;
+        if (btnRate2s) btnRate2s.classList.add('active');
+        if (btnRate5s) btnRate5s.classList.remove('active');
+        if (lblCurrTime) lblCurrTime.innerText = 'LIVE (2s)';
+        if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (2s Sync)';
+        showToast('⚡ Fast Sync enabled (2s interval)');
+      } else {
+        userSelectedRate = 5000;
+        if (btnRate5s) btnRate5s.classList.add('active');
+        if (btnRate2s) btnRate2s.classList.remove('active');
+        if (lblCurrTime) lblCurrTime.innerText = 'LIVE (5s)';
+        if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (5s Sync)';
+        showToast('🍃 Eco Sync enabled (5s interval)');
+      }
+      if (currentMode === 'live' && !isUserInactive) {
+        scheduleNextPoll();
+      }
+    }
+
     function scheduleNextPoll() {
       if (livePollTimeoutId) {
         clearTimeout(livePollTimeoutId);
@@ -1363,8 +1424,8 @@
       }
       if (document.hidden || currentMode !== 'live' || isUserInactive) return;
 
-      // Adaptive polling: 5s when online/active, 15s when offline (cuts idle calls by 65%)
-      const delay = isRigOnline ? 5000 : 15000;
+      // Adaptive polling: userSelectedRate (5s default, 2s if chosen and live), or 15s if rig is offline
+      const delay = isRigOnline ? userSelectedRate : 15000;
       livePollTimeoutId = setTimeout(async () => {
         await checkRigHeartbeat();
       }, delay);
