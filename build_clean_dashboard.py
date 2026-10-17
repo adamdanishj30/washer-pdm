@@ -360,6 +360,20 @@ def generate_html(default_view='live'):
       align-items: center;
       animation: fadeIn 0.3s ease;
     }}
+    /* Inactivity Auto-Pause Alert Banner */
+    .live-inactivity-banner {{
+      background: rgba(251, 146, 60, 0.12);
+      border: 1px solid rgba(251, 146, 60, 0.35);
+      border-radius: 10px;
+      padding: 10px 18px;
+      color: #fdba74;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+      margin-bottom: 2px;
+    }}
     @keyframes fadeIn {{
       from {{ opacity: 0; transform: translateY(-4px); }}
       to {{ opacity: 1; transform: translateY(0); }}
@@ -648,14 +662,16 @@ def generate_html(default_view='live'):
         padding: 10px 8px;
         gap: 10px;
       }}
-      .live-offline-banner {{
+      .live-offline-banner,
+      .live-inactivity-banner {{
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
         padding: 8px 10px;
         font-size: 11px;
       }}
-      .live-offline-banner button {{
+      .live-offline-banner button,
+      .live-inactivity-banner button {{
         width: 100%;
         padding: 6px 10px !important;
         text-align: center;
@@ -789,6 +805,15 @@ def generate_html(default_view='live'):
         <span><strong>Live Rig Offline:</strong> No active ESP32 sensor input. Displaying cached data.</span>
       </div>
       <button class="btn-dark-secondary" style="padding: 4px 12px; font-size: 11px;" onclick="switchToSession(activeSessionKey)">Switch to Historical Data</button>
+    </div>
+
+    <!-- Inactivity Auto-Pause Alert Banner (shown when tab is idle > 5 mins to protect quota) -->
+    <div id="live-inactivity-banner" class="live-inactivity-banner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 14px;">⏸️</span>
+        <span><strong>Live Stream Paused:</strong> Inactive for 5 minutes. Live stream paused to conserve data quota.</span>
+      </div>
+      <button class="btn-dark-primary" style="padding: 5px 14px; font-size: 11px; width: auto;" onclick="resumeFromInactivity()">▶ Resume Live Stream</button>
     </div>
 
     <!-- Card 1: Dual-Modality Telemetry -->
@@ -1039,6 +1064,17 @@ def generate_html(default_view='live'):
     const lblStatusTextMob = document.getElementById('lbl-status-text-mobile');
 
     const offlineBanner = document.getElementById('live-offline-banner');
+    const inactivityBanner = document.getElementById('live-inactivity-banner');
+    const FIREBASE_FALLBACK_URL = 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json';
+    const LIVE_ENDPOINT = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+      ? '/api/live'
+      : FIREBASE_FALLBACK_URL;
+
+    const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 min idle auto-pause
+    let isUserInactive = false;
+    let inactivityTimer = null;
+    let livePollTimeoutId = null;
+
     const wrapScrubber = document.getElementById('wrap-scrubber');
     const btnPrimaryAction = document.getElementById('btn-primary-action');
     const btnSecondarySwitch = document.getElementById('btn-secondary-switch');
@@ -1321,8 +1357,15 @@ def generate_html(default_view='live'):
         lblCurrTime.innerText = 'LIVE (5s)';
         updateRigStatusUI(isRigOnline);
         updateChartSubtitles();
+        if (inactivityBanner && !isUserInactive) inactivityBanner.style.display = 'none';
+        recordUserActivity();
         checkRigHeartbeat();
       }} else {{
+        if (livePollTimeoutId) {{
+          clearTimeout(livePollTimeoutId);
+          livePollTimeoutId = null;
+        }}
+        if (inactivityBanner) inactivityBanner.style.display = 'none';
         if (isPlaying) togglePlayPause();
         if (sel) sel.value = activeSessionKey;
         wrapScrubber.style.display = 'flex';
@@ -1390,11 +1433,75 @@ def generate_html(default_view='live'):
       }}
     }}
 
+    function recordUserActivity() {{
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      if (isUserInactive) {{
+        resumeFromInactivity();
+      }} else {{
+        inactivityTimer = setTimeout(() => {{
+          if (currentMode === 'live') {{
+            pauseForInactivity();
+          }}
+        }}, INACTIVITY_TIMEOUT_MS);
+      }}
+    }}
+
+    function pauseForInactivity() {{
+      isUserInactive = true;
+      if (inactivityBanner) inactivityBanner.style.display = 'flex';
+      if (livePollTimeoutId) {{
+        clearTimeout(livePollTimeoutId);
+        livePollTimeoutId = null;
+      }}
+    }}
+
+    function resumeFromInactivity() {{
+      isUserInactive = false;
+      if (inactivityBanner) inactivityBanner.style.display = 'none';
+      recordUserActivity();
+      if (currentMode === 'live') {{
+        checkRigHeartbeat();
+      }}
+    }}
+
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {{
+      window.addEventListener(evt, recordUserActivity, {{ passive: true }});
+    }});
+
+    function scheduleNextPoll() {{
+      if (livePollTimeoutId) {{
+        clearTimeout(livePollTimeoutId);
+        livePollTimeoutId = null;
+      }}
+      if (document.hidden || currentMode !== 'live' || isUserInactive) return;
+
+      // Adaptive polling: 5s when online/active, 15s when offline (cuts idle calls by 65%)
+      const delay = isRigOnline ? 5000 : 15000;
+      livePollTimeoutId = setTimeout(async () => {{
+        await checkRigHeartbeat();
+      }}, delay);
+    }}
+
     async function checkRigHeartbeat() {{
       if (document.hidden) return; // Conserve Firebase free-tier quota when tab is in background
       if (currentMode !== 'live') return; // Strict isolation: Zero network calls in historical/archive mode
+      if (isUserInactive) return; // Zero network calls when user is idle
+
       try {{
-        const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
+        let res;
+        try {{
+          res = await fetch(LIVE_ENDPOINT);
+          if (!res.ok && LIVE_ENDPOINT !== FIREBASE_FALLBACK_URL) {{
+            res = await fetch(FIREBASE_FALLBACK_URL);
+          }}
+        }} catch (netErr) {{
+          if (LIVE_ENDPOINT !== FIREBASE_FALLBACK_URL) {{
+            res = await fetch(FIREBASE_FALLBACK_URL);
+          }} else {{
+            throw netErr;
+          }}
+        }}
+
         const d = await res.json();
         const wasOnlineBefore = isRigOnline;
 
@@ -1441,6 +1548,7 @@ def generate_html(default_view='live'):
         isRigOnline = false;
       }}
       updateRigStatusUI(isRigOnline);
+      scheduleNextPoll();
     }}
 
     function applyRecord(rec, isFromLive = false) {{
@@ -2522,7 +2630,7 @@ def generate_html(default_view='live'):
     setViewMode('{default_view}');
     window.addEventListener('load', () => {{
       resizeCanvases();
-      setInterval(checkRigHeartbeat, 5000);
+      recordUserActivity();
       if (currentMode === 'live') {{
         checkRigHeartbeat();
       }}
@@ -2532,8 +2640,11 @@ def generate_html(default_view='live'):
       if (energyCvs) setupCanvasScrubbing(energyCvs);
     }});
     document.addEventListener('visibilitychange', () => {{
-      if (!document.hidden && currentMode === 'live') {{
+      if (!document.hidden && currentMode === 'live' && !isUserInactive) {{
         checkRigHeartbeat();
+      }} else if (document.hidden && livePollTimeoutId) {{
+        clearTimeout(livePollTimeoutId);
+        livePollTimeoutId = null;
       }}
     }});
   </script>
