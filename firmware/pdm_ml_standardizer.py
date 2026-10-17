@@ -193,7 +193,8 @@ class PdmAcousticStandardizer:
 
         # 4. Continuous Acoustic Anomaly Probability (0% to 100%)
         # Sigmoid centered at z = 2.0 (z=0 -> 5%, z=2.0 -> 50%, z=3.5 -> 90%)
-        anomaly_prob = 1.0 / (1.0 + math.exp(-1.5 * (z - 2.0)))
+        exp_val = max(-50.0, min(50.0, -1.5 * (z - 2.0)))
+        anomaly_prob = 1.0 / (1.0 + math.exp(exp_val))
         out["acoustic_anomaly_pct"] = round(anomaly_prob * 100.0, 1)
 
         return out
@@ -266,9 +267,15 @@ def build_consolidated_ml_dataset() -> int:
     transformed = standardizer.transform_rows(all_rows)
 
     output_path = DATA_DIR / "pdm_ml_standardized_training_dataset.csv"
-    fieldnames = list(transformed[0].keys())
+    # Collect all unique fieldnames across all rows dynamically
+    unique_fields = []
+    for row in transformed:
+        for k in row.keys():
+            if k not in unique_fields:
+                unique_fields.append(k)
+
     with open(output_path, "w", encoding="utf-8", newline="") as fp:
-        writer = csv.DictWriter(fp, fieldnames=fieldnames)
+        writer = csv.DictWriter(fp, fieldnames=unique_fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(transformed)
 

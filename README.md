@@ -3,7 +3,9 @@
 > **From Home Appliances to Township Infrastructure**  
 > An autonomous IoT edge rig, cloud streaming pipeline, and predictive AI platform designed for the **Sime Darby Property Hackathon ("Township of Tomorrow")**.
 >
-> 🌐 **Live Deployed Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)
+> 🌐 **Live Deployed Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
+> 📄 **2-Page Executive Proposal:** [PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf](PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf) ([Markdown Brief](PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.md))  
+> 📑 **Full Competition Dossier:** [PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf](PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf) ([Full Whitepaper](PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.md))  
 
 ---
 
@@ -111,9 +113,13 @@ The dashboard provides a real-time, responsive dark UI built with pure web techn
 ├── data/
 │   ├── real_sessions/                 # Full multi-minute wash cycles (6-column standardized)
 │   ├── testing_data/                  # Diagnostic bench logs and buffer dump traces
-│   ├── pdm_multimodal_prediction_dataset.csv  # 22-column ML master dataset
-│   ├── pdm_ml_standardized_training_dataset.csv # 5,530-point ML training dataset
+│   ├── pdm_multimodal_prediction_dataset.csv  # 31-column ML master dataset
+│   ├── pdm_ml_standardized_training_dataset.csv # 3,980-point active ML training dataset
 │   └── pdm_feature_dictionary.json   # Formal ML schema & physical unit contract
+├── PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf # 2-Page Executive Pitch PDF (MSME Format)
+├── PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.md  # 2-Page Executive Brief Markdown
+├── PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf       # Full Competition Dossier PDF
+├── PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.md        # Full Competition Dossier Markdown
 ├── build_clean_dashboard.py           # Dashboard generator & preset compiler
 ├── index.html                         # Live Rig default dashboard view
 ├── historical.html                    # Historical Archive default view

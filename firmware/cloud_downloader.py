@@ -20,7 +20,7 @@ if os.path.exists(env_file):
         pass
 
 FIREBASE_HOST = os.environ.get("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
-FIREBASE_SECRET = os.environ.get("FIREBASE_SECRET", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
+FIREBASE_SECRET = os.environ.get("FIREBASE_SECRET") or os.environ.get("FIREBASE_AUTH")
 TZ_GMT8 = timezone(timedelta(hours=8))
 
 def format_ts_filename(prefix, epoch_ms=None):
@@ -29,19 +29,58 @@ def format_ts_filename(prefix, epoch_ms=None):
         return f"{prefix}_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
     return None
 
-def write_rows_to_csv(filepath, rows):
-    """Writes standardized 6-column session CSV (including power_w) with acoustic scale rectification."""
+from pathlib import Path
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from firmware.smartthings_client import (
+    fetch_session_phase_timeline,
+    estimate_point_phase_fallback,
+    compute_weight_and_class
+)
+
+def write_rows_to_csv(filepath, rows, session_id=None):
+    """Writes standardized 8-column session CSV (including phase & load_class) with acoustic scale rectification."""
     rms_vals = [float(r.get("rms", 0.0)) for r in rows if "rms" in r and r.get("rms") is not None]
     median_rms = sorted(rms_vals)[len(rms_vals)//2] if rms_vals else 0.0
     scale_factor = (256000.0 / 16384.0) if median_rms > 1200.0 else 1.0
 
+    load_class, _ = compute_weight_and_class(rows)
+    phase_timeline = fetch_session_phase_timeline(session_id) if session_id else []
+
+    first_ts = None
+    for r in rows:
+        ts_val = r.get("ts")
+        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+            first_ts = ts_val
+            break
+
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\n")
+        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class\n")
         for r in rows:
-            p = r.get("pwr") if "pwr" in r else r.get("power", 0.0)
+            t = r.get("t", 0)
+            ax = float(r.get("ax", 0.0))
+            ay = float(r.get("ay", 0.0))
+            az = float(r.get("az", 0.0))
             raw_rms = float(r.get("rms", 0.0))
             clean_rms = round(raw_rms / scale_factor, 1)
-            f.write(f"{r.get('t', 0)},{r.get('ax', 0.0)},{r.get('ay', 0.0)},{r.get('az', 0.0)},{clean_rms:.1f},{p:.1f}\n")
+            p = float(r.get("pwr") if "pwr" in r else r.get("power", 0.0))
+            vibe_mag = (ax * ax + ay * ay + az * az) ** 0.5
+
+            row_epoch = r.get("ts")
+            if not row_epoch and first_ts and first_ts > 1700000000000:
+                row_epoch = first_ts + t
+
+            matched_phase = None
+            if phase_timeline and row_epoch:
+                valid_checks = [c for c in phase_timeline if c["ts"] <= (row_epoch + 15000)]
+                if valid_checks:
+                    matched_phase = valid_checks[-1]["phase"]
+
+            if not matched_phase or matched_phase == "none":
+                matched_phase = estimate_point_phase_fallback(p, vibe_mag, clean_rms, t)
+
+            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{p:.1f},{matched_phase},{load_class}\n")
 
 def download_sessions():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
@@ -155,23 +194,25 @@ def download_sessions():
                     else:
                         fname = f"{session_id}.csv"
 
-                # Classify session: test vs real wash (< 150 points = bench/pre-wash test)
-                is_test = session_id.startswith("wash_offline_") or len(seg_rows) < 150 or "test" in fname.lower() or "1009" in fname
+                # Classify session: test vs real wash (< 150 points = bench/pre-wash test, or known bench test)
+                is_test = session_id.startswith("wash_offline_") or len(seg_rows) < 150 or "test" in fname.lower() or session_id == "wash_1009" or fname == "wash_cycle_2026-10-12_0800.csv"
                 target_folder = test_dir if is_test else real_dir
                 csv_file = os.path.join(target_folder, fname)
-                write_rows_to_csv(csv_file, seg_rows)
+                write_rows_to_csv(csv_file, seg_rows, session_id=session_id)
                 rel_folder = "testing_data" if is_test else "real_sessions"
                 print(f"    Saved segment {seg_idx + 1}/{len(segments)} ({len(seg_rows)} records) -> data/{rel_folder}/{fname}")
 
         print("\n[COMPLETE] All cloud sessions successfully downloaded and synced to CSV!")
 
-        # Automatically rebuild dashboards so the newly downloaded sessions appear in UI
+        # Automatically rebuild dashboards and refit ML baselines
         try:
             import subprocess
             subprocess.run([sys.executable, os.path.join(base_dir, "build_clean_dashboard.py")], check=True)
             print("[DASHBOARD] Clean dashboards updated with newly downloaded sessions!")
+            subprocess.run([sys.executable, os.path.join(base_dir, "firmware", "pdm_ml_standardizer.py")], check=True)
+            print("[ML] Acoustic baselines & standardized training dataset updated!")
         except Exception as e:
-            print(f"[WARN] Could not rebuild dashboard: {e}")
+            print(f"[WARN] Post-download build/ML update error: {e}")
 
     except Exception as e:
         print(f"[ERROR] Could not fetch sessions from Firebase: {e}")

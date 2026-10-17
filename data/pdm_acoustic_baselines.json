@@ -10,39 +10,39 @@
   },
   "phase_conditioned_baselines": {
     "idle": {
-      "mean": 177.13,
-      "std": 125.23,
-      "median": 155.9,
-      "p95": 407.4,
-      "count": 3515
+      "mean": 171.58,
+      "std": 118.42,
+      "median": 153.95,
+      "p95": 360.7,
+      "count": 3376
     },
     "sensing": {
-      "mean": 180.0,
-      "std": 35.0,
-      "median": 175.0,
-      "p95": 240.0,
-      "count": 0
+      "mean": 160.67,
+      "std": 88.08,
+      "median": 166.7,
+      "p95": 323.0,
+      "count": 41
     },
     "wash": {
-      "mean": 258.44,
-      "std": 163.53,
-      "median": 242.0,
-      "p95": 558.2,
-      "count": 450
+      "mean": 206.99,
+      "std": 105.19,
+      "median": 199.1,
+      "p95": 372.4,
+      "count": 333
     },
     "rinse": {
-      "mean": 240.0,
-      "std": 50.0,
-      "median": 230.0,
-      "p95": 330.0,
-      "count": 0
+      "mean": 149.38,
+      "std": 57.38,
+      "median": 148.5,
+      "p95": 243.9,
+      "count": 75
     },
     "spin": {
-      "mean": 581.19,
-      "std": 173.46,
-      "median": 569.25,
-      "p95": 849.0,
-      "count": 22
+      "mean": 529.29,
+      "std": 116.87,
+      "median": 497.9,
+      "p95": 793.2,
+      "count": 162
     }
   }
 }

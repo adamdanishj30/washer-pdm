@@ -2,15 +2,15 @@
 auto_drive_sync_daemon.py
 Autonomous Cloud-to-Drive Telemetry Sync Daemon for Samsung Washer PdM Rig.
 
-Monitors Google Firebase Realtime Database in real-time.
-Immediately upon detecting that the ESP32 is offline and no longer transmitting data
-(e.g., after 15-30 seconds of packet inactivity following wash completion or power-down),
-this daemon automatically:
-  1. Fetches all recorded session batches from Firebase.
-  2. Compiles a clean, validated CSV dataset (timestamp_ms, accel_x, accel_y, accel_z, audio_rms).
-  3. Saves the CSV directly into 'G:\\My Drive\\PdM SideProject\\data\\'.
-  4. Triggers Google Drive for Desktop automatic cloud sync.
-  5. Re-runs 'build_clean_dashboard.py' so the new session is instantly available on the web dashboard!
+Monitors Google Firebase Realtime Database and SmartThings REST API in real-time.
+1. Actively tracks washer operational phase from Samsung SmartThings (job_state: wash, rinse, spin, etc.).
+2. Logs phase checkpoints to Firebase (/session_phases/{session_id}/{timestamp_ms}) and updates /live_phase.json.
+3. Automatically computes load class (LIGHT, MEDIUM, HEAVY) from Tapo P110 initial dry-tumble power.
+4. Immediately upon detecting that the ESP32 is offline (after cycle completion or power-down):
+   - Compiles standardized 8-column CSV (timestamp_ms, accel_x, accel_y, accel_z, audio_rms, power_w, phase, load_class).
+   - Routes real cycles to 'data/real_sessions/' and tests to 'data/testing_data/'.
+   - Rectifies acoustic RMS to canonical scale.
+   - Re-runs 'build_clean_dashboard.py' and 'pdm_ml_standardizer.py'.
 
 Usage:
   py firmware/auto_drive_sync_daemon.py [--timeout 20] [--interval 5] [--once]
@@ -20,15 +20,30 @@ import os
 import sys
 import time
 import json
+import math
 import argparse
 import subprocess
 import urllib.request
 import urllib.error
 from datetime import datetime
+from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-SYNC_HISTORY_FILE = os.path.join(DATA_DIR, ".sync_history.json")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+REAL_DIR = DATA_DIR / "real_sessions"
+TEST_DIR = DATA_DIR / "testing_data"
+SYNC_HISTORY_FILE = DATA_DIR / ".sync_history.json"
+
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from firmware.smartthings_client import (
+    get_smartthings_status,
+    push_phase_to_firebase,
+    fetch_session_phase_timeline,
+    estimate_point_phase_fallback,
+    compute_weight_and_class
+)
 
 def _load_env_file(env_path):
     if os.path.exists(env_path):
@@ -44,11 +59,10 @@ def _load_env_file(env_path):
         except Exception:
             pass
 
-_load_env_file(os.path.join(BASE_DIR, ".env"))
+_load_env_file(BASE_DIR / ".env")
 
 FIREBASE_HOST = os.environ.get("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
-FIREBASE_AUTH = os.environ.get("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
-
+FIREBASE_AUTH = os.environ.get("FIREBASE_AUTH") or os.environ.get("FIREBASE_SECRET")
 
 def load_sync_history():
     if os.path.exists(SYNC_HISTORY_FILE):
@@ -59,7 +73,6 @@ def load_sync_history():
             return {}
     return {}
 
-
 def save_sync_history(history):
     os.makedirs(DATA_DIR, exist_ok=True)
     try:
@@ -67,7 +80,6 @@ def save_sync_history(history):
             json.dump(history, f, indent=2)
     except Exception as e:
         print(f"[WARN] Could not save sync history: {e}")
-
 
 def get_firebase_json(path):
     url = f"{FIREBASE_HOST}/{path.lstrip('/')}"
@@ -82,7 +94,6 @@ def get_firebase_json(path):
     except Exception:
         raise
 
-
 def mark_session_archived_in_firebase(session_id):
     try:
         url = f"{FIREBASE_HOST}/archived_sessions/{session_id}.json?auth={FIREBASE_AUTH}"
@@ -96,11 +107,8 @@ def mark_session_archived_in_firebase(session_id):
     except Exception as e:
         print(f"  [WARN] Could not mark session in Firebase: {e}")
 
-
 def format_session_filename(session_id, first_timestamp_ms=None):
-    """
-    Generate clean, standardized filename: wash_cycle_YYYY-MM-DD_HHMM.csv
-    """
+    """Generate clean, standardized filename: wash_cycle_YYYY-MM-DD_HHMM.csv"""
     if session_id.startswith("wash_202"):
         clean_id = session_id.replace("wash_", "")
         for fmt in ("%Y-%m-%d_%H%M%S", "%Y-%m-%d_%H%M", "%Y%m%d_%H%M%S", "%Y%m%d_%H%M"):
@@ -116,15 +124,28 @@ def format_session_filename(session_id, first_timestamp_ms=None):
         dt = datetime.fromtimestamp(first_timestamp_ms / 1000.0)
         return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
 
-    # Default to current date/time if not parseable
     now = datetime.now()
     clean_id = session_id.replace("wash_", "")
     return f"wash_cycle_{now.strftime('%Y-%m-%d')}_{clean_id}.csv"
 
+def trigger_dashboard_and_ml_refit():
+    """Triggers clean dashboard rebuild and ML standardizer pipeline."""
+    try:
+        subprocess.run([sys.executable, str(BASE_DIR / "build_clean_dashboard.py")], cwd=str(BASE_DIR), check=True)
+        print("  [BUILD] Dashboards recompiled successfully!")
+    except Exception as e:
+        print(f"  [WARN] Dashboard rebuild error: {e}")
 
-def export_session_to_csv(session_id, batches):
+    try:
+        subprocess.run([sys.executable, str(BASE_DIR / "firmware" / "pdm_ml_standardizer.py")], cwd=str(BASE_DIR), check=True)
+        print("  [ML] Acoustic baselines and ML training dataset re-fitted!")
+    except Exception as e:
+        print(f"  [WARN] Standardizer fit error: {e}")
+
+def export_session_to_csv(session_id, batches, st_info=None):
     """
-    Convert Firebase batch data to standardized CSV and save to data directory.
+    Convert Firebase batch data to standardized 8-column CSV with SmartThings phase ground truth.
+    Columns: timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class
     """
     rows = []
     if isinstance(batches, dict):
@@ -150,61 +171,67 @@ def export_session_to_csv(session_id, batches):
     if first_ts is None:
         first_ts = rows[0].get("t", 0)
 
+    # Route destination folder
+    REAL_DIR.mkdir(parents=True, exist_ok=True)
+    TEST_DIR.mkdir(parents=True, exist_ok=True)
+    is_test = session_id.startswith("wash_offline_") or len(rows) < 40
+    target_dir = TEST_DIR if is_test else REAL_DIR
+
     filename = format_session_filename(session_id, first_ts)
-    csv_path = os.path.join(DATA_DIR, filename)
+    csv_path = target_dir / filename
 
-    # Check history to avoid false skipping on colliding legacy IDs
-    history = load_sync_history()
-    sess_history = history.get(session_id, {})
-    prev_first_ts = sess_history.get("first_ts")
-    prev_last_t = sess_history.get("last_t", 0)
-    current_last_t = rows[-1].get("t", 0)
+    # Acoustic scale rectification
+    rms_vals = [float(r.get("rms", 0.0)) for r in rows if r.get("rms") is not None]
+    median_rms = sorted(rms_vals)[len(rms_vals)//2] if rms_vals else 0.0
+    scale_factor = (256000.0 / 16384.0) if median_rms > 1200.0 else 1.0
 
-    # Avoid overwriting existing distinct session file unless current has more data or different first_ts
-    if os.path.exists(csv_path):
-        if prev_first_ts and first_ts != prev_first_ts and first_ts > 1700000000000:
-            dt = datetime.fromtimestamp(first_ts / 1000.0)
-            filename = f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M%S')}_{session_id}.csv"
-            csv_path = os.path.join(DATA_DIR, filename)
-        else:
-            with open(csv_path, "r", encoding="utf-8") as f:
-                existing_lines = sum(1 for _ in f) - 1
-            if existing_lines >= len(rows) and current_last_t <= prev_last_t:
-                print(f"  [INFO] Session '{session_id}' already synced to '{filename}' ({existing_lines} records).")
-                return csv_path
+    # Load class calculation
+    load_class, est_kg = compute_weight_and_class(rows, st_info)
 
-    # Write clean CSV
+    # Fetch recorded SmartThings phase timeline from Firebase
+    phase_timeline = fetch_session_phase_timeline(session_id)
+
+    print(f"\n>>> Compiling session '{session_id}' -> {csv_path.name}")
+    print(f"    Load Classification: {load_class} (~{est_kg} kg)")
+    print(f"    Recorded Phase Checkpoints: {len(phase_timeline)}")
+
+    # Write standardized 8-column CSV
     with open(csv_path, "w", encoding="utf-8") as f:
-        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms\n")
+        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class\n")
+        
         for r in rows:
             t = r.get("t", 0)
-            ax = r.get("ax", 0.0)
-            ay = r.get("ay", 0.0)
-            az = r.get("az", 0.0)
-            rms = r.get("rms", 0.0)
-            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{rms:.1f}\n")
+            ax = float(r.get("ax", 0.0))
+            ay = float(r.get("ay", 0.0))
+            az = float(r.get("az", 0.0))
+            raw_rms = float(r.get("rms", 0.0))
+            clean_rms = round(raw_rms / scale_factor, 1)
+            pwr = float(r.get("pwr") if "pwr" in r else r.get("power", 0.0))
+            vibe_mag = math.sqrt(ax * ax + ay * ay + az * az)
 
-    print(f"  [SUCCESS] Created: {csv_path}")
-    print(f"            Records: {len(rows)} data points")
-    print(f"            Cloud Status: Syncing to Google Drive...")
+            # Determine point phase
+            row_epoch = r.get("ts")
+            if not row_epoch and first_ts and first_ts > 1700000000000:
+                row_epoch = first_ts + t
 
-    # Rebuild dashboard so the session appears immediately
-    builder_script = os.path.join(BASE_DIR, "build_clean_dashboard.py")
-    if os.path.exists(builder_script):
-        try:
-            print("  [BUILD] Updating dashboard HTML files with new session...")
-            subprocess.run([sys.executable, builder_script], cwd=BASE_DIR, check=True, capture_output=True)
-            print("  [BUILD] Dashboards recompiled successfully!")
-        except Exception as e:
-            print(f"  [WARN] Dashboard rebuild error: {e}")
+            matched_phase = None
+            if phase_timeline and row_epoch:
+                # Match latest checkpoint with checkpoint_ts <= row_epoch (LOCF)
+                valid_checks = [c for c in phase_timeline if c["ts"] <= (row_epoch + 15000)]
+                if valid_checks:
+                    matched_phase = valid_checks[-1]["phase"]
 
-    return csv_path
+            # Fallback if unrecorded
+            if not matched_phase or matched_phase == "none":
+                matched_phase = estimate_point_phase_fallback(pwr, vibe_mag, clean_rms, t)
 
+            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{pwr:.1f},{matched_phase},{load_class}\n")
+
+    print(f"  [SUCCESS] Created: {csv_path.name} ({len(rows)} records)")
+    return str(csv_path)
 
 def check_and_sync_all_unarchived():
-    """
-    Check Firebase for any completed sessions that are not yet recorded in sync history.
-    """
+    """Check Firebase for any completed sessions that are not yet recorded in sync history."""
     history = load_sync_history()
     try:
         shallow_sessions = get_firebase_json("sessions.json?shallow=true")
@@ -243,13 +270,13 @@ def check_and_sync_all_unarchived():
             prev_last_t = sess_hist.get("last_t", 0)
             prev_points = sess_hist.get("points", 0)
 
-            # Do not skip if points increased, or if last_t is greater, or if first_ts changed
             is_identical = prev_synced and (prev_points >= len(items)) and (prev_last_t == cur_last_t) and (prev_first_ts == cur_first_ts)
             if is_identical:
                 continue
 
             print(f"\n[SYNC] Fetching session '{s_id}' from Firebase ({len(items)} points)...")
-            csv_path = export_session_to_csv(s_id, batches)
+            st_info = get_smartthings_status(min_interval_s=60.0)
+            csv_path = export_session_to_csv(s_id, batches, st_info=st_info)
             if csv_path:
                 history[s_id] = {
                     "completed": True,
@@ -263,27 +290,28 @@ def check_and_sync_all_unarchived():
                 mark_session_archived_in_firebase(s_id)
                 synced_count += 1
 
+        if synced_count > 0:
+            trigger_dashboard_and_ml_refit()
         return synced_count
     except Exception as e:
         print(f"[WARN] Error during batch sync: {e}")
         return 0
 
-
 def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
     print("=" * 70)
-    print("   ESP32 AUTONOMOUS CLOUD-TO-DRIVE PDM TELEMETRY SYNC DAEMON   ")
+    print("   MULTIMODAL AUTONOMOUS CLOUD-TO-DRIVE PDM TELEMETRY SYNC DAEMON   ")
     print("=" * 70)
     print(f" Firebase Host    : {FIREBASE_HOST}")
-    print(f" Google Drive Dir : {DATA_DIR}")
-    print(f" Offline Timeout  : {offline_timeout} seconds of packet inactivity")
+    print(f" Real Sessions    : {REAL_DIR}")
+    print(f" Offline Timeout  : {offline_timeout} seconds")
     print(f" Polling Interval : {poll_interval} seconds")
     print("=" * 70)
 
-    # Initial check for any existing unsynced sessions
+    # Initial check
     print("\n[INIT] Checking for existing unarchived sessions in Firebase...")
     initial_synced = check_and_sync_all_unarchived()
     if initial_synced > 0:
-        print(f"[INIT] Synced {initial_synced} session(s) to Google Drive!\n")
+        print(f"[INIT] Synced {initial_synced} session(s)!\n")
     else:
         print("[INIT] All existing sessions already up to date.\n")
 
@@ -297,21 +325,27 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
     last_seen_time = 0
     is_rig_online = False
     active_session_id = None
-    session_start_time = None
+    last_st_poll = 0.0
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Daemon active. Waiting for ESP32 transmission...\n")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Daemon active. Listening for SmartThings and ESP32...\n")
 
     while True:
         try:
-            live = get_firebase_json("live.json")
             now = time.time()
+            live = get_firebase_json("live.json")
+
+            # Check SmartThings every 30-45s and mirror to Firebase
+            if (now - last_st_poll) >= 30.0:
+                st = get_smartthings_status(min_interval_s=30.0)
+                if st:
+                    push_phase_to_firebase(st, session_id=active_session_id)
+                last_st_poll = now
 
             if live and ("cnt" in live or "uptime" in live):
                 cur_cnt = live.get("cnt")
                 cur_uptime = live.get("uptime")
                 cur_session = live.get("session")
 
-                # Check if telemetry is actively advancing
                 has_advanced = (last_cnt is not None and cur_cnt != last_cnt) or \
                                (last_uptime is not None and cur_uptime != last_uptime)
 
@@ -319,7 +353,6 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                     last_seen_time = now
                     last_cnt = cur_cnt
                     last_uptime = cur_uptime
-                    # Baseline captured; wait for active packet advancement
                     continue
 
                 if has_advanced:
@@ -330,12 +363,12 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                     if not is_rig_online:
                         is_rig_online = True
                         active_session_id = cur_session
-                        session_start_time = now
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> ESP32 DETECTED ONLINE! Streaming session: '{cur_session}' (State: {live.get('state', 'RUNNING')})")
+                        st_info = get_smartthings_status(min_interval_s=5.0)
+                        st_phase = str(st_info.get("job_state") or "none") if isinstance(st_info, dict) else "none"
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> ESP32 ONLINE! Session: '{cur_session}' | SmartThings Phase: {st_phase.upper()}")
                     else:
                         active_session_id = cur_session
                 else:
-                    # No increment detected
                     inactive_seconds = now - last_seen_time
 
                     if is_rig_online and inactive_seconds >= offline_timeout:
@@ -346,7 +379,8 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                         if active_session_id:
                             batches = get_firebase_json(f"sessions/{active_session_id}.json")
                             if batches:
-                                csv_path = export_session_to_csv(active_session_id, batches)
+                                st_final = get_smartthings_status(min_interval_s=5.0)
+                                csv_path = export_session_to_csv(active_session_id, batches, st_info=st_final)
                                 if csv_path:
                                     b_list = list(batches.values()) if isinstance(batches, dict) else (batches or [])
                                     valid_b = [b for b in b_list if isinstance(b, dict) and "ax" in b]
@@ -370,9 +404,9 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                                     }
                                     save_sync_history(history)
                                     mark_session_archived_in_firebase(active_session_id)
-                                    print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> Session '{active_session_id}' safely stored and synced to Google Drive!\n")
+                                    print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> Session '{active_session_id}' archived!\n")
+                                    trigger_dashboard_and_ml_refit()
 
-                        # Also sweep any other unarchived sessions
                         check_and_sync_all_unarchived()
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] Daemon listening for next wash cycle...\n")
 
@@ -382,14 +416,12 @@ def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] !!! ESP32 unreachable. Offline mode.")
 
         except Exception as e:
-            # Network blip or temporary connection issue - keep running
-            pass
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] [DAEMON LOOP NOTICE] {e}")
 
         time.sleep(poll_interval)
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ESP32 Cloud-to-Drive Sync Daemon")
+    parser = argparse.ArgumentParser(description="ESP32 Multimodal Cloud-to-Drive Sync Daemon")
     parser.add_argument("--interval", type=int, default=5, help="Polling interval in seconds (default: 5)")
     parser.add_argument("--timeout", type=int, default=20, help="Offline inactivity threshold in seconds (default: 20)")
     parser.add_argument("--once", action="store_true", help="Sync once and exit")

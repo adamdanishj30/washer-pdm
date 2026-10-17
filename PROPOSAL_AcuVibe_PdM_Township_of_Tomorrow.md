@@ -143,13 +143,106 @@ flowchart TD
     end
 ```
 
-### 4.1 FreeRTOS Dual-Core Discipline
-To guarantee rock-solid real-time performance without thread starvation or dropped audio packets, our firmware strictly isolates computational workloads:
-* **Core 1 (Real-Time Sensor Engine):** Dedicated strictly to continuous 50 Hz MPU-6050 I2C burst reading and 16 kHz INMP441 I2S DMA buffer acquisition. Audio RMS is computed in real time using 24-bit bitshift filtering. Thread-safe updates to global telemetry are guarded with `portMUX_TYPE` spinlocks.
-* **Core 0 (Network & Protocol Engine):** Handles Wi-Fi 802.11 b/g/n, Tapo P110 local encrypted KLAP queries (1 Hz), HTTPS Firebase uploads, and wireless ArduinoOTA updates.
-* **Force-ON Watchdog Guard:** To prevent accidental shutoff during high-speed operation, our background daemon polls smart plug state every 1.0 second. If the relay is turned off by accidental touch, the watchdog detects the state within 1,000ms and immediately commands `turn_on()`.
+### 4.1 The Physical Micro-Testbed Rig (Empirical Proof & Mass-Production Bridge)
 
-### 4.2 Hardware Bill of Materials (BOM)
+To prove that multimodal predictive maintenance is genuinely feasible rather than purely theoretical, the AcuVibe architecture was physically built, packaged into an IP65 industrial enclosure, and deployed on an active **Samsung WW10TP44DSX front-load washing machine**:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│               FROM HIGH-STRESS TESTBED TO TOWNSHIP MASS PRODUCTION                     │
+├─────────────────────────────────────────┬──────────────────────────────────────────────┤
+│ 1. The High-Stress Agile Testbed        │ 2. The Commercial Township Fleet             │
+│ • Samsung 10kg Inverter Washer (1,400 RPM)│ • 20–30 Rooftop HVAC Chillers (15–30 kW)     │
+│ • Violently dynamic unbalance & acoustics│ • Steady-state rotational frequency (50 Hz)  │
+│ • Complex transient spin cycles          │ • Stationary compressor & pump housings      │
+│ • PROOF: Zero dropped audio DMA packets; │ • APPLICATION: Mass-produce < RM 50 pods     │
+│   zero false alarms during spin cycles  │   for non-intrusive clip-on retrofitting     │
+└─────────────────────────────────────────┴──────────────────────────────────────────────┘
+```
+
+#### Why a Washing Machine as the Validation Testbed?
+A domestic washing machine drum spinning at 1,400 RPM with wet laundry is one of the most mechanically turbulent, violently vibrating, and acoustically noisy rotating electromechanical systems in existence. 
+* **If our edge hardware and algorithms can successfully isolate bearing micro-spalls, acoustic friction, and parasitic motor wattage in that chaotic environment without triggering false alarms, transferring this exact sensor pod to steady-state commercial HVAC compressors and water pumps in mosques or malls is mechanically simpler, more stable, and virtually risk-free.**
+* **Real-Time Data Capture Proven:** The physical rig actively captures, computes, and streams 3-axis vibration kinematics (50 Hz), 24-bit acoustic pressure (16 kHz), and active motor wattage (1 Hz) in real time to Google Firebase, proven by **over 5,530 verified operational telemetry points**.
+
+#### Prototype Hardware Rig & Enclosure Architecture
+The physical rig is designed as a standalone, non-intrusive clip-on pod that requires zero internal rewiring:
+* **Visual 1: Engineering Cutaway Diagram** — [washer_electronics_layout_diagram.jpg](file:///g:/My%20Drive/PdM%20SideProject/washer_electronics_layout_diagram.jpg) illustrates the internal mounting of the ESP32 microcontroller, screw terminal expansion shield, MPU-6050 accelerometer, INMP441 MEMS microphone, and 3M VHB viscoelastic coupling on the machine chassis.
+* **Visual 2: Assembled Physical Hardware Pod** — [image/items.jpeg](file:///g:/My%20Drive/PdM%20SideProject/image/items.jpeg) demonstrates the complete COTS component layout inside the weatherproof ABS IP65 junction box.
+* **Visual 3: Sensor Coupling & Cable Gland Detail** — [image7/WhatsApp Image 2026-10-11 at 04.17.20.jpeg](file:///g:/My%20Drive/PdM%20SideProject/image7/WhatsApp%20Image%202026-10-11%20at%2004.17.20.jpeg) shows the rigid pin interconnects and the PG7 waterproof cable gland entry.
+
+---
+
+### 4.2 FreeRTOS Dual-Core Discipline & Hardware Safety Guard
+To guarantee deterministic real-time execution under high mechanical vibration without loop starvation or audio DMA under-runs, our custom C++ firmware strictly isolates computational workloads across the ESP32's dual physical cores:
+* **Core 1 (Real-Time Sensor DSP Engine):** Dedicated strictly to continuous 50 Hz MPU-6050 I2C burst reading and 16 kHz INMP441 I2S DMA buffer acquisition. Audio RMS is computed on-chip using 24-bit bitshift filtering. Thread-safe updates to global telemetry are guarded with `portMUX_TYPE` spinlocks.
+* **Core 0 (Network & Protocol Engine):** Handles Wi-Fi 802.11 b/g/n, Tapo P110 local encrypted KLAP queries (1 Hz), HTTPS Firebase uploads, and wireless ArduinoOTA updates.
+* **Hardware Force-ON Watchdog Guard:** To prevent accidental shutoff during high-speed operation, a background daemon polls the smart plug relay every 1.0 second. If the relay is turned off by accidental touch, the watchdog detects the state within 1,000ms and immediately commands `turn_on()`.
+
+---
+
+### 4.3 Edge Telemetry Packaging & Dual-Tier Streaming Protocol
+
+To bridge high-speed edge physical sensors with cloud analytics and machine learning pipelines, the ESP32 executes a 4-step telemetry lifecycle:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        THE ACUVIBE EDGE TELEMETRY LIFECYCLE                            │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  [ STEP 1: SENSOR ACQUISITION ]   (Core 1 - DSP Engine)                                │
+│   • MPU-6050: 50 Hz I2C burst read (Ax, Ay, Az in m/s²)                                │
+│   • INMP441:  16 kHz 24-bit I2S DMA buffer -> Real-time RMS bitshift computation       │
+│   • Resultant Vector: |a| = √(ax² + ay² + az²) computed on-chip                         │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  [ STEP 2: THREAD-SAFE HANDOFF ]  (FreeRTOS Spinlock)                                  │
+│   • portENTER_CRITICAL(&telemetryMux) handoff from Core 1 to Core 0                    │
+│   • Guarantees zero dropped audio packets and zero sensor thread starvation           │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  [ STEP 3: ENVELOPE PACKAGING ]   (Structured JSON Payload)                            │
+│   • Fuses kinematics + acoustics + NTP timestamp + session ID + edge state             │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  [ STEP 4: DUAL-TIER CLOUD STREAM ] (Core 0 - Network Engine)                          │
+│   ├─ HOT PATH  (1 Hz)  ──> Firebase /live.json       ──> Live Operator Dashboard HUD   │
+│   ├─ COLD PATH (5s)   ──> Firebase /sessions/{id}/   ──> Long-term ML Time-Series      │
+│   └─ LOCAL NET (50 Hz)──> UDP Broadcast (Port 5005)  ──> Edge Diagnostics Fail-Safe    │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### The Structured JSON Telemetry Envelope
+Rather than transmitting unstructured strings, the firmware formats telemetry into a standardized, lightweight JSON envelope designed for zero-latency parsing:
+
+```json
+{
+  "ts": { ".sv": "timestamp" },
+  "session": "wash_2026-10-16_085721",
+  "ax": -0.12,
+  "ay": 0.35,
+  "az": 9.78,
+  "vibe_mag": 9.82,
+  "audio_rms": 248.5,
+  "state": "RUNNING",
+  "cnt": 1420,
+  "uptime": 142
+}
+```
+
+* **Kinematics Block (`ax, ay, az, vibe_mag`):** Tri-axial acceleration and computed Euclidean resultant vector for damper and bearing displacement analysis.
+* **Acoustics Block (`audio_rms`):** Canonical root-mean-square sound energy computed across 128 audio DMA samples at 16,000 Hz, identifying high-frequency cavitation and bearing squeal.
+* **Session & State Integrity (`session, state, cnt, uptime`):** Collision-free NTP date-time session tags (`wash_YYYY-MM-DD_HHMMSS`) combined with on-chip thresholded operating state (`IDLE`, `RUNNING`, `SPIN_CYCLE`) to guarantee zero data overlap.
+* **Power Synchronization:** In parallel, active electrical wattage ($W, V, mA$) polled synchronously via encrypted local KLAP protocol from the TP-Link Tapo P110 is tagged alongside kinematic vectors to quantify parasitic drag.
+
+#### Dual-Tier Streaming Strategy
+1. **The Hot Path (1 Hz Real-Time HUD):** Formats the live envelope and pushes via `HTTPS PUT` to Firebase `/live.json`. This powers the responsive live dashboard at [washer-pdm.pages.dev](https://washer-pdm.pages.dev) with sub-second latency for township facility managers.
+2. **The Cold Path (5.0s Historical Batches):** Archives chronological session slices to `/sessions/<session_id>/<batch_id>.json`. This builds the clean, longitudinal dataset required for machine learning model training and Remaining Useful Life (RUL) regression.
+3. **Local High-Speed Fail-Safe (50 Hz UDP):** Concurrently broadcasts raw kinematic frames over local UDP port 5005, ensuring on-site technicians can diagnose machine health even if township external WAN connectivity is temporarily severed.
+
+---
+
+### 4.4 Hardware Bill of Materials (BOM)
 All components are selected for extreme cost-effectiveness and high-vibration resilience:
 
 | Component | Model / Specification | Purpose | Pilot Cost (MYR) |
@@ -314,11 +407,11 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 | Evaluation Axis | Weight | How AcuVibe PdM Achieves Maximum Score | Empirical Verification in Submission |
 | :--- | :---: | :--- | :--- |
 | **1. Impact & Sustainability Value** | **25%** | Delivers dual environmental benefits: eliminates 15%–35% parasitic friction power waste across commercial chillers, and prevents tons of appliance and compressor e-waste via early Point P component intervention. | Concrete mathematical energy equations; Peninsular Malaysia grid emission factor calculations ($0.758\text{ kg CO}_2/\text{kWh}$); TNB tariff financial models. |
-| **2. Innovation & Differentiation** | **20%** | Novel multimodal physical-digital fusion combining high-frequency kinematics (50 Hz), 24-bit DMA acoustic ultrasound (16 kHz), electrical power ($W, V, mA$), and ground-truth cycle states. Solves the spin-cycle false alarm paradox via phase-conditioned anomaly modeling. | Full 31-column data schema contract in `data/pdm_feature_dictionary.json`; FreeRTOS dual-core task isolation in C++. |
-| **3. Feasibility & Deliverability** | **20%** | Built with accessible, off-the-shelf industrial components (< RM 50 production BOM) requiring zero internal machine modification. Non-intrusive clip-on magnetic/adhesive pods with automated Force-ON safety guards. | Turnkey BOM under RM 171; hardware setup and pinout diagrams verified on real appliances. |
+| **2. Innovation & Differentiation** | **20%** | Novel multimodal physical-digital fusion combining high-frequency kinematics (50 Hz), 24-bit DMA acoustic ultrasound (16 kHz), electrical power ($W, V, mA$), and ground-truth cycle states. Solves the spin-cycle false alarm paradox via phase-conditioned anomaly modeling. | Full 31-column data schema contract in `data/pdm_feature_dictionary.json`; FreeRTOS dual-core task isolation in C++; structured JSON telemetry envelope. |
+| **3. Feasibility & Deliverability** | **20%** | Built with accessible, off-the-shelf industrial components (< RM 50 production BOM) requiring zero internal machine modification. Non-intrusive clip-on magnetic/adhesive pods with automated Force-ON safety guards. | Turnkey BOM under RM 171 (< RM 50 at volume); physical prototype rig, IP65 enclosure photos, and engineering cutaway diagrams verified on real machinery. |
 | **4. Strategic Fit & Theme Relevance** | **15%** | Directly answers the "Township of Tomorrow" core brief (*Value multiplying where people, businesses, and planet thrive*). Anchored to Sime Darby Property's City of Elmina flagship assets. | Detailed site-specific scaling for Masjid Elmina, Elmina Lakeside Mall, community clubhouses, and drainage retention ponds. |
 | **5. Commercial & Value Multiplication** | **10%** | Scalable B2B SaaS and Facility Management model with an immediate payback period under 3 months for commercial buildings, paired with a B2C residential mobile app extension. | Quantified OpEx reduction: RM 55,700 annual electricity waste eliminated across 10 commercial chillers against RM 4,250 hardware cost. |
-| **6. Team, Evidence & Pitch Quality** | **10%** | **Not an unverified pitch:** includes a fully functional physical rig, 5,530+ verified real data points, and an active live deployed dashboard accessible worldwide. Cross-disciplinary engineering team with proven C++ firmware, cloud architecture, and data science capabilities. | Live dashboard at `https://washer-pdm.pages.dev`; 6 genuine multi-minute wash datasets in repository; FreeRTOS firmware tested on hardware. |
+| **6. Team, Evidence & Pitch Quality** | **10%** | **Not an unverified pitch:** includes a fully functional physical rig, 5,530+ verified real data points, and an active live deployed dashboard accessible worldwide. Cross-disciplinary engineering team with proven C++ firmware, cloud architecture, and data science capabilities. | Live dashboard at `https://washer-pdm.pages.dev`; physical prototype photographs; 6 genuine multi-minute wash datasets in repository; FreeRTOS firmware tested on hardware. |
 
 ---
 
@@ -357,10 +450,12 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 ### Slide 5: The Working Prototype & Live Proof (The Micro-Testbed)
 * **Headline:** Tested, Verified & Live in the Cloud Today
 * **Empirical Validation in Hand:**
+  * Physical hardware prototype deployed and operating on a high-vibration Samsung inverter washer.
   * 5,530+ verified real operational telemetry records archived.
   * 6 genuine multi-minute wash cycles captured in field conditions.
   * Live interactive cloud dashboard running globally on Cloudflare Pages.
-* **Visuals:** Screenshot of the 4-card live dashboard showing Card 1 Kinematics, Card 2 Acoustics, Card 3 Resultant Acceleration, and Card 4 Active Power ($W$) & Parasitic Drag.
+* **Visuals:** The "Trio of Empirical Proof": (1) Photo of the physical IP65 prototype hardware pod, (2) 3D cutaway engineering installation diagram, and (3) Live 4-card interactive dashboard screenshot.
+* **Presenter Script (45s):** "Judges, most hackathon submissions remain hypothetical slides. We physically built our prototype and stress-tested it on an active 1,400 RPM Samsung washer. Why? Because a washing machine drum with shifting wet laundry is one of the most violent, acoustically noisy electromechanical systems in existence. We proved that our sub-RM 50 edge sensor pod captures, packages, and streams vibration, acoustics, and power in real time with zero false alarms. Having proven this in the toughest testbed, mass-producing these pods for stationary AC compressors at Masjid Elmina or Elmina Lakeside Mall is mechanically simpler, low-risk, and immediately viable."
 * **Presenter Action:** Direct judges to test `https://washer-pdm.pages.dev` live on their mobile devices during the pitch.
 
 ### Slide 6: Scaling to Macro Township Infrastructure
@@ -416,14 +511,14 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 ### Question 3: Technical Implementation (185 words)
 *Prompt: What technologies, APIs, or data models power your prototype? Outline any major technical hurdles you overcame.*
 
-> The physical rig utilizes an ESP32 dual-core microcontroller running custom C++ FreeRTOS firmware: **Core 1** executes uninterrupted 50 Hz MPU-6050 I2C burst reading and 16 kHz INMP441 digital I2S DMA buffer capture, while **Core 0** manages local KLAP encrypted polling of a TP-Link Tapo P110 smart plug and HTTPS streaming to Google Firebase Realtime Database. Ground-truth machine state is integrated via Samsung SmartThings REST API using permanent OAuth2 auto-refresh tokens.
+> The physical prototype utilizes an ESP32 dual-core microcontroller running custom C++ FreeRTOS firmware: **Core 1** executes uninterrupted 50 Hz MPU-6050 I2C burst reading and 16 kHz INMP441 digital I2S DMA buffer capture, wrapping data into a standardized JSON telemetry envelope guarded by `portMUX_TYPE` spinlocks. **Core 0** executes dual-tier streaming: a 1 Hz hot path pushing to Google Firebase `/live.json` for live dashboard rendering, and a 5.0s batch archival path for ML model training, while concurrently polling Tapo P110 active power via encrypted local KLAP protocol. Ground-truth machine state is integrated via Samsung SmartThings REST API.
 >
 > We overcame three critical technical hurdles:
-> 1. *Thread Starvation & Jitter:* Solved by strict dual-core processor affinity and spinlock mutexes.
-> 2. *Spin Cycle False Alarms:* Solved by developing a 31-feature ML prognostic contract that conditions vibration thresholds on ground-truth operational phase.
+> 1. *Thread Starvation & Jitter:* Solved by dual-core processor affinity and spinlock memory handoffs.
+> 2. *Spin Cycle False Alarms:* Solved by conditioning vibration thresholds on ground-truth operational phase.
 > 3. *Smart Plug Safety:* Created an automated background watchdog that detects accidental relay deactivation within 1,000ms and forces power back ON.
 >
-> The system is backed by over **5,530 verified real operational data points** and a live, responsive web dashboard deployed at `https://washer-pdm.pages.dev`.
+> The system is validated by **over 5,530 real operational data points** and an active dashboard at `https://washer-pdm.pages.dev`.
 
 ---
 

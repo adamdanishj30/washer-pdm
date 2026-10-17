@@ -35,102 +35,28 @@ SYNC_HISTORY_FILE = DATA_DIR / ".sync_history.json"
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
-FIREBASE_AUTH = os.getenv("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
+FIREBASE_AUTH = os.getenv("FIREBASE_AUTH") or os.getenv("FIREBASE_SECRET")
 SMARTTHINGS_PAT = os.getenv("SMARTTHINGS_PAT")
 SMARTTHINGS_DEVICE_ID = os.getenv("SMARTTHINGS_DEVICE_ID")
-SMARTTHINGS_CLIENT_ID = "d18cf96e-c626-4433-bf51-ddbb10c5d1ed"
-SMARTTHINGS_REFRESH_URL = "https://auth-global.api.smartthings.com/oauth/token"
 
-def get_valid_smartthings_token() -> str:
-    """
-    Retrieves or automatically refreshes the SmartThings OAuth2 access token.
-    Prioritizes persistent CLI credentials with automated token exchange.
-    """
-    cred_path = Path(os.path.expandvars(r"%LOCALAPPDATA%\@smartthings\cli\Data\credentials.json"))
-    
-    # 1. Try reading from CLI credentials file
-    if cred_path.is_file():
-        try:
-            with open(cred_path, "r", encoding="utf-8") as f:
-                creds = json.load(f)
-            prof = creds.get("default:api.smartthings.com", {})
-            acc = prof.get("accessToken")
-            ref = prof.get("refreshToken")
-            exp_str = prof.get("expires")
-            
-            # Check expiry
-            needs_refresh = False
-            if exp_str:
-                try:
-                    exp_dt = datetime.fromisoformat(exp_str.replace("Z", "+00:00"))
-                    now_dt = datetime.now(exp_dt.tzinfo)
-                    if (exp_dt - now_dt).total_seconds() < 300:
-                        needs_refresh = True
-                except Exception:
-                    needs_refresh = True
-            
-            if not needs_refresh and acc:
-                return acc
-            
-            # Refresh using refresh token
-            if ref:
-                body = urllib.parse.urlencode({
-                    "grant_type": "refresh_token",
-                    "client_id": SMARTTHINGS_CLIENT_ID,
-                    "refresh_token": ref
-                }).encode("utf-8")
-                req = urllib.request.Request(
-                    SMARTTHINGS_REFRESH_URL,
-                    data=body,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"}
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    new_acc = data.get("access_token")
-                    new_ref = data.get("refresh_token")
-                    expires_in = data.get("expires_in", 86400)
-                    
-                    if new_acc and new_ref:
-                        prof["accessToken"] = new_acc
-                        prof["refreshToken"] = new_ref
-                        import datetime as dt_mod
-                        prof["expires"] = (dt_mod.datetime.now(dt_mod.timezone.utc) + dt_mod.timedelta(seconds=expires_in)).isoformat().replace("+00:00", "Z")
-                        creds["default:api.smartthings.com"] = prof
-                        with open(cred_path, "w", encoding="utf-8") as out_f:
-                            json.dump(creds, out_f, indent=4)
-                        return new_acc
-        except Exception as e:
-            print(f"[AUTH REFRESH NOTICE] CLI token refresh attempt: {e}")
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-    # 2. Check environment variable refresh token (e.g. for GitHub Actions)
-    env_ref = os.getenv("SMARTTHINGS_REFRESH_TOKEN")
-    if env_ref:
-        try:
-            body = urllib.parse.urlencode({
-                "grant_type": "refresh_token",
-                "client_id": SMARTTHINGS_CLIENT_ID,
-                "refresh_token": env_ref
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                SMARTTHINGS_REFRESH_URL,
-                data=body,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                new_acc = data.get("access_token")
-                if new_acc:
-                    return new_acc
-        except Exception as e:
-            print(f"[ENV REFRESH NOTICE] Token refresh from env: {e}")
-
-    # 3. Fallback to access token or PAT
-    return os.getenv("SMARTTHINGS_ACCESS_TOKEN") or SMARTTHINGS_PAT
+from firmware.smartthings_client import (
+    get_valid_smartthings_token,
+    query_smartthings,
+    get_smartthings_status,
+    push_phase_to_firebase,
+    fetch_session_phase_timeline,
+    estimate_point_phase_fallback,
+    compute_weight_and_class
+)
 
 def query_firebase(path: str):
     url = f"{FIREBASE_HOST}/{path.lstrip('/')}"
     delimiter = "&" if "?" in url else "?"
-    url = f"{url}{delimiter}auth={FIREBASE_AUTH}"
+    if FIREBASE_AUTH:
+        url = f"{url}{delimiter}auth={FIREBASE_AUTH}"
     req = urllib.request.Request(url, headers={"User-Agent": "PdM-CloudSync/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
@@ -138,129 +64,26 @@ def query_firebase(path: str):
     except Exception as e:
         return None
 
-def put_firebase(path: str, payload: dict) -> bool:
-    url = f"{FIREBASE_HOST}/{path.lstrip('/')}"
-    delimiter = "&" if "?" in url else "?"
-    url = f"{url}{delimiter}auth={FIREBASE_AUTH}"
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return resp.status in (200, 204)
-    except Exception as e:
-        print(f"[FIREBASE ERR] Could not write to {path}: {e}")
-        return False
+def format_session_filename(session_id: str, first_timestamp_ms=None) -> str:
+    """Generate clean, standardized filename: wash_cycle_YYYY-MM-DD_HHMM.csv"""
+    if session_id.startswith("wash_202"):
+        clean_id = session_id.replace("wash_", "")
+        for fmt in ("%Y-%m-%d_%H%M%S", "%Y-%m-%d_%H%M", "%Y%m%d_%H%M%S", "%Y%m%d_%H%M"):
+            try:
+                sample_len = len(datetime.now().strftime(fmt))
+                dt = datetime.strptime(clean_id[:sample_len], fmt)
+                return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
+            except Exception:
+                pass
+        return f"wash_cycle_{clean_id}.csv"
 
-def query_smartthings():
-    if not SMARTTHINGS_DEVICE_ID:
-        return None
-    token = get_valid_smartthings_token()
-    if not token:
-        return None
-    url = f"https://api.smartthings.com/v1/devices/{SMARTTHINGS_DEVICE_ID}/status"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.smartthings+json;v=1"
-    }
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            main = data.get("components", {}).get("main", {})
-            
-            # Standard operating state
-            op = main.get("washerOperatingState", {})
-            job_state = op.get("washerJobState", {}).get("value", "none")
-            mach_state = op.get("machineState", {}).get("value", "stop")
-            comp_time = op.get("completionTime", {}).get("value")
+    if first_timestamp_ms and first_timestamp_ms > 1700000000000:
+        dt = datetime.fromtimestamp(first_timestamp_ms / 1000.0)
+        return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
 
-            # Samsung CE custom capabilities
-            s_op = main.get("samsungce.washerOperatingState", {})
-            remaining_mins = s_op.get("remainingTime", {}).get("value")
-            progress_pct = s_op.get("progress", {}).get("value")
-            
-            cycle = main.get("samsungce.washerCycle", {}).get("washerCycle", {}).get("value", "unknown")
-            spin_speed = (main.get("custom.washerSpinLevel", {}).get("washerSpinLevel", {}).get("value") or
-                          main.get("samsungce.washerSpinLevel", {}).get("spinLevel", {}).get("value", "unknown"))
-            water_level = main.get("samsungce.washerWaterLevel", {}).get("waterLevel", {}).get("value", "Auto")
-            water_temp = main.get("custom.washerWaterTemperature", {}).get("washerWaterTemperature", {}).get("value", "cold")
-            rinse_cycles = main.get("custom.washerRinseCycles", {}).get("washerRinseCycles", {}).get("value", "0")
-            detergent = main.get("samsungce.autoDispenseDetergent", {}).get("remainingAmount", {}).get("value", "unknown")
-            softener = main.get("samsungce.autoDispenseSoftener", {}).get("remainingAmount", {}).get("value", "unknown")
-            kids_lock = main.get("samsungce.kidsLock", {}).get("lockState", {}).get("value", "unlocked")
-            cum_water = main.get("samsungce.waterConsumptionReport", {}).get("waterConsumption", {}).get("value", {}).get("cumulativeAmount", 0)
-
-            return {
-                "job_state": job_state,
-                "machine_state": mach_state,
-                "completion_time": comp_time,
-                "remaining_mins": remaining_mins,
-                "progress_pct": progress_pct,
-                "cycle": cycle,
-                "spin_speed": spin_speed,
-                "water_level": water_level,
-                "water_temp": water_temp,
-                "rinse_cycles": rinse_cycles,
-                "detergent_remaining": detergent,
-                "softener_remaining": softener,
-                "kids_lock": kids_lock,
-                "cumulative_water_l": round(cum_water / 1000.0, 1) if cum_water else 0.0,
-                "updated_at": datetime.now().isoformat()
-            }
-    except Exception as e:
-        print(f"[SMARTTHINGS ERR] Could not fetch washer status: {e}")
-        return None
-
-_last_st_call = 0.0
-_cached_st_data = None
-
-def get_smartthings_status(min_interval_s: float = 60.0):
-    """Fetches SmartThings status with a 60-second minimum interval throttle to protect API quotas."""
-    global _last_st_call, _cached_st_data
-    now = time.time()
-    if _cached_st_data is not None and (now - _last_st_call) < min_interval_s:
-        return _cached_st_data
-    
-    data = query_smartthings()
-    if data:
-        _cached_st_data = data
-        _last_st_call = now
-    return _cached_st_data or data
-
-def compute_weight_and_class(batches: list, st_info: dict = None) -> tuple:
-    """
-    Computes load class (LIGHT, MEDIUM, HEAVY) and estimated weight (kg)
-    using dry-tumble motor power inertia during early cycle phase.
-    """
-    # Look for early dry-tumble readings (first 10-20 batches, t < 120s)
-    sensing_powers = []
-    for b in batches[:25]:
-        pwr = b.get("pwr") or b.get("power")
-        if pwr is not None and 60.0 <= pwr <= 350.0:
-            sensing_powers.append(pwr)
-
-    if sensing_powers:
-        avg_sensing_w = sum(sensing_powers) / len(sensing_powers)
-        # Weight formula: m = (P - 70) / 15.0 kg
-        est_kg = max(0.5, min(10.0, (avg_sensing_w - 70.0) / 15.0))
-    else:
-        # Fallback estimation from SmartThings water level if power absent
-        wl = str(st_info.get("water_level") if st_info else "").lower()
-        if wl in ("low", "1"):
-            avg_sensing_w, est_kg = 100.0, 2.0
-        elif wl in ("high", "3"):
-            avg_sensing_w, est_kg = 240.0, 8.0
-        else:
-            avg_sensing_w, est_kg = 160.0, 5.0
-
-    if est_kg < 3.0 or avg_sensing_w < 120.0:
-        load_class = "LIGHT"
-    elif est_kg <= 6.0 or avg_sensing_w <= 220.0:
-        load_class = "MEDIUM"
-    else:
-        load_class = "HEAVY"
-
-    return load_class, round(est_kg, 1), round(avg_sensing_w, 1)
+    now = datetime.now()
+    clean_id = session_id.replace("wash_", "")
+    return f"wash_cycle_{now.strftime('%Y-%m-%d')}_{clean_id}.csv"
 
 def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = None):
     """Compiles a validated unified CSV dataset into data/ and triggers dashboard rebuild."""
@@ -272,42 +95,66 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
     real_dir.mkdir(parents=True, exist_ok=True)
     test_dir.mkdir(parents=True, exist_ok=True)
 
-    load_class, est_kg, avg_pwr = compute_weight_and_class(raw_batches, st_info)
+    load_class, est_kg = compute_weight_and_class(raw_batches, st_info)
+
+    first_ts = None
+    for b in raw_batches:
+        ts_val = b.get("ts")
+        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+            first_ts = ts_val
+            break
 
     # Clean filename & route
-    clean_id = session_id.replace("wash_", "")
     is_test = session_id.startswith("wash_offline_") or len(raw_batches) < 40
     target_dir = test_dir if is_test else real_dir
-    target_csv = target_dir / f"wash_cycle_{clean_id}.csv"
+    filename = format_session_filename(session_id, first_ts)
+    target_csv = target_dir / filename
 
     print(f"\n>>> Compiling session '{session_id}' -> {target_csv.relative_to(BASE_DIR)}")
-    print(f"    Load Classification: {load_class} (~{est_kg} kg | Sensing Pwr: {avg_pwr} W)")
+    print(f"    Load Classification: {load_class} (~{est_kg} kg)")
+
+    # Acoustic scale rectification
+    rms_vals = [float(b.get("rms", 0.0)) for b in raw_batches if b.get("rms") is not None]
+    median_rms = sorted(rms_vals)[len(rms_vals)//2] if rms_vals else 0.0
+    scale_factor = (256000.0 / 16384.0) if median_rms > 1200.0 else 1.0
+
+    # Retrieve recorded phase timeline from Firebase
+    phase_timeline = fetch_session_phase_timeline(session_id)
+
+    first_ts = None
+    for b in raw_batches:
+        ts_val = b.get("ts")
+        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
+            first_ts = ts_val
+            break
 
     with open(target_csv, "w", encoding="utf-8") as f:
-        # Standard schema
+        # Standard 8-column schema
         f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class\n")
         for b in raw_batches:
             t = b.get("t", 0)
-            ax = b.get("ax", 0.0)
-            ay = b.get("ay", 0.0)
-            az = b.get("az", 0.0)
-            rms = b.get("rms", 0.0)
-            pwr = b.get("pwr") if b.get("pwr") is not None else b.get("power", 0.0)
-            
-            # Simple phase estimator if ground truth not logged per point
+            ax = float(b.get("ax", 0.0))
+            ay = float(b.get("ay", 0.0))
+            az = float(b.get("az", 0.0))
+            raw_rms = float(b.get("rms", 0.0))
+            clean_rms = round(raw_rms / scale_factor, 1)
+            pwr = float(b.get("pwr") if b.get("pwr") is not None else b.get("power", 0.0))
             vibe_mag = math.sqrt(ax * ax + ay * ay + az * az)
-            if pwr > 1500.0:
-                point_phase = "wash_heating"
-            elif vibe_mag > 11.0 or rms > 400.0:
-                point_phase = "spin"
-            elif pwr > 35.0 and rms < 100.0 and abs(vibe_mag - 9.81) < 0.5:
-                point_phase = "drain"
-            elif t < 120000:
-                point_phase = "weightSensing"
-            else:
-                point_phase = "wash"
+            
+            row_epoch = b.get("ts")
+            if not row_epoch and first_ts and first_ts > 1700000000000:
+                row_epoch = first_ts + t
 
-            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{rms:.1f},{pwr:.1f},{point_phase},{load_class}\n")
+            matched_phase = None
+            if phase_timeline and row_epoch:
+                valid_checks = [c for c in phase_timeline if c["ts"] <= (row_epoch + 15000)]
+                if valid_checks:
+                    matched_phase = valid_checks[-1]["phase"]
+
+            if not matched_phase or matched_phase == "none":
+                matched_phase = estimate_point_phase_fallback(pwr, vibe_mag, clean_rms, t)
+
+            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{pwr:.1f},{matched_phase},{load_class}\n")
 
     # Update sync history
     sync_hist = {}
@@ -329,24 +176,26 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
     with open(SYNC_HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(sync_hist, f, indent=2)
 
-    # Rebuild dashboards
+    # Rebuild dashboards and standardizer
     try:
         import subprocess
         subprocess.run([sys.executable, str(BASE_DIR / "build_clean_dashboard.py")], check=True)
         print("[DASHBOARD] Clean dashboards updated with new session!")
+        subprocess.run([sys.executable, str(BASE_DIR / "firmware" / "pdm_ml_standardizer.py")], check=True)
+        print("[ML] Acoustic baselines & standardized training dataset updated!")
     except Exception as e:
-        print(f"[WARN] Could not rebuild dashboard: {e}")
+        print(f"[WARN] Post-sync rebuild/ML error: {e}")
 
     return target_csv
 
 def run_sync_iteration():
     """Performs one complete cloud sync step."""
     live = query_firebase("live.json")
-    st = get_smartthings_status(min_interval_s=60.0)
+    st = get_smartthings_status(min_interval_s=30.0)
 
+    session_id = live.get("session") if live else None
     if st:
-        # Mirror live SmartThings state to Firebase /live_phase.json
-        put_firebase("live_phase.json", st)
+        push_phase_to_firebase(st, session_id=session_id)
 
     if not live:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Firebase /live.json is empty or offline.")
@@ -357,7 +206,7 @@ def run_sync_iteration():
     uptime = live.get("uptime", 0)
     live_power = live.get("power", 0.0)
 
-    st_phase = st.get("job_state", "none") if st else "none"
+    st_phase = str(st.get("job_state") or "none") if isinstance(st, dict) else "none"
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Session: {session_id} | State: {state} | Phase: {st_phase.upper()} | Power: {live_power:.1f} W")
 
     # Check sync history

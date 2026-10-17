@@ -22,8 +22,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load .env
-env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from firmware.smartthings_client import get_valid_smartthings_token
 
 SMARTTHINGS_API_URL = "https://api.smartthings.com/v1"
 
@@ -143,11 +147,11 @@ def get_washer_status(token: str, device_id: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Samsung SmartThings Washer Status & Weight Estimator")
-    parser.add_argument("--token", type=str, default=os.getenv("SMARTTHINGS_PAT"), help="SmartThings Personal Access Token")
+    parser.add_argument("--token", type=str, default=None, help="SmartThings Personal Access Token")
     parser.add_argument("--device-id", type=str, default=os.getenv("SMARTTHINGS_DEVICE_ID"), help="Washer Device UUID")
     args = parser.parse_args()
 
-    token = args.token
+    token = args.token or get_valid_smartthings_token()
     if not token:
         print("\n[ERROR] No SmartThings token found!")
         print("How to get your SmartThings Token:")
