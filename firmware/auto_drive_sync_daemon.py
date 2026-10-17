@@ -174,10 +174,9 @@ def export_session_to_csv(session_id, batches, st_info=None):
     # Route destination folder
     REAL_DIR.mkdir(parents=True, exist_ok=True)
     TEST_DIR.mkdir(parents=True, exist_ok=True)
-    is_test = session_id.startswith("wash_offline_") or len(rows) < 40
-    target_dir = TEST_DIR if is_test else REAL_DIR
-
     filename = format_session_filename(session_id, first_ts)
+    is_test = len(rows) < 150 or "test" in filename.lower() or session_id == "wash_1009" or filename == "wash_cycle_2026-10-12_0800.csv"
+    target_dir = TEST_DIR if is_test else REAL_DIR
     csv_path = target_dir / filename
 
     # Acoustic scale rectification
@@ -190,6 +189,9 @@ def export_session_to_csv(session_id, batches, st_info=None):
 
     # Fetch recorded SmartThings phase timeline from Firebase
     phase_timeline = fetch_session_phase_timeline(session_id)
+
+    total_duration_ms = (rows[-1].get("t", 0) - rows[0].get("t", 0)) if rows else 0
+    last_phase = "weightSensing"
 
     print(f"\n>>> Compiling session '{session_id}' -> {csv_path.name}")
     print(f"    Load Classification: {load_class} (~{est_kg} kg)")
@@ -223,7 +225,14 @@ def export_session_to_csv(session_id, batches, st_info=None):
 
             # Fallback if unrecorded
             if not matched_phase or matched_phase == "none":
-                matched_phase = estimate_point_phase_fallback(pwr, vibe_mag, clean_rms, t)
+                matched_phase = estimate_point_phase_fallback(
+                    pwr, vibe_mag, clean_rms, t,
+                    total_duration_ms=total_duration_ms,
+                    last_phase=last_phase
+                )
+
+            if matched_phase and matched_phase != "none":
+                last_phase = matched_phase
 
             f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{pwr:.1f},{matched_phase},{load_class}\n")
 

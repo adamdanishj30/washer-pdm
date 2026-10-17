@@ -60,5 +60,21 @@
     "points": 857,
     "first_ts": 1792112278625,
     "last_t": 4495681
+  },
+  "wash_offline_8BFFE246": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-17_0718.csv",
+    "synced_at": "2026-10-17T21:13:16.000000",
+    "points": 854,
+    "first_ts": 1792192714036,
+    "last_t": 4551489
+  },
+  "wash_offline_E239416F": {
+    "completed": true,
+    "file": "wash_cycle_2026-10-17_0835.csv",
+    "synced_at": "2026-10-17T21:13:17.000000",
+    "points": 792,
+    "first_ts": 1792197352284,
+    "last_t": 4229674
   }
 }

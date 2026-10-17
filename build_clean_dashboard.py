@@ -47,7 +47,11 @@ def discover_all_sessions():
                 pts_cnt = len(rows)
                 duration_m = round((rows[-1][0] - rows[0][0]) / 60000.0) if pts_cnt > 1 else 0
                 
-                if '2026-10-16_0857' in fname:
+                if '2026-10-17_0835' in fname:
+                    disp = f"🧺 17 Oct 2026, 08:35 AM ({duration_m}m Full Wash, {pts_cnt} pts)"
+                elif '2026-10-17_0718' in fname:
+                    disp = f"🧺 17 Oct 2026, 07:18 AM ({duration_m}m Full Wash, {pts_cnt} pts)"
+                elif '2026-10-16_0857' in fname:
                     disp = f"🧺 16 Oct 2026, 08:57 AM ({duration_m}m Multimodal Wash, {pts_cnt} pts)"
                 elif 'morning' in fname:
                     disp = f"🧺 15 Oct 2026 Morning Wash ({duration_m}m, {pts_cnt} pts)"
@@ -75,9 +79,10 @@ def discover_all_sessions():
 
     # 2. Testing & Calibration Data (from data/testing_data)
     test_options = []
+    real_filenames = set(os.listdir(real_dir)) if os.path.exists(real_dir) else set()
     if os.path.exists(test_dir):
         for fname in sorted(os.listdir(test_dir), reverse=True):
-            if fname.endswith('.csv') and not fname.startswith('.'):
+            if fname.endswith('.csv') and not fname.startswith('.') and fname not in real_filenames:
                 fpath = os.path.join(test_dir, fname)
                 rows = load_csv(fpath)
                 if rows:

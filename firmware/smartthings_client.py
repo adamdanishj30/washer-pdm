@@ -287,23 +287,44 @@ def fetch_session_phase_timeline(session_id: str) -> list:
     except Exception:
         return []
 
-def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int) -> str:
+def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int, total_duration_ms: int = None, last_phase: str = "wash") -> str:
     """
     Intelligent physics-informed fallback when SmartThings API timeline is unrecorded.
-    Uses mechanical kinematics, acoustic pressure, and active electrical draw.
+    Uses mechanical kinematics, acoustic pressure, active electrical draw, and cycle progress.
     """
+    vibe_diff = abs(vibe_mag - 9.81)
+
+    # 1. Active heating wash element (1800-2000W)
     if power_w > 1500.0:
-        return "wash" # Active heating wash element (1800-2000W)
-    elif vibe_mag > 11.0 or audio_rms > 400.0 or power_w > 350.0:
-        return "spin" # High-speed extraction (350-650W, RMS 400-1100, vibe > 11 m/s^2)
-    elif 30.0 <= power_w <= 60.0 and audio_rms < 250.0 and abs(vibe_mag - 9.81) < 0.6:
-        return "drain" # Electric drain pump active with stationary drum
-    elif t_ms < 120000 and (60.0 <= power_w <= 240.0 or vibe_mag < 10.3):
-        return "weightSensing" # Initial dry tumble inertia sensing
-    elif power_w > 45.0:
-        return "wash" # Normal tumbling agitation
-    else:
-        return "none" # Standby / idle
+        return "wash"
+
+    # 2. Spin cycle (high speed extraction: high vibration, acoustic roar > 350 RMS, or motor power > 300W)
+    if vibe_mag > 10.8 or audio_rms > 350.0 or power_w > 300.0:
+        return "spin"
+
+    # 3. Drain pump (electric pump active 25-65W with stationary drum)
+    if 25.0 <= power_w <= 65.0 and audio_rms < 150.0 and vibe_diff < 0.25:
+        return "drain"
+
+    # 4. Weight sensing (initial dry tumble inertia sensing in the first 2 minutes)
+    if t_ms < 120000:
+        return "weightSensing"
+
+    # 5. Normal tumbling / agitation (detectable by power OR acoustic audio RMS OR drum oscillation)
+    if power_w > 45.0 or audio_rms > 35.0 or vibe_diff > 0.15:
+        if total_duration_ms and total_duration_ms > 0:
+            return "wash" if t_ms < (total_duration_ms * 0.60) else "rinse"
+        elif t_ms < 2400000:  # First 40 mins
+            return "wash"
+        else:
+            return "rinse"
+
+    # 6. Momentary tumble pause between drum reversals (3-5s soak pause)
+    # If inside an active session, carry forward the ongoing phase instead of spurious 'none'
+    if last_phase and last_phase not in ("none", "finish", "stop"):
+        return last_phase
+
+    return "none"
 
 def compute_weight_and_class(rows: list, st_info: dict = None) -> tuple:
     """

@@ -2,47 +2,47 @@
   "version": "1.0.0",
   "canonical_reference_rms": 120.0,
   "global_stats": {
-    "mean": 188.54,
-    "std": 136.07,
-    "median": 162.2,
-    "p95": 466.7,
-    "count": 3987
+    "mean": 181.29,
+    "std": 140.14,
+    "median": 149.5,
+    "p95": 469.1,
+    "count": 5633
   },
   "phase_conditioned_baselines": {
     "idle": {
-      "mean": 171.58,
-      "std": 118.42,
-      "median": 153.95,
-      "p95": 360.7,
-      "count": 3376
+      "mean": 169.45,
+      "std": 122.94,
+      "median": 149.95,
+      "p95": 366.3,
+      "count": 2854
     },
     "sensing": {
-      "mean": 160.67,
-      "std": 88.08,
-      "median": 166.7,
-      "p95": 323.0,
-      "count": 41
+      "mean": 147.85,
+      "std": 72.34,
+      "median": 152.6,
+      "p95": 266.1,
+      "count": 82
     },
     "wash": {
-      "mean": 206.99,
-      "std": 105.19,
-      "median": 199.1,
-      "p95": 372.4,
-      "count": 333
+      "mean": 138.12,
+      "std": 79.07,
+      "median": 121.6,
+      "p95": 293.5,
+      "count": 1383
     },
     "rinse": {
-      "mean": 149.38,
-      "std": 57.38,
-      "median": 148.5,
-      "p95": 243.9,
-      "count": 75
+      "mean": 150.82,
+      "std": 83.12,
+      "median": 138.45,
+      "p95": 314.7,
+      "count": 926
     },
     "spin": {
-      "mean": 529.29,
-      "std": 116.87,
-      "median": 497.9,
-      "p95": 793.2,
-      "count": 162
+      "mean": 502.06,
+      "std": 145.45,
+      "median": 461.95,
+      "p95": 811.0,
+      "count": 388
     }
   }
 }

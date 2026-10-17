@@ -105,9 +105,9 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
             break
 
     # Clean filename & route
-    is_test = session_id.startswith("wash_offline_") or len(raw_batches) < 40
-    target_dir = test_dir if is_test else real_dir
     filename = format_session_filename(session_id, first_ts)
+    is_test = len(raw_batches) < 150 or "test" in filename.lower() or session_id == "wash_1009" or filename == "wash_cycle_2026-10-12_0800.csv"
+    target_dir = test_dir if is_test else real_dir
     target_csv = target_dir / filename
 
     print(f"\n>>> Compiling session '{session_id}' -> {target_csv.relative_to(BASE_DIR)}")
@@ -121,12 +121,8 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
     # Retrieve recorded phase timeline from Firebase
     phase_timeline = fetch_session_phase_timeline(session_id)
 
-    first_ts = None
-    for b in raw_batches:
-        ts_val = b.get("ts")
-        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
-            first_ts = ts_val
-            break
+    total_duration_ms = (raw_batches[-1].get("t", 0) - raw_batches[0].get("t", 0)) if raw_batches else 0
+    last_phase = "weightSensing"
 
     with open(target_csv, "w", encoding="utf-8") as f:
         # Standard 8-column schema
@@ -152,7 +148,14 @@ def sync_completed_session(session_id: str, raw_batches: list, st_info: dict = N
                     matched_phase = valid_checks[-1]["phase"]
 
             if not matched_phase or matched_phase == "none":
-                matched_phase = estimate_point_phase_fallback(pwr, vibe_mag, clean_rms, t)
+                matched_phase = estimate_point_phase_fallback(
+                    pwr, vibe_mag, clean_rms, t,
+                    total_duration_ms=total_duration_ms,
+                    last_phase=last_phase
+                )
+
+            if matched_phase and matched_phase != "none":
+                last_phase = matched_phase
 
             f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{pwr:.1f},{matched_phase},{load_class}\n")
 

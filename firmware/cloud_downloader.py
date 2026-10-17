@@ -55,6 +55,9 @@ def write_rows_to_csv(filepath, rows, session_id=None):
             first_ts = ts_val
             break
 
+    total_duration_ms = (rows[-1].get("t", 0) - rows[0].get("t", 0)) if rows else 0
+    last_phase = "weightSensing"
+
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class\n")
         for r in rows:
@@ -78,7 +81,14 @@ def write_rows_to_csv(filepath, rows, session_id=None):
                     matched_phase = valid_checks[-1]["phase"]
 
             if not matched_phase or matched_phase == "none":
-                matched_phase = estimate_point_phase_fallback(p, vibe_mag, clean_rms, t)
+                matched_phase = estimate_point_phase_fallback(
+                    p, vibe_mag, clean_rms, t,
+                    total_duration_ms=total_duration_ms,
+                    last_phase=last_phase
+                )
+
+            if matched_phase and matched_phase != "none":
+                last_phase = matched_phase
 
             f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{p:.1f},{matched_phase},{load_class}\n")
 
@@ -195,7 +205,7 @@ def download_sessions():
                         fname = f"{session_id}.csv"
 
                 # Classify session: test vs real wash (< 150 points = bench/pre-wash test, or known bench test)
-                is_test = session_id.startswith("wash_offline_") or len(seg_rows) < 150 or "test" in fname.lower() or session_id == "wash_1009" or fname == "wash_cycle_2026-10-12_0800.csv"
+                is_test = len(seg_rows) < 150 or "test" in fname.lower() or session_id == "wash_1009" or fname == "wash_cycle_2026-10-12_0800.csv"
                 target_folder = test_dir if is_test else real_dir
                 csv_file = os.path.join(target_folder, fname)
                 write_rows_to_csv(csv_file, seg_rows, session_id=session_id)
