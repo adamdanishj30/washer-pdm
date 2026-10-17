@@ -756,7 +756,7 @@ def generate_html(default_view='live'):
       <div class="session-picker-box">
         <select class="session-select-dropdown" id="sel-session" onchange="onSessionDropdownChange(this.value)">
           <optgroup label="Real-Time Telemetry">
-            <option value="live">📡 Live Rig Telemetry (50 Hz)</option>
+            <option value="live">📡 Live Rig Telemetry (5s Sync)</option>
           </optgroup>
           {PRESET_OPTIONS_HTML}
           <optgroup label="Custom Loaded Files" id="group-custom-sessions" style="display: none;"></optgroup>
@@ -1318,7 +1318,7 @@ def generate_html(default_view='live'):
         btnSecondarySwitch.innerText = `Switch to Historical: ${{activeSessionName}}`;
         titleTimeline.innerText = 'Live Rig Telemetry Stream';
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
-        lblCurrTime.innerText = 'LIVE (50 Hz)';
+        lblCurrTime.innerText = 'LIVE (5s)';
         updateRigStatusUI(isRigOnline);
         updateChartSubtitles();
         checkRigHeartbeat();
@@ -1356,11 +1356,11 @@ def generate_html(default_view='live'):
         if (online) {{
           if (statusBadge) statusBadge.className = 'status-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot';
-          if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (50 Hz)';
+          if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (5s Sync)';
 
           if (statusBadgeMob) statusBadgeMob.className = 'status-badge mobile-status-tag';
           if (statusDotMob) statusDotMob.className = 'status-dot';
-          if (lblStatusTextMob) lblStatusTextMob.innerText = 'Live 50 Hz';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = 'Live 5s';
 
           if (offlineBanner) offlineBanner.style.display = 'none';
         }} else {{
@@ -1392,13 +1392,14 @@ def generate_html(default_view='live'):
 
     async function checkRigHeartbeat() {{
       if (document.hidden) return; // Conserve Firebase free-tier quota when tab is in background
+      if (currentMode !== 'live') return; // Strict isolation: Zero network calls in historical/archive mode
       try {{
         const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
         const d = await res.json();
         const wasOnlineBefore = isRigOnline;
 
         if (d && (d.cnt !== undefined || d.uptime !== undefined || d.ts !== undefined)) {{
-          const isFreshByTs = d.ts ? (Date.now() - d.ts < 12000) : true;
+          const isFreshByTs = d.ts ? (Date.now() - d.ts < 15000) : true;
           const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
                                  (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
 
@@ -1410,7 +1411,7 @@ def generate_html(default_view='live'):
               isRigOnline = false;
             }} else if (lastPacketArrivedAt === 0) {{
               isRigOnline = false;
-            }} else if (Date.now() - lastPacketArrivedAt > 4500) {{
+            }} else if (Date.now() - lastPacketArrivedAt > 15000) {{
               isRigOnline = false;
             }}
           }}
@@ -2521,12 +2522,19 @@ def generate_html(default_view='live'):
     setViewMode('{default_view}');
     window.addEventListener('load', () => {{
       resizeCanvases();
-      setInterval(checkRigHeartbeat, 1000);
-      checkRigHeartbeat();
+      setInterval(checkRigHeartbeat, 5000);
+      if (currentMode === 'live') {{
+        checkRigHeartbeat();
+      }}
       setupCanvasScrubbing(splineCvs);
       setupCanvasScrubbing(xyzCvs);
       setupCanvasScrubbing(areaCvs);
       if (energyCvs) setupCanvasScrubbing(energyCvs);
+    }});
+    document.addEventListener('visibilitychange', () => {{
+      if (!document.hidden && currentMode === 'live') {{
+        checkRigHeartbeat();
+      }}
     }});
   </script>
 </body>
