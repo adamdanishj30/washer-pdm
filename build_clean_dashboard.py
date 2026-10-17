@@ -90,6 +90,10 @@ def discover_all_sessions():
                     pts_cnt = len(rows)
                     if '2026-10-12_0800' in fname:
                         disp = f"🧪 12 Oct Bench / Idle Run ({pts_cnt} pts)"
+                    elif '2026-10-12_1009' in fname:
+                        disp = f"🧪 12 Oct Bench Pre-Wash Test ({pts_cnt} pts)"
+                    elif '2026-10-12_1020' in fname:
+                        disp = f"🧪 12 Oct Bench Spin Test ({pts_cnt} pts)"
                     elif 'wifi_test' in fname:
                         disp = f"🧪 Wi-Fi Telemetry Stream Test ({pts_cnt} pts)"
                     elif '0852' in fname:
@@ -134,7 +138,7 @@ def generate_html(default_view='live'):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Samsung Washer PdM - Live Rig &amp; Historical Diagnostics</title>
+  <title>Apex PdM - Samsung Washer Live Rig &amp; Historical Diagnostics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -738,7 +742,7 @@ def generate_html(default_view='live'):
   <header class="top-nav">
     <div class="nav-brand-row">
       <a href="#" class="brand-title">
-        <span class="brand-pill">PDM</span>
+        <span class="brand-pill">APEX PDM</span>
         <span>Samsung Washer Monitor</span>
       </a>
       <div class="status-badge offline-badge mobile-status-tag" id="badge-live-tag-mobile">
@@ -756,7 +760,6 @@ def generate_html(default_view='live'):
           </optgroup>
           {PRESET_OPTIONS_HTML}
           <optgroup label="Custom Loaded Files" id="group-custom-sessions" style="display: none;"></optgroup>
-          <optgroup label="Cloud Firebase Sessions" id="group-cloud-sessions" style="display: none;"></optgroup>
         </select>
 
         <button class="btn-load-csv" title="Open any local CSV file" onclick="document.getElementById('input-file-csv').click()">
@@ -1276,12 +1279,6 @@ def generate_html(default_view='live'):
         return;
       }}
 
-      if (key.startsWith('cloud_') && (!LOADED_SESSIONS[key] || !LOADED_SESSIONS[key].data)) {{
-        const sid = key.replace('cloud_', '');
-        await loadCloudSession(sid);
-        return;
-      }}
-
       const session = LOADED_SESSIONS[key];
       if (!session || !session.data || session.data.length < 2) return;
 
@@ -1394,6 +1391,7 @@ def generate_html(default_view='live'):
     }}
 
     async function checkRigHeartbeat() {{
+      if (document.hidden) return; // Conserve Firebase free-tier quota when tab is in background
       try {{
         const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json');
         const d = await res.json();
@@ -1437,11 +1435,6 @@ def generate_html(default_view='live'):
           }}
         }} else {{
           isRigOnline = false;
-        }}
-
-        // When rig finishes transmitting and transitions to offline, immediately discover newly archived cloud session
-        if (wasOnlineBefore && !isRigOnline) {{
-          discoverFirebaseSessions();
         }}
       }} catch (e) {{
         isRigOnline = false;
@@ -2155,27 +2148,18 @@ def generate_html(default_view='live'):
         if (hasRealPower) {{
           subEnergy.innerHTML = 'TP-Link Tapo P110 (1 Hz KLAP Telemetry) &bull; Active motor load, cycle energy, and parasitic friction';
         }} else {{
-          subEnergy.innerHTML = 'Physical Kinematic &amp; Acoustic Model (Estimated) &bull; Inferred motor load, cycle energy, and friction';
+          subEnergy.innerHTML = 'Active power not tracked for this cycle (0.0 W baseline) &bull; Tapo P110 monitoring inactive';
         }}
       }}
 
-      // Extract power series (or infer from physical telemetry)
+      // Extract power series (returns 0.0 W for untracked datasets such as 12 Oct runs)
       function getPowerAt(idx) {{
         const r = dataSeries[idx];
         if (!r) return 0.0;
-        if (hasRealPower) {{
-          if (r.length >= 6 && r[5] !== null && r[5] !== undefined && !isNaN(r[5])) {{
-            return Math.max(0.0, r[5]);
-          }}
-          return 0.0;
+        if (hasRealPower && r.length >= 6 && r[5] !== null && r[5] !== undefined && !isNaN(r[5])) {{
+          return Math.max(0.0, r[5]);
         }}
-        // Fallback physical inference (kinematic vibration + acoustic RMS)
-        const vibe = Math.sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3]);
-        const rms = r[4];
-        if (vibe > 10.5) return Math.min(680.0, 420.0 + (vibe - 10.5) * 65.0 + (rms * 0.08));
-        if (rms > 160.0) return 130.0 + Math.sin(idx * 0.3) * 60.0 + (rms * 0.15);
-        if (idx < 25) return 85.0 + Math.sin(idx * 0.5) * 45.0; // dry tumble sensing
-        return 4.5; // standby idle
+        return 0.0;
       }}
 
       let maxPwrObserved = 0.0;
@@ -2185,7 +2169,6 @@ def generate_html(default_view='live'):
         if (p > maxPwrObserved) maxPwrObserved = p;
         sumPwr += p;
       }}
-      if (maxPwrObserved < 50.0) maxPwrObserved = 50.0;
       const avgPwr = total > 0 ? (sumPwr / total) : 0.0;
 
       let pwrMax = 700;
@@ -2289,7 +2272,9 @@ def generate_html(default_view='live'):
       drawPillBadge(energyCtx, baseX, ySpin - (10 * dpr), isMobile ? 'SPIN THRESHOLD: 400W' : 'CENTRIFUGAL SPIN THRESHOLD: 400W', '#facc15', baseAlign, dpr);
 
       // Floating cursor pill
-      const badgeText = `${{curPwr.toFixed(1)}} Watts (${{Math.round((curPwr / pwrMax) * 100)}}% Load)`;
+      const badgeText = hasRealPower
+        ? `${{curPwr.toFixed(1)}} Watts (${{Math.round((curPwr / pwrMax) * 100)}}% Load)`
+        : '0.0 Watts (Not Tracked)';
       energyCtx.font = `700 ${{(isMobile ? 7.5 : 8.5) * dpr}}px 'JetBrains Mono', monospace`;
       const tw = energyCtx.measureText(badgeText).width;
       const bw = tw + (10 * dpr);
@@ -2318,9 +2303,18 @@ def generate_html(default_view='live'):
       energyCtx.fillText(badgeText, bx + (bw / 2), by + ((isMobile ? 11.5 : 13.5) * dpr));
       energyCtx.textAlign = 'left';
 
+      // Untracked dataset watermark on canvas
+      if (!hasRealPower) {{
+        energyCtx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        energyCtx.font = `600 ${{(isMobile ? 8.5 : 9.5) * dpr}}px 'JetBrains Mono', monospace`;
+        energyCtx.textAlign = 'center';
+        energyCtx.fillText('Active Power Not Tracked For This Session (0.0 W Baseline)', marginLeft + (plotW / 2), marginTop + (plotH / 2));
+        energyCtx.textAlign = 'left';
+      }}
+
       // Update stat cards
       const durHours = (total > 1) ? ((dataSeries[total - 1][0] - dataSeries[0][0]) / 3600000.0) : 0.05;
-      const cycleKwh = (avgPwr * durHours) / 1000.0;
+      const cycleKwh = hasRealPower ? ((avgPwr * durHours) / 1000.0) : 0.0;
       const cycleCost = cycleKwh * 0.28;
 
       const elWatts = document.getElementById('energy-head-watts');
@@ -2334,12 +2328,15 @@ def generate_html(default_view='live'):
       let lClass = 'MEDIUM';
       if (maxPwrObserved > 550) {{ estKg = 7.8; lClass = 'HEAVY'; }}
       else if (maxPwrObserved < 420) {{ estKg = 2.8; lClass = 'LIGHT'; }}
-      if (elLoad) elLoad.innerText = `${{estKg.toFixed(1)}} kg`;
-      if (elClass) elClass.innerText = lClass;
+      if (elLoad) elLoad.innerText = hasRealPower ? `${{estKg.toFixed(1)}} kg` : '-- kg';
+      if (elClass) elClass.innerText = hasRealPower ? lClass : 'Untracked';
 
       const elDrag = document.getElementById('energy-head-drag');
       if (elDrag) {{
-        if (curPwr > 580 && Math.sqrt(dataSeries[curPointIdx][1]**2 + dataSeries[curPointIdx][2]**2 + dataSeries[curPointIdx][3]**2) < 10.0) {{
+        if (!hasRealPower) {{
+          elDrag.innerText = 'Untracked';
+          elDrag.style.color = 'var(--text-muted)';
+        }} else if (curPwr > 580 && Math.sqrt(dataSeries[curPointIdx][1]**2 + dataSeries[curPointIdx][2]**2 + dataSeries[curPointIdx][3]**2) < 10.0) {{
           elDrag.innerText = '+18% (Bearing Drag)';
           elDrag.style.color = '#fb923c';
         }} else {{
@@ -2349,11 +2346,22 @@ def generate_html(default_view='live'):
       }}
 
       const elPeak = document.getElementById('energy-stat-peak');
-      if (elPeak) elPeak.innerText = `${{maxPwrObserved.toFixed(0)}} W`;
+      if (elPeak) elPeak.innerText = hasRealPower ? `${{maxPwrObserved.toFixed(0)}} W` : '0 W';
       const elAvg = document.getElementById('energy-stat-avg');
-      if (elAvg) elAvg.innerText = `${{avgPwr.toFixed(0)}} W`;
+      if (elAvg) elAvg.innerText = hasRealPower ? `${{avgPwr.toFixed(0)}} W` : '0 W';
       const elCost = document.getElementById('energy-stat-cost');
-      if (elCost) elCost.innerText = `RM ${{cycleCost.toFixed(2)}}`;
+      if (elCost) elCost.innerText = hasRealPower ? `RM ${{cycleCost.toFixed(2)}}` : 'RM 0.00';
+
+      const elPf = document.getElementById('energy-stat-pf');
+      if (elPf) {{
+        if (!hasRealPower) {{
+          elPf.innerText = 'UNTRACKED';
+          elPf.style.color = 'var(--text-muted)';
+        }} else {{
+          elPf.innerText = 'NOMINAL';
+          elPf.style.color = '#4ade80';
+        }}
+      }}
     }}
 
     function onScrub(val) {{
@@ -2468,70 +2476,6 @@ def generate_html(default_view='live'):
       reader.readAsText(file);
     }}
 
-    // Auto-discover recorded sessions from Firebase
-    async function discoverFirebaseSessions() {{
-      try {{
-        const res = await fetch('https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/sessions.json?shallow=true');
-        const list = await res.json();
-        if (list && typeof list === 'object') {{
-          const groupCloud = document.getElementById('group-cloud-sessions');
-          if (!groupCloud) return;
-          const sessionIds = Object.keys(list);
-          if (sessionIds.length > 0) {{
-            groupCloud.innerHTML = '';
-            groupCloud.style.display = '';
-            sessionIds.forEach(sid => {{
-              let label = `☁️ ${{sid}}`;
-              if (sid.startsWith('wash_')) {{
-                label = `☁️ Wash Session ${{sid.replace('wash_', '')}}`;
-              }}
-              const opt = document.createElement('option');
-              opt.value = 'cloud_' + sid;
-              opt.innerText = label;
-              groupCloud.appendChild(opt);
-            }});
-          }}
-        }}
-      }} catch (err) {{
-        // Network offline, keep quiet
-      }}
-    }}
-
-    async function loadCloudSession(sid) {{
-      showToast(`Fetching cloud session ${{sid}}...`);
-      try {{
-        const res = await fetch(`https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/sessions/${{sid}}.json`);
-        const batches = await res.json();
-        if (!batches) throw new Error('Empty session data in cloud');
-
-        const rows = [];
-        const items = Array.isArray(batches) ? batches : Object.values(batches);
-        items.forEach(b => {{
-          if (b && typeof b === 'object' && b.t !== undefined) {{
-            const pwr = (b.power !== undefined && b.power !== null) ? b.power : (b.pwr !== undefined ? b.pwr : null);
-            const r = [b.t, b.ax || 0, b.ay || 0, b.az || -9.8, b.rms || 0];
-            if (pwr !== null && !isNaN(pwr)) r.push(pwr);
-            rows.push(r);
-          }}
-        }});
-        rows.sort((a, b) => a[0] - b[0]);
-        if (rows.length < 2) throw new Error('Insufficient records');
-
-        const sessionKey = 'cloud_' + sid;
-        const durMin = ((rows[rows.length - 1][0] - rows[0][0]) / 60000).toFixed(1);
-        LOADED_SESSIONS[sessionKey] = {{
-          name: sid,
-          displayName: `☁️ ${{sid}} (${{rows.length}} pts, ${{durMin}}m)`,
-          data: rows
-        }};
-
-        switchToSession(sessionKey);
-        showToast(`Loaded cloud session ${{sid}}!`);
-      }} catch (e) {{
-        alert(`Failed to load cloud session: ${{e.message}}`);
-      }}
-    }}
-
     // Export Active CSV
     function exportActiveCsv() {{
       let csv = 'timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w\\n';
@@ -2579,7 +2523,6 @@ def generate_html(default_view='live'):
       resizeCanvases();
       setInterval(checkRigHeartbeat, 1000);
       checkRigHeartbeat();
-      discoverFirebaseSessions();
       setupCanvasScrubbing(splineCvs);
       setupCanvasScrubbing(xyzCvs);
       setupCanvasScrubbing(areaCvs);

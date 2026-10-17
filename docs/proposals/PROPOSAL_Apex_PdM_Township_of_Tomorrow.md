@@ -1,4 +1,4 @@
-# AcuVibe PdM: Multimodal Predictive Maintenance for Sustainable Townships
+# Apex PdM: Multimodal Predictive Maintenance for Sustainable Townships
 
 > **Official Competition Proposal & Pitch Dossier**  
 > **Sime Darby Property University Hackathon ("Township of Tomorrow")**  
@@ -50,7 +50,7 @@ From rooftop commercial HVAC chillers in community mosques and retail centers to
 ```
 
 ### The Winning "Option 2" Strategy
-Rather than presenting a speculative concept, **AcuVibe PdM** unites a **fully working, field-verified physical prototype** with a **turnkey township-scale infrastructure vision**:
+Rather than presenting a speculative concept, **Apex PdM** unites a **fully working, field-verified physical prototype** with a **turnkey township-scale infrastructure vision**:
 * **The Micro-Proof (Ground-Truth Physical Testbed):** An autonomous, multimodal edge rig deployed on a high-vibration Samsung WW10TP44DSX front-load washing machine. It captures 3-axis vibration kinematics ($\pm 16\text{g}$ @ 50 Hz), 24-bit acoustic pressure (16 kHz I2S DMA), active electrical wattage ($W, V, mA$ @ 1 Hz), and Samsung SmartThings ground-truth operational states, validated by **over 5,530 standardized operational data points** across real wash cycles.
 * **The Macro-Vision (Township Infrastructure Scalability):** Rotating electromechanical failure physics is universal:
   $$\text{Micro-Vibration Harmonics} \longrightarrow \text{Acoustic Friction} \longrightarrow \text{Parasitic Electrical Drag} \longrightarrow \text{Catastrophic Breakdown}$$
@@ -60,7 +60,7 @@ Rather than presenting a speculative concept, **AcuVibe PdM** unites a **fully w
 
 ## 2. Alignment with Sime Darby Property "Township of Tomorrow"
 
-AcuVibe PdM directly answers the competition challenge statement by multiplying value across four pillars:
+Apex PdM directly answers the competition challenge statement by multiplying value across four pillars:
 
 | Hackathon Pillar | Criteria Reference | Real-World Township Impact | Quantifiable KPI |
 | :--- | :--- | :--- | :--- |
@@ -89,13 +89,13 @@ flowchart LR
 ```
 
 ### 3.2 The Economics of the P-F Interval
-Traditional maintenance operates at Point F (functional failure). AcuVibe PdM operates at Point P (potential failure detection):
+Traditional maintenance operates at Point F (functional failure). Apex PdM operates at Point P (potential failure detection):
 
 ```text
 Machine Health
   100% |  [Nominal Baseline Operation]
        |         \
-       |          \  <-- POINT P: Harmonic & Acoustic shifts detected (AcuVibe Alert)
+       |          \  <-- POINT P: Harmonic & Acoustic shifts detected (Apex Alert)
        |           \     • Action: Preventative swap of RM 25 bearing or RM 45 damper.
        |            \     • Downtime: 45 minutes scheduled servicing.
        |             \  <-- Friction Leeching: Motor draws +25% parasitic electrical power
@@ -145,7 +145,7 @@ flowchart TD
 
 ### 4.1 The Physical Micro-Testbed Rig (Empirical Proof & Mass-Production Bridge)
 
-To prove that multimodal predictive maintenance is genuinely feasible rather than purely theoretical, the AcuVibe architecture was physically built, packaged into an IP65 industrial enclosure, and deployed on an active **Samsung WW10TP44DSX front-load washing machine**:
+To prove that multimodal predictive maintenance is genuinely feasible rather than purely theoretical, the Apex architecture was physically built, packaged into an IP65 industrial enclosure, and deployed on an active **Samsung WW10TP44DSX front-load washing machine**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -167,9 +167,9 @@ A domestic washing machine drum spinning at 1,400 RPM with wet laundry is one of
 
 #### Prototype Hardware Rig & Enclosure Architecture
 The physical rig is designed as a standalone, non-intrusive clip-on pod that requires zero internal rewiring:
-* **Visual 1: Engineering Cutaway Diagram** — [washer_electronics_layout_diagram.jpg](file:///g:/My%20Drive/PdM%20SideProject/washer_electronics_layout_diagram.jpg) illustrates the internal mounting of the ESP32 microcontroller, screw terminal expansion shield, MPU-6050 accelerometer, INMP441 MEMS microphone, and 3M VHB viscoelastic coupling on the machine chassis.
-* **Visual 2: Assembled Physical Hardware Pod** — [image/items.jpeg](file:///g:/My%20Drive/PdM%20SideProject/image/items.jpeg) demonstrates the complete COTS component layout inside the weatherproof ABS IP65 junction box.
-* **Visual 3: Sensor Coupling & Cable Gland Detail** — [image7/WhatsApp Image 2026-10-11 at 04.17.20.jpeg](file:///g:/My%20Drive/PdM%20SideProject/image7/WhatsApp%20Image%202026-10-11%20at%2004.17.20.jpeg) shows the rigid pin interconnects and the PG7 waterproof cable gland entry.
+* **Visual 1: Engineering Cutaway Diagram** — [washer_electronics_layout_diagram.jpg](file:///g:/My%20Drive/PdM%20SideProject/docs/hardware_guides/diagrams/washer_electronics_layout_diagram.jpg) illustrates the internal mounting of the ESP32 microcontroller, screw terminal expansion shield, MPU-6050 accelerometer, INMP441 MEMS microphone, and 3M VHB viscoelastic coupling on the machine chassis.
+* **Visual 2: Assembled Physical Hardware Pod** — [items.jpeg](file:///g:/My%20Drive/PdM%20SideProject/hardware/photos/bench_assembly/items.jpeg) demonstrates the complete COTS component layout inside the weatherproof ABS IP65 junction box.
+* **Visual 3: Sensor Coupling & Cable Gland Detail** — [WhatsApp Image 2026-10-11 at 04.17.20.jpeg](file:///g:/My%20Drive/PdM%20SideProject/hardware/photos/enclosure_and_mounting/WhatsApp%20Image%202026-10-11%20at%2004.17.20.jpeg) shows the rigid pin interconnects and the PG7 waterproof cable gland entry.
 
 ---
 
@@ -187,7 +187,7 @@ To bridge high-speed edge physical sensors with cloud analytics and machine lear
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        THE ACUVIBE EDGE TELEMETRY LIFECYCLE                            │
+│                        THE APEX EDGE TELEMETRY LIFECYCLE                            │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                        │
 │  [ STEP 1: SENSOR ACQUISITION ]   (Core 1 - DSP Engine)                                │
@@ -308,7 +308,7 @@ Defined in [`data/pdm_feature_dictionary.json`](file:///g:/My%20Drive/PdM%20Side
 ### 5.3 Solving the "High-Speed Spin" False Alarm Paradox
 In traditional anomaly detection systems, high-speed spin extraction (1,400 RPM) causes sudden spikes in vibration ($|a| > 14\text{ m/s}^2$) and acoustic sound ($> 800\text{ RMS}$), triggering false alarm emergency dispatches.
 
-By fusing **ground-truth operational phase** (`washerJobState`) via our rate-limited SmartThings integration, AcuVibe PdM conditions anomaly thresholds dynamically:
+By fusing **ground-truth operational phase** (`washerJobState`) via our rate-limited SmartThings integration, Apex PdM conditions anomaly thresholds dynamically:
 
 $$\text{Anomaly Score} = \mathcal{P}(\text{Kinematics}, \text{Acoustics}, \text{Watts} \mid \text{Operational Phase})$$
 
@@ -323,7 +323,7 @@ The frontend architecture is lightweight, framework-free, and deployed globally 
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        ACUVIBE PDM LIVE DASHBOARD                      │
+│                        APEX PDM LIVE DASHBOARD                      │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │ CARD 1: Tri-Axial Kinematic Wave  │ CARD 2: Standardized Acoustics     │
 │ • Ax, Ay, Az acceleration (m/s²)  │ • Canonical RMS (0 to 1,200 scale) │
@@ -404,7 +404,7 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 
 # Part 2: Official Kolaxus 6-Axis Evaluation Rubric Scoring Breakdown
 
-| Evaluation Axis | Weight | How AcuVibe PdM Achieves Maximum Score | Empirical Verification in Submission |
+| Evaluation Axis | Weight | How Apex PdM Achieves Maximum Score | Empirical Verification in Submission |
 | :--- | :---: | :--- | :--- |
 | **1. Impact & Sustainability Value** | **25%** | Delivers dual environmental benefits: eliminates 15%–35% parasitic friction power waste across commercial chillers, and prevents tons of appliance and compressor e-waste via early Point P component intervention. | Concrete mathematical energy equations; Peninsular Malaysia grid emission factor calculations ($0.758\text{ kg CO}_2/\text{kWh}$); TNB tariff financial models. |
 | **2. Innovation & Differentiation** | **20%** | Novel multimodal physical-digital fusion combining high-frequency kinematics (50 Hz), 24-bit DMA acoustic ultrasound (16 kHz), electrical power ($W, V, mA$), and ground-truth cycle states. Solves the spin-cycle false alarm paradox via phase-conditioned anomaly modeling. | Full 31-column data schema contract in `data/pdm_feature_dictionary.json`; FreeRTOS dual-core task isolation in C++; structured JSON telemetry envelope. |
@@ -418,11 +418,11 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 # Part 3: The 8-Slide Grand Finale Pitch Deck Blueprint
 
 ### Slide 1: Cover & Vision
-* **Headline:** AcuVibe PdM: The Pulse of Sustainable Townships
+* **Headline:** Apex PdM: The Pulse of Sustainable Townships
 * **Sub-headline:** Transforming Reactive Equipment Failure into Proactive Township Asset Intelligence
 * **Tagline:** Value Multiplying Energy Efficiency & Circular Asset Lifespans for Sime Darby Property’s Township of Tomorrow
 * **Visuals:** High-tech split rendering: Deployed physical IoT pod on the left; digital township asset health command center on the right. Live URL banner: `https://washer-pdm.pages.dev`.
-* **Presenter Script (30s):** "Judges, modern townships pride themselves on sustainability. Yet behind the scenes, hundreds of air-conditioning chillers, pumps, and household appliances run until they break down. We are AcuVibe, and we are introducing multimodal predictive maintenance to eliminate friction, save electricity, and keep machines out of landfills."
+* **Presenter Script (30s):** "Judges, modern townships pride themselves on sustainability. Yet behind the scenes, hundreds of air-conditioning chillers, pumps, and household appliances run until they break down. We are Apex, and we are introducing multimodal predictive maintenance to eliminate friction, save electricity, and keep machines out of landfills."
 
 ### Slide 2: The Silent Crisis in Modern Townships
 * **Headline:** Friction: The Hidden Killer of Township Energy & Hardware
@@ -436,10 +436,10 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 * **Headline:** All Rotating Machinery Fails Identically
 * **Core Insight:** Whether it is a 1,400 RPM washing machine drum motor or a 50 kW central chiller in Masjid Elmina, the degradation physics is universal:
   $$\text{Micro-Vibrations} \longrightarrow \text{Acoustic Friction} \longrightarrow \text{Parasitic Electrical Drag} \longrightarrow \text{Breakdown}$$
-* **The P-F Curve:** AcuVibe detects failures at **Point P** (micro-harmonics), saving 85% of repair costs and halting energy waste before Point F (functional failure).
+* **The P-F Curve:** Apex detects failures at **Point P** (micro-harmonics), saving 85% of repair costs and halting energy waste before Point F (functional failure).
 * **Visuals:** Illustrated P-F Interval degradation curve with callout badges for MPU-6050, INMP441, and Tapo P110 detection points.
 
-### Slide 4: The AcuVibe Platform Architecture
+### Slide 4: The Apex Platform Architecture
 * **Headline:** Multimodal Edge AI Meets Cloud Facility Intelligence
 * **Key Architecture Pillars:**
   * *Dual-Core ESP32 Edge Computing:* Core 1 runs 50 Hz kinematics and 16 kHz acoustic DMA; Core 0 handles Wi-Fi, local KLAP power queries, and Firebase streaming.
@@ -481,8 +481,8 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 * **Milestones:**
   * *Months 1–3:* Deploy Phase 2 pilot on 25 communal chillers and pumps in City of Elmina.
   * *Months 4–6:* Platform integration with Sime Darby Resident App and FM ticketing system.
-  * *Months 7–12:* Standardize AcuVibe PdM as a sustainable feature in future residential handovers.
-* **Closing Statement:** "Sustainable townships start with smart, friction-free engineering. With AcuVibe, Sime Darby Property can lead Southeast Asia in circular, energy-efficient living."
+  * *Months 7–12:* Standardize Apex PdM as a sustainable feature in future residential handovers.
+* **Closing Statement:** "Sustainable townships start with smart, friction-free engineering. With Apex, Sime Darby Property can lead Southeast Asia in circular, energy-efficient living."
 
 ---
 
@@ -500,11 +500,11 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 ### Question 2: Innovation & Uniqueness (180 words)
 *Prompt: What makes your solution unique? How does it differ from existing solutions in the market?*
 
-> AcuVibe PdM is the first low-cost (< RM 50 production BOM) multimodal edge-AI platform that fuses four synchronized physical dimensions: **high-frequency 3-axis kinematics ($\pm 16\text{g}$ @ 50 Hz)**, **ultrasonic/acoustic sound pressure (16 kHz 24-bit I2S DMA)**, **active electrical power ($W, V, mA$ @ 1 Hz)**, and **ground-truth operational phase**.
+> Apex PdM is the first low-cost (< RM 50 production BOM) multimodal edge-AI platform that fuses four synchronized physical dimensions: **high-frequency 3-axis kinematics ($\pm 16\text{g}$ @ 50 Hz)**, **ultrasonic/acoustic sound pressure (16 kHz 24-bit I2S DMA)**, **active electrical power ($W, V, mA$ @ 1 Hz)**, and **ground-truth operational phase**.
 >
-> Existing commercial predictive maintenance systems cost thousands of ringgit per sensor, target only heavy industrial oil-and-gas plants, and produce frequent false alarms during normal high-speed operations. AcuVibe solves this via **phase-conditioned anomaly modeling**: by conditioning vibration and sound against ground-truth operational states, our algorithm distinguishes between high-speed centrifugal dynamics and actual mechanical failure. 
+> Existing commercial predictive maintenance systems cost thousands of ringgit per sensor, target only heavy industrial oil-and-gas plants, and produce frequent false alarms during normal high-speed operations. Apex solves this via **phase-conditioned anomaly modeling**: by conditioning vibration and sound against ground-truth operational states, our algorithm distinguishes between high-speed centrifugal dynamics and actual mechanical failure. 
 >
-> Furthermore, our FreeRTOS dual-core firmware architecture isolates 50 Hz sensor sampling from network streaming, ensuring zero dropped audio samples and millisecond-level responsiveness. Combined with our automated Force-ON safety guard, AcuVibe delivers industrial-grade prognostics at a consumer-accessible price point.
+> Furthermore, our FreeRTOS dual-core firmware architecture isolates 50 Hz sensor sampling from network streaming, ensuring zero dropped audio samples and millisecond-level responsiveness. Combined with our automated Force-ON safety guard, Apex delivers industrial-grade prognostics at a consumer-accessible price point.
 
 ---
 
@@ -525,11 +525,11 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 ### Question 4: Target Audience & Adoption (175 words)
 *Prompt: Who are the end-users? How will you drive adoption or get your solution into their hands?*
 
-> AcuVibe serves two primary user tiers across Sime Darby Property developments:
+> Apex serves two primary user tiers across Sime Darby Property developments:
 > 1. **Township Facility Managers (B2B):** Operators managing commercial assets across community mosques, suraus, retail malls (e.g., Elmina Lakeside Mall), and clubhouse facilities. Adoption is driven by out-of-the-box retrofitting: non-intrusive clip-on pods attach to existing compressor housings in under 10 minutes without rewiring, feeding directly into a unified township facility dashboard.
 > 2. **Township Residents (B2C):** Homeowners in smart residential precincts. Adoption is driven through native integration with the **Sime Darby Township Resident App**. Instead of cryptic error codes, residents receive intuitive Machine Health Index notifications (e.g., *"Washing machine damper degraded; early RM 25 component fix saves RM 1,200 motor repair"*).
 >
-> To drive early adoption, Sime Darby Property can bundle AcuVibe sensor pods as a standard smart sustainability amenity in new home handovers, while piloting commercial compressor monitoring across flagship communal buildings to demonstrate immediate utility bill reductions.
+> To drive early adoption, Sime Darby Property can bundle Apex sensor pods as a standard smart sustainability amenity in new home handovers, while piloting commercial compressor monitoring across flagship communal buildings to demonstrate immediate utility bill reductions.
 
 ---
 
@@ -541,6 +541,6 @@ Assuming an average 20 kW commercial compressor operating 10 hours daily:
 > Our future execution roadmap comprises three structured phases:
 > * **Months 1–3 (Township Pilot):** Retrofit 25 communal rotating assets in **City of Elmina** (8 central AC chillers in Masjid Elmina, 11 rooftop compressors at Elmina Lakeside Mall, and 6 clubhouse filtration pumps). Validate energy waste reductions in live commercial operating conditions.
 > * **Months 4–6 (Platform & App Integration):** Integrate machine health telemetry into the Sime Darby Resident Mobile App and deploy automated maintenance triage ticketing for certified local service providers.
-> * **Months 7–12 (Township-Wide Scaling):** Standardize AcuVibe pods as an optional sustainability add-on for new residential handovers across Bandar Bukit Raja and City of Elmina, establishing an automated circular economy parts-replacement network.
+> * **Months 7–12 (Township-Wide Scaling):** Standardize Apex pods as an optional sustainability add-on for new residential handovers across Bandar Bukit Raja and City of Elmina, establishing an automated circular economy parts-replacement network.
 >
 > With a hardware cost of under RM 171 per turnkey kit, capital payback is achieved in under three months on energy savings alone.

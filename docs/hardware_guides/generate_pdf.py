@@ -1,3 +1,4 @@
+import os
 import sys
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -333,4 +334,5 @@ def build_pdf(filename):
     print("PDF successfully generated!")
 
 if __name__ == '__main__':
-    build_pdf("G:/My Drive/PdM SideProject/hardware_bom_and_setup_guide.pdf")
+    out_pdf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hardware_bom_and_setup_guide.pdf")
+    build_pdf(out_pdf)

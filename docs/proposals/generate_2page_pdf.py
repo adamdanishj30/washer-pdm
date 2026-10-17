@@ -13,17 +13,18 @@ def get_base64_image(path):
 
 def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(base_dir, "..", ".."))
     html_path = os.path.join(base_dir, "proposal_2page_presentation.html")
-    pdf_path = os.path.join(base_dir, "PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf")
+    pdf_path = os.path.join(base_dir, "PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf")
 
     # Load images if available
-    img_layout = get_base64_image(os.path.join(base_dir, "washer_electronics_layout_diagram.jpg"))
+    img_layout = get_base64_image(os.path.join(root_dir, "docs", "hardware_guides", "diagrams", "washer_electronics_layout_diagram.jpg"))
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AcuVibe PdM - 2-Page Executive Proposal</title>
+<title>Apex PdM - 2-Page Executive Proposal</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
@@ -281,7 +282,7 @@ def main():
     <!-- Section 1: Title -->
     <div class="section" style="margin-bottom: 4px;">
       <div style="font-size:7.5pt; font-weight:800; color:#64748b; text-transform:uppercase;">1. Title of the Idea</div>
-      <div class="title-hero">AcuVibe PdM: Township-Scale Asset Health &amp; Air-Conditioning Predictive Maintenance Platform</div>
+      <div class="title-hero">Apex PdM: Township-Scale Asset Health &amp; Air-Conditioning Predictive Maintenance Platform</div>
       <div class="subtitle-hero">Eliminating Parasitic Energy Waste &amp; Premature Landfill Scrap from Scaled Testbed to Commercial Infrastructure</div>
       <div>
         <span class="live-bar">LIVE WORKING RIG: <span>https://washer-pdm.pages.dev</span></span>
@@ -327,7 +328,7 @@ def main():
     <!-- Section 3: Proposed Solution -->
     <div class="section">
       <div class="section-title">3. Proposed Solution</div>
-      <p><strong>How does your solution address the problem?</strong> AcuVibe PdM provides low-cost, non-intrusive edge-IoT sensor pods that clip onto rotating machinery housings. It continuously tracks a <strong>Machine Health Index (0%–100%)</strong> and <strong>Remaining Useful Life (RUL)</strong>, detecting mechanical friction weeks in advance (Point P) before catastrophic failure (Point F).</p>
+      <p><strong>How does your solution address the problem?</strong> Apex PdM provides low-cost, non-intrusive edge-IoT sensor pods that clip onto rotating machinery housings. It continuously tracks a <strong>Machine Health Index (0%–100%)</strong> and <strong>Remaining Useful Life (RUL)</strong>, detecting mechanical friction weeks in advance (Point P) before catastrophic failure (Point F).</p>
 
       <div class="two-col" style="margin-top:3px;">
         <div class="modality-box">
@@ -355,7 +356,7 @@ def main():
 
   <!-- Page 1 Footer -->
   <div class="doc-footer">
-    <span>AcuVibe PdM &bull; Sime Darby Property "Township of Tomorrow" Hackathon</span>
+    <span>Apex PdM &bull; Sime Darby Property "Township of Tomorrow" Hackathon</span>
     <span>Page 1 of 2</span>
   </div>
 </div>
@@ -390,8 +391,8 @@ def main():
     <div class="section">
       <div class="section-title">5. Uniqueness and Innovation</div>
       <ul>
-        <li><strong>Ultra-Low Cost (&lt; RM 50 Production BOM):</strong> Industrial predictive systems cost RM 2,000–RM 5,000 per sensor. AcuVibe brings industrial-grade prognostics to everyday township communal infrastructure at 1/40th the cost.</li>
-        <li><strong>Solves the False Alarm Paradox:</strong> By conditioning vibration and sound against ground-truth operational states, AcuVibe prevents false emergency alarms during normal high-speed extractions.</li>
+        <li><strong>Ultra-Low Cost (&lt; RM 50 Production BOM):</strong> Industrial predictive systems cost RM 2,000–RM 5,000 per sensor. Apex brings industrial-grade prognostics to everyday township communal infrastructure at 1/40th the cost.</li>
+        <li><strong>Solves the False Alarm Paradox:</strong> By conditioning vibration and sound against ground-truth operational states, Apex prevents false emergency alarms during normal high-speed extractions.</li>
         <li><strong>Quantifies Parasitic Energy Drag in Ringgit:</strong> Correlates vibration harmonics with active wattage to compute excess power loss ($W_{{excess}}$) and monthly electricity bill inflation.</li>
         <li><strong>Zero-Intrusive 5-Minute Retrofit:</strong> Mounts externally with 3M VHB viscoelastic acrylic coupling and smart inline metering—zero rewiring or warranty-voiding alterations.</li>
       </ul>
@@ -435,7 +436,7 @@ def main():
 
   <!-- Page 2 Footer -->
   <div class="doc-footer">
-    <span>AcuVibe PdM &bull; Confidential &bull; Designed for Sime Darby Property Innovation Challenge</span>
+    <span>Apex PdM &bull; Confidential &bull; Designed for Sime Darby Property Innovation Challenge</span>
     <span>Page 2 of 2</span>
   </div>
 </div>

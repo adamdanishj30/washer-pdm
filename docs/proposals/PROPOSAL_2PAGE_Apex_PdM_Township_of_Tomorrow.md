@@ -4,7 +4,7 @@
 ---
 
 ### 1. Title of the Idea
-**AcuVibe PdM: Township-Scale Asset Health & Air-Conditioning Predictive Maintenance Platform**  
+**Apex PdM: Township-Scale Asset Health & Air-Conditioning Predictive Maintenance Platform**  
 *Subtitle: Eliminating Parasitic Energy Waste & Premature Landfill Scrap from Scaled Testbed to Commercial Infrastructure*  
 **Live Working Prototype & Telemetry Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
 **Track Alignment:** **PLANET** (Energy Optimization & Circular Economy) with **PEOPLE** (Digital Living) synergy.
@@ -27,9 +27,9 @@
 ### 3. Proposed Solution
 
 * **How does your solution address the problem?**  
-  AcuVibe PdM provides low-cost, non-intrusive edge-IoT sensor pods that clip onto rotating machinery housings. It continuously tracks a **Machine Health Index (0%–100%)** and **Remaining Useful Life (RUL)**, detecting mechanical friction weeks in advance (at Point P) before catastrophic failure occurs (at Point F).
+  Apex PdM provides low-cost, non-intrusive edge-IoT sensor pods that clip onto rotating machinery housings. It continuously tracks a **Machine Health Index (0%–100%)** and **Remaining Useful Life (RUL)**, detecting mechanical friction weeks in advance (at Point P) before catastrophic failure occurs (at Point F).
 * **What makes it innovative? (4-Modality Synchronous Fusion):**  
-  Traditional vibration alarms trigger frequent false alarms during normal high-speed operation. AcuVibe integrates four synchronized physical dimensions:
+  Traditional vibration alarms trigger frequent false alarms during normal high-speed operation. Apex PdM integrates four synchronized physical dimensions:
   1. *Kinematics (MPU-6050 @ 50 Hz):* Tri-axial acceleration ($\pm 16\text{g}$) measuring chassis rocking, unbalance, and damper shock.
   2. *Acoustics (INMP441 @ 16 kHz):* 24-bit digital I2S DMA capturing high-frequency bearing squeal and pump cavitation.
   3. *Electrical Power (Tapo P110 @ 1 Hz):* Active wattage ($W$), voltage, and current measuring motor load and parasitic friction drag.
@@ -54,9 +54,9 @@
 
 ### 5. Uniqueness and Innovation
 
-* **Ultra-Low Cost (< RM 50 Production BOM):** Existing industrial predictive maintenance systems cost upwards of RM 2,000–RM 5,000 per sensor, limiting them to oil-and-gas refineries. AcuVibe brings industrial-grade prognostics to everyday township assets.
-* **Solves the False Alarm Paradox:** By conditioning vibration and sound against ground-truth operational states, AcuVibe prevents false emergency alarms during normal high-speed extractions.
-* **Quantifies Parasitic Energy Drag in Ringgit:** Rather than reporting raw acceleration, AcuVibe correlates vibration harmonics with active wattage to compute excess power loss ($W_{\text{excess}}$) and monthly electricity bill inflation.
+* **Ultra-Low Cost (< RM 50 Production BOM):** Existing industrial predictive maintenance systems cost upwards of RM 2,000–RM 5,000 per sensor, limiting them to oil-and-gas refineries. Apex PdM brings industrial-grade prognostics to everyday township assets.
+* **Solves the False Alarm Paradox:** By conditioning vibration and sound against ground-truth operational states, Apex PdM prevents false emergency alarms during normal high-speed extractions.
+* **Quantifies Parasitic Energy Drag in Ringgit:** Rather than reporting raw acceleration, Apex PdM correlates vibration harmonics with active wattage to compute excess power loss ($W_{\text{excess}}$) and monthly electricity bill inflation.
 * **Zero-Intrusive 5-Minute Retrofit:** Requires zero rewiring or warranty-voiding alterations; mounts with 3M VHB viscoelastic acrylic coupling and smart inline metering.
 
 ---

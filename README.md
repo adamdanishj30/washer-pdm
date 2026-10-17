@@ -1,11 +1,11 @@
-# AcuVibe PdM: Multimodal Predictive Maintenance for Sustainable Townships
+# Apex PdM: Multimodal Predictive Maintenance for Sustainable Townships
 
 > **From Home Appliances to Township Infrastructure**  
 > An autonomous IoT edge rig, cloud streaming pipeline, and predictive AI platform designed for the **Sime Darby Property Hackathon ("Township of Tomorrow")**.
 >
 > 🌐 **Live Deployed Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
-> 📄 **2-Page Executive Proposal:** [PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf](PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf) ([Markdown Brief](PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.md))  
-> 📑 **Full Competition Dossier:** [PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf](PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf) ([Full Whitepaper](PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.md))  
+> 📄 **2-Page Executive Proposal:** [PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf) ([Markdown Brief](docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.md))  
+> 📑 **Full Competition Dossier:** [PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf) ([Full Whitepaper](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.md))  
 
 ---
 
@@ -19,7 +19,7 @@ When a bearing wears down or a suspension damper fatigues:
 3. **Massive E-Waste:** Perfectly salvageable 70 kg machines and heavy industrial hardware are dumped into landfills simply because a **RM 25 consumable component** failed unnoticed.
 
 ### The Solution: Option 2 Positioning
-**AcuVibe PdM** solves this by uniting a **proven physical testbed** with a **scalable township infrastructure architecture**:
+**Apex PdM** solves this by uniting a **proven physical testbed** with a **scalable township infrastructure architecture**:
 * **Micro (The Proven Hardware Rig):** A fully functioning edge-AI rig deployed on a front-load Samsung washing machine, capturing 3-axis vibration kinematics, 16 kHz acoustic sound pressure, active electrical wattage, and cycle ground truth in real time.
 * **Macro (Township-Scale Expansion):** Scaling the exact same multimodal sensor pods across commercial township assets—monitoring **20 to 30 air conditioning compressors in mosques, suraus, commercial malls, clubhouses, and water pump stations** from a single centralized facility dashboard.
 
@@ -103,10 +103,27 @@ The dashboard provides a real-time, responsive dark UI built with pure web techn
 ## 6. Repository Structure
 
 ```
+├── docs/
+│   ├── proposals/                     # Sime Darby Hackathon Proposals & Presentations
+│   │   ├── PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf
+│   │   ├── PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf
+│   │   ├── proposal_presentation.html
+│   │   └── generate_proposal_pdf.py   # Headless PDF compile scripts
+│   ├── handoffs/                      # Project blueprints, logs & Tapo/SmartThings specs
+│   │   ├── project_progress_and_handoff_log.md
+│   │   ├── tapo_and_smartthings_pdm_handoff.md
+│   │   └── washing_machine_fault_project_blueprint.md
+│   └── hardware_guides/               # BOM, visual wiring widgets & pinout schematics
+│       ├── hardware_bom_and_setup_guide.md
+│       ├── step_by_step_visual_guide.html
+│       └── diagrams/                  # Layout cutaway diagrams & wiring pinouts
+├── hardware/
+│   ├── drivers/                       # CP210x USB UART Windows Drivers
+│   └── photos/                        # Bench assembly, wiring & enclosure photo logs
 ├── firmware/
 │   ├── 06_standalone_tapo_streamer/   # ESP32 FreeRTOS Dual-Core C++ Firmware
 │   ├── capture_pdm_dataset.py         # Real-time multimodal session recorder
-│   ├── cloud_downloader.py            # Automated Firebase session sync engine
+│   ├── cloud_multimodal_sync.py       # Autonomous Cloud-to-Cloud sync daemon
 │   ├── standardize_datasets.py        # Acoustic RMS normalization engine
 │   ├── pdm_ml_standardizer.py         # ML feature transformer (canonical scale, log, dB)
 │   └── audit_all_datasets.py          # Integrity audit across all historical CSVs
@@ -116,16 +133,16 @@ The dashboard provides a real-time, responsive dark UI built with pure web techn
 │   ├── pdm_multimodal_prediction_dataset.csv  # 31-column ML master dataset
 │   ├── pdm_ml_standardized_training_dataset.csv # 3,980-point active ML training dataset
 │   └── pdm_feature_dictionary.json   # Formal ML schema & physical unit contract
-├── PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.pdf # 2-Page Executive Pitch PDF (MSME Format)
-├── PROPOSAL_2PAGE_AcuVibe_PdM_Township_of_Tomorrow.md  # 2-Page Executive Brief Markdown
-├── PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.pdf       # Full Competition Dossier PDF
-├── PROPOSAL_AcuVibe_PdM_Township_of_Tomorrow.md        # Full Competition Dossier Markdown
+├── scripts/
+│   ├── run_auto_sync_daemon.bat       # 1-tap Windows background sync daemon runner
+│   ├── google_apps_script_drive_sync.js # Google Cloud trigger daemon
+│   └── generate_dashboard.ps1
 ├── build_clean_dashboard.py           # Dashboard generator & preset compiler
-├── index.html                         # Live Rig default dashboard view
+├── index.html                         # Live Rig default dashboard view (GitHub Pages)
 ├── historical.html                    # Historical Archive default view
 ├── dashboard.html / cloud_dashboard.html # Synchronized distribution builds
 ├── AGENTS.md                          # Engineering & architecture guidelines
-└── washing_machine_fault_project_blueprint.md # Full project technical blueprint
+└── README.md                          # Project documentation
 ```
 
 ---
@@ -163,4 +180,4 @@ py -3.12 firmware/audit_all_datasets.py
 
 $$\text{Early Detection (Point P)} \longrightarrow \text{RM 25–50 Component Fix} \ll \text{RM 1,500+ Replacement} + \text{15–35% Energy Saved}$$
 
-By transforming reactive appliance breakdown into **Township Asset Intelligence**, AcuVibe PdM proves that sustainable townships start with smart, friction-free engineering.
+By transforming reactive appliance breakdown into **Township Asset Intelligence**, Apex PdM proves that sustainable townships start with smart, friction-free engineering.

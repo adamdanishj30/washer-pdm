@@ -1,3 +1,4 @@
+Set-Location -Path (Resolve-Path "$PSScriptRoot\..")
 $jsPath = if (Test-Path "data/wash_cycle_2026-10-11_1019_embedded.js") { "data/wash_cycle_2026-10-11_1019_embedded.js" } else { "data/wash_1019_embedded.js" }
 $embeddedJs = Get-Content $jsPath -Raw
 
