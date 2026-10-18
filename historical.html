@@ -723,7 +723,7 @@
             <button class="span-btn" id="btn-spline-win" onclick="setChartSpan('spline', 'win')">40s Window</button>
           </div>
           <span class="legend-item-dot">
-            <span class="dot-indicator" style="background: var(--teal-accent);"></span> |a|: <strong id="spline-cur-vibe" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">9.54</strong> m/s&sup2;
+            <span class="dot-indicator" style="background: var(--teal-accent);"></span> <span id="lbl-spline-vibe-title">|a|</span>: <strong id="spline-cur-vibe" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">9.54</strong> m/s&sup2;
           </span>
           <span class="legend-item-dot">
             <span class="dot-indicator" style="background: var(--coral-accent);"></span> Sound: <strong id="spline-cur-rms" style="color: var(--coral-accent); font-family: 'JetBrains Mono', monospace;">75.3</strong> RMS
@@ -777,10 +777,9 @@
           <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
         </div>
         <div class="timeline-stats-container">
-          <!-- Sync Rate Selector (Default 5s, 2s available only when rig is live) -->
+          <!-- Adaptive Sync Indicator -->
           <div class="view-toggle-pill" id="tog-live-rate" style="display: none;">
-            <button class="span-btn active" id="btn-rate-5s" onclick="setLiveSyncRate(5000)" title="Eco Sync: 5-second interval (Default, quota safe)">5s Eco</button>
-            <button class="span-btn disabled" id="btn-rate-2s" onclick="setLiveSyncRate(2000)" title="Fast Sync: 2-second interval (Available only when rig is live)">⚡ 2s Fast</button>
+            <span class="span-btn active" id="lbl-sync-mode" onclick="showToast('ℹ️ Adaptive sync: 10s during wash cycles, 60s idle heartbeat to conserve Firebase quota.')" style="cursor: pointer; padding: 3px 10px; font-size: 11px;">📡 60s Idle Heartbeat</span>
           </div>
           <span class="axis-toggle-clean" style="color: var(--teal-accent);">
             Current: <strong id="timeline-head-rms">105.6</strong> RMS
@@ -964,7 +963,8 @@
 
     const offlineBanner = document.getElementById('live-offline-banner');
     const inactivityBanner = document.getElementById('live-inactivity-banner');
-    const FIREBASE_FALLBACK_URL = 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app/live.json';
+    const FIREBASE_BASE_URL = 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app';
+    const FIREBASE_FALLBACK_URL = `${FIREBASE_BASE_URL}/live.json`;
     const LIVE_ENDPOINT = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
       ? '/api/live'
       : FIREBASE_FALLBACK_URL;
@@ -974,10 +974,12 @@
     let inactivityTimer = null;
     let livePollTimeoutId = null;
 
-    let userSelectedRate = 5000; // Default 5 seconds
+    let isRigActive = false;
+    let lastBackfillMs = 0;
     const togLiveRate = document.getElementById('tog-live-rate');
-    const btnRate5s = document.getElementById('btn-rate-5s');
-    const btnRate2s = document.getElementById('btn-rate-2s');
+    const lblSyncMode = document.getElementById('lbl-sync-mode');
+    const btnRate5s = null;
+    const btnRate2s = null;
 
     const wrapScrubber = document.getElementById('wrap-scrubber');
     const btnPrimaryAction = document.getElementById('btn-primary-action');
@@ -1258,7 +1260,7 @@
         btnSecondarySwitch.innerText = `Switch to Historical: ${activeSessionName}`;
         titleTimeline.innerText = 'Live Rig Telemetry Stream';
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
-        lblCurrTime.innerText = userSelectedRate === 2000 ? 'LIVE (2s)' : 'LIVE (5s)';
+        lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (60s)';
         if (togLiveRate) togLiveRate.style.display = 'inline-flex';
         updateRigStatusUI(isRigOnline);
         updateChartSubtitles();
@@ -1303,32 +1305,34 @@
     function updateRigStatusUI(online) {
       if (currentMode === 'live') {
         if (online) {
-          if (btnRate2s) {
-            btnRate2s.disabled = false;
-            btnRate2s.classList.remove('disabled');
-            btnRate2s.title = 'Fast Sync: 2-second interval (Rig is online)';
+          const syncLabel = isRigActive ? '10s Active' : '60s Idle';
+          if (lblSyncMode) {
+            if (isRigActive) {
+              lblSyncMode.innerHTML = '⚡ 10s Active Sync';
+              lblSyncMode.className = 'span-btn active';
+              lblSyncMode.style.color = 'var(--teal-accent)';
+            } else {
+              lblSyncMode.innerHTML = '💤 60s Idle Heartbeat';
+              lblSyncMode.className = 'span-btn active';
+              lblSyncMode.style.color = 'var(--text-dim)';
+            }
           }
-          const syncLabel = userSelectedRate === 2000 ? '2s' : '5s';
           if (statusBadge) statusBadge.className = 'status-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot';
-          if (lblStatusText) lblStatusText.innerText = `Live Rig Active (${syncLabel} Sync)`;
+          if (lblStatusText) lblStatusText.innerText = isRigActive ? 'Live Rig Active (10s Sync)' : 'Live Rig Idle (60s Heartbeat)';
 
           if (statusBadgeMob) statusBadgeMob.className = 'status-badge mobile-status-tag';
           if (statusDotMob) statusDotMob.className = 'status-dot';
-          if (lblStatusTextMob) lblStatusTextMob.innerText = `Live ${syncLabel}`;
+          if (lblStatusTextMob) lblStatusTextMob.innerText = isRigActive ? 'Live 10s' : 'Idle 60s';
 
-          if (lblCurrTime) lblCurrTime.innerText = `LIVE (${syncLabel})`;
+          if (lblCurrTime) lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (60s)';
 
           if (offlineBanner) offlineBanner.style.display = 'none';
         } else {
-          if (btnRate2s) {
-            btnRate2s.disabled = true;
-            btnRate2s.classList.add('disabled');
-            btnRate2s.title = '2s Fast Sync is only available when the rig is live';
-            if (userSelectedRate === 2000) {
-              btnRate2s.classList.remove('active');
-              if (btnRate5s) btnRate5s.classList.add('active');
-            }
+          if (lblSyncMode) {
+            lblSyncMode.innerHTML = '⚠️ Offline';
+            lblSyncMode.className = 'span-btn disabled';
+            lblSyncMode.style.color = '#ef4444';
           }
           if (statusBadge) statusBadge.className = 'status-badge offline-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot dot-offline';
@@ -1394,28 +1398,7 @@
     });
 
     function setLiveSyncRate(rate) {
-      if (rate === 2000) {
-        if (!isRigOnline) {
-          showToast('⚠️ 2s Fast Sync is only available when the rig is live and transmitting.');
-          return;
-        }
-        userSelectedRate = 2000;
-        if (btnRate2s) btnRate2s.classList.add('active');
-        if (btnRate5s) btnRate5s.classList.remove('active');
-        if (lblCurrTime) lblCurrTime.innerText = 'LIVE (2s)';
-        if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (2s Sync)';
-        showToast('⚡ Fast Sync enabled (2s interval)');
-      } else {
-        userSelectedRate = 5000;
-        if (btnRate5s) btnRate5s.classList.add('active');
-        if (btnRate2s) btnRate2s.classList.remove('active');
-        if (lblCurrTime) lblCurrTime.innerText = 'LIVE (5s)';
-        if (lblStatusText) lblStatusText.innerText = 'Live Rig Active (5s Sync)';
-        showToast('🍃 Eco Sync enabled (5s interval)');
-      }
-      if (currentMode === 'live' && !isUserInactive) {
-        scheduleNextPoll();
-      }
+      showToast('ℹ️ Adaptive sync: 10s during wash cycles, 60s idle heartbeat to conserve Firebase quota.');
     }
 
     function scheduleNextPoll() {
@@ -1425,8 +1408,14 @@
       }
       if (document.hidden || currentMode !== 'live' || isUserInactive) return;
 
-      // Adaptive polling: userSelectedRate (5s default, 2s if chosen and live), or 15s if rig is offline
-      const delay = isRigOnline ? userSelectedRate : 15000;
+      // Adaptive polling based on rig activity:
+      // When rig is active (washing): 10 seconds
+      // When rig is idle (standby): 25 seconds (checks for start of wash while saving quota)
+      // When rig is offline: 15 seconds
+      let delay = 15000;
+      if (isRigOnline) {
+        delay = isRigActive ? 10000 : 25000;
+      }
       livePollTimeoutId = setTimeout(async () => {
         await checkRigHeartbeat();
       }, delay);
@@ -1472,46 +1461,111 @@
             isRigOnline = false;
           }
 
+          isRigActive = (d.active === true);
           lastLivePacketCnt = d.cnt;
           lastLivePacketUptime = d.uptime;
 
           // Push into Live rolling buffer
           if (!isLivePaused && isRigOnline) {
             const pwr = (d.power !== undefined && d.power !== null) ? d.power : (d.pwr !== undefined ? d.pwr : 0.0);
-            const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms, pwr];
-            LIVE_BUFFER.push(newRec);
-            if (LIVE_BUFFER.length > 80) LIVE_BUFFER.shift();
+            const vibStd = (d.vib_std !== undefined && d.vib_std !== null) ? d.vib_std : Math.abs(Math.sqrt(d.ax*d.ax + d.ay*d.ay + d.az*d.az) - 9.81);
+            const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms, pwr, vibStd];
 
-            if (currentMode === 'live') {
-              applyRecord(newRec, true);
-              drawSpline();
-              drawXyz();
-              drawArea();
-              drawEnergy();
+            if (hasIncremented || LIVE_BUFFER.length === 0 || (LIVE_BUFFER.length > 0 && LIVE_BUFFER[LIVE_BUFFER.length - 1][0] !== newRec[0])) {
+              LIVE_BUFFER.push(newRec);
+              if (LIVE_BUFFER.length > 120) LIVE_BUFFER.shift();
+
+              if (currentMode === 'live') {
+                applyRecord(newRec, true);
+                drawSpline();
+                drawXyz();
+                drawArea();
+                drawEnergy();
+              }
+            }
+
+            // If active wash session, backfill detailed 5s window summaries every ~30s
+            if (d.active && d.session && (Date.now() - lastBackfillMs > 30000)) {
+              lastBackfillMs = Date.now();
+              backfillSessionWindows(d.session);
             }
           }
         } else {
           isRigOnline = false;
+          isRigActive = false;
         }
       } catch (e) {
         isRigOnline = false;
+        isRigActive = false;
       }
       updateRigStatusUI(isRigOnline);
       scheduleNextPoll();
     }
 
+    async function backfillSessionWindows(sessionId) {
+      if (!sessionId) return;
+      try {
+        const sessUrl = `${FIREBASE_BASE_URL}/sessions/${sessionId}.json?orderBy=%22%24key%22&limitToLast=8`;
+        const res = await fetch(sessUrl);
+        if (!res.ok) return;
+        const winMap = await res.json();
+        if (!winMap || typeof winMap !== 'object') return;
+
+        const existingTimes = new Set(LIVE_BUFFER.map(r => r[0]));
+        const added = [];
+        for (const [k, w] of Object.entries(winMap)) {
+          if (!w || typeof w !== 'object' || w.t === undefined) continue;
+          const tMs = w.t;
+          if (!existingTimes.has(tMs)) {
+            const wPwr = (w.pwr !== undefined) ? w.pwr : 0.0;
+            const wVibStd = (w.sm !== undefined) ? w.sm : (w.vdf || 0.03);
+            added.push([tMs, w.ax, w.ay, w.az, w.rms, wPwr, wVibStd]);
+          }
+        }
+        if (added.length > 0) {
+          LIVE_BUFFER = LIVE_BUFFER.concat(added).sort((a, b) => a[0] - b[0]);
+          while (LIVE_BUFFER.length > 120) LIVE_BUFFER.shift();
+          if (currentMode === 'live') {
+            drawSpline();
+            drawXyz();
+            drawArea();
+            drawEnergy();
+          }
+        }
+      } catch (err) {
+        // Silently handle backfill errors
+      }
+    }
+
     function applyRecord(rec, isFromLive = false) {
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
+      const vibStd = (rec.length >= 7 && rec[6] !== undefined && rec[6] !== null) ? rec[6] : null;
       const baselineRms = 120.0;
       const spikeRatio = Math.max(1.0, (rms / baselineRms)).toFixed(1);
 
       if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
       if (timelineHeadSpike) timelineHeadSpike.innerText = `${spikeRatio}x`;
-      if (headVibeMag) headVibeMag.innerText = vibe.toFixed(2);
+
+      if (headVibeMag) {
+        if (isFromLive && vibStd !== null) {
+          headVibeMag.innerHTML = `${vibe.toFixed(2)} <span style="color: var(--teal-accent); font-size: 11px; font-weight: 500;">(&sigma;: ${vibStd.toFixed(2)})</span>`;
+        } else {
+          headVibeMag.innerText = vibe.toFixed(2);
+        }
+      }
 
       const curVibeEl = document.getElementById('spline-cur-vibe');
-      if (curVibeEl) curVibeEl.innerText = vibe.toFixed(2);
+      const curVibeTitle = document.getElementById('lbl-spline-vibe-title');
+      if (curVibeEl) {
+        if (isFromLive && vibStd !== null) {
+          if (curVibeTitle) curVibeTitle.innerText = 'Vib (σ)';
+          curVibeEl.innerText = vibStd.toFixed(3);
+        } else {
+          if (curVibeTitle) curVibeTitle.innerText = '|a|';
+          curVibeEl.innerText = vibe.toFixed(2);
+        }
+      }
       const curRmsEl = document.getElementById('spline-cur-rms');
       if (curRmsEl) curRmsEl.innerText = rms.toFixed(1);
 
@@ -1602,9 +1656,18 @@
       });
       splineCtx.fillText('RMS', w - marginRight + (5 * dpr), marginTop - (4 * dpr));
 
+      function getPointVibe(p) {
+        if (currentMode === 'live' && p.length >= 7 && p[6] !== undefined && p[6] !== null) {
+          // In live mode with Schema 3, p[6] is vib_std (dynamic vibration).
+          // Map to 9.81 baseline so dynamic vibration peaks visibly above 9.81.
+          return 9.81 + (p[6] * 1.5);
+        }
+        return Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3]);
+      }
+
       // Left side: Vibration m/s^2 ticks & dynamic scaling
-      const maxVibe = points.reduce((m, p) => Math.max(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
-      const minVibe = points.reduce((m, p) => Math.min(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
+      const maxVibe = points.reduce((m, p) => Math.max(m, getPointVibe(p)), 9.81);
+      const minVibe = points.reduce((m, p) => Math.min(m, getPointVibe(p)), 9.81);
       const vibeSpread = Math.max(2.5, maxVibe - 9.81, 9.81 - minVibe);
       const scaleVibe = Math.min((isMobile ? 20 : 25) * dpr, (plotH * 0.38) / vibeSpread);
 
@@ -1681,7 +1744,7 @@
       splineCtx.moveTo(marginLeft, marginTop + plotH);
       for (let i = 0; i < points.length; i++) {
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
-        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const v = getPointVibe(points[i]);
         const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
         splineCtx.lineTo(x, y);
       }
@@ -1695,7 +1758,7 @@
       splineCtx.lineWidth = strokeW;
       for (let i = 0; i < points.length; i++) {
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
-        const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+        const v = getPointVibe(points[i]);
         const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
         if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
       }
@@ -1727,7 +1790,7 @@
         splineCtx.stroke();
 
         // Active Vibration dot (Teal)
-        const v = Math.sqrt(curPt[1]*curPt[1] + curPt[2]*curPt[2] + curPt[3]*curPt[3]);
+        const v = getPointVibe(curPt);
         const cyVibe = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
         splineCtx.fillStyle = '#00f0d2';
         splineCtx.beginPath();
