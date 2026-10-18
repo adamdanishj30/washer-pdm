@@ -1567,21 +1567,20 @@ def generate_html(default_view='live'):
         const wasOnlineBefore = isRigOnline;
 
         if (d && (d.cnt !== undefined || d.uptime !== undefined || d.ts !== undefined)) {{
-          const isFreshByTs = d.ts ? (Date.now() - d.ts < 15000) : true;
+          // In Firmware 07 (schema: 3), idle heartbeat is sent every 60s to conserve Firebase quota.
+          // While active/washing, it sends every 10s. For legacy fw, it is 2-5s.
+          const maxAgeMs = (d.schema >= 3 && d.active === false) ? 75000 : 25000;
+          const isFreshByTs = d.ts ? (Date.now() - d.ts < maxAgeMs) : true;
           const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
                                  (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
 
-          if (hasIncremented && isFreshByTs) {{
-            lastPacketArrivedAt = Date.now();
+          if (isFreshByTs) {{
+            if (hasIncremented || (lastPacketArrivedAt === 0 && d.uptime !== undefined)) {{
+              lastPacketArrivedAt = Date.now();
+            }}
             isRigOnline = true;
           }} else {{
-            if (!isFreshByTs) {{
-              isRigOnline = false;
-            }} else if (lastPacketArrivedAt === 0) {{
-              isRigOnline = false;
-            }} else if (Date.now() - lastPacketArrivedAt > 15000) {{
-              isRigOnline = false;
-            }}
+            isRigOnline = false;
           }}
 
           lastLivePacketCnt = d.cnt;
