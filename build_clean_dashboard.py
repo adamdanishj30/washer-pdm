@@ -379,6 +379,70 @@ def generate_html(default_view='live'):
       to {{ opacity: 1; transform: translateY(0); }}
     }}
 
+    /* AFK Freeze Modal Backdrop & Card */
+    .afk-modal-backdrop {{
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 18, 24, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fadeIn 0.25s ease-out;
+    }}
+    .afk-modal-card {{
+      background: #252934;
+      border: 1px solid rgba(0, 240, 210, 0.35);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(0, 240, 210, 0.18);
+      border-radius: 16px;
+      max-width: 460px;
+      width: 100%;
+      padding: 28px 24px;
+      text-align: center;
+      color: #f3f4f6;
+    }}
+    .afk-modal-icon {{
+      font-size: 38px;
+      margin-bottom: 12px;
+    }}
+    .afk-modal-title {{
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }}
+    .afk-modal-desc {{
+      font-size: 13px;
+      color: #9ca3af;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }}
+    .afk-modal-meta {{
+      background: #1a1d24;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+    }}
+    .afk-resume-btn {{
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }}
+
     /* Clean Dark Cards */
     .card {{
       background: var(--bg-card);
@@ -777,7 +841,7 @@ def generate_html(default_view='live'):
       <div class="session-picker-box">
         <select class="session-select-dropdown" id="sel-session" onchange="onSessionDropdownChange(this.value)">
           <optgroup label="Real-Time Telemetry">
-            <option value="live">📡 Live Rig Telemetry (5s Sync)</option>
+            <option value="live">📡 Live Rig Telemetry (Adaptive Sync)</option>
           </optgroup>
           {PRESET_OPTIONS_HTML}
           <optgroup label="Custom Loaded Files" id="group-custom-sessions" style="display: none;"></optgroup>
@@ -816,9 +880,27 @@ def generate_html(default_view='live'):
     <div id="live-inactivity-banner" class="live-inactivity-banner" style="display: none;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 14px;">⏸️</span>
-        <span><strong>Live Stream Paused:</strong> Inactive for 5 minutes. Live stream paused to conserve data quota.</span>
+        <span><strong>Live Stream Paused:</strong> Inactive for 5 minutes. Live stream frozen to conserve data quota.</span>
       </div>
-      <button class="btn-dark-primary" style="padding: 5px 14px; font-size: 11px; width: auto;" onclick="resumeFromInactivity()">▶ Resume Live Stream</button>
+      <button class="btn-dark-primary" style="padding: 5px 14px; font-size: 11px; width: auto;" onclick="confirmAndResume()">▶ Resume Live Stream</button>
+    </div>
+
+    <!-- AFK Freeze Confirmation Modal (Zero requests while away) -->
+    <div id="afk-freeze-modal" class="afk-modal-backdrop" style="display: none;">
+      <div class="afk-modal-card">
+        <div class="afk-modal-icon">⏸️</div>
+        <h3 class="afk-modal-title">Live Monitoring Paused</h3>
+        <p class="afk-modal-desc">
+          No activity detected for 5 minutes. Real-time Firebase polling has been <strong>completely frozen (0 req/s)</strong> to conserve network quota.
+        </p>
+        <div class="afk-modal-meta">
+          <span>Paused at: <strong id="afk-pause-time" style="color: var(--coral-accent);">--:--:--</strong></span>
+          <span>Pending sync: <strong id="afk-pending-status" style="color: var(--teal-accent);">Auto catch-up on confirm</strong></span>
+        </div>
+        <button id="btn-confirm-resume" class="btn-dark-primary afk-resume-btn" onclick="confirmAndResume()">
+          ▶ Confirm &amp; Resume Monitoring
+        </button>
+      </div>
     </div>
 
     <!-- Card 1: Dual-Modality Telemetry -->
@@ -899,7 +981,7 @@ def generate_html(default_view='live'):
             Spike: <strong id="timeline-head-spike">1.0x</strong>
           </span>
           <span class="time-readout-pill" id="lbl-curr-time">
-            LIVE (5s)
+            LIVE (Adaptive)
           </span>
         </div>
       </div>
@@ -1080,17 +1162,42 @@ def generate_html(default_view='live'):
       ? '/api/live'
       : FIREBASE_FALLBACK_URL;
 
-    const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 min idle auto-pause
-    let isUserInactive = false;
+    // Page-Level Isolation Guard (historical.html never runs live controller)
+    const PAGE_DEFAULT_VIEW = '{default_view}';
+
+    // Sticky Edge-to-Direct Fallback Tracker (avoids double-fetching on persistent proxy errors)
+    let apiLiveFailCount = 0;
+    let lastApiLiveFailTime = 0;
+
+    // Opus-Style Generation Polling Controller & AFK Freeze Guard
+    let generation = 0;          // Monotonic counter bumped on every freeze/resume; stale callbacks compare against it
+    let pollTimer = null;        // Handle for the single scheduled setTimeout (never setInterval)
+    let inflight = null;         // AbortController for the request currently on the wire
+    let lastSeenT = null;        // Rig-time cursor: newest epoch timestamp (ms) actually received
+    let lastWindowKey = null;    // Key cursor for /sessions/<sid> (e.g. "w000482")
+    let frozenSessionId = null;  // Session that was live when we froze, for boundary checks on resume
+    let isAfkFrozen = false;     // True when AFK modal is active
+    let isResuming = false;      // Guards against double-clicking Resume
+    let activeLiveSessionId = null;
+
+    // Testing aid: read ?afk_test_ms= from URL (clamped to >= 10000ms), defaulting to 5 mins
+    const urlParams = new URLSearchParams(window.location.search);
+    const afkTestMsParam = parseInt(urlParams.get('afk_test_ms'), 10);
+    const INACTIVITY_TIMEOUT_MS = (!isNaN(afkTestMsParam) && afkTestMsParam >= 10000)
+      ? afkTestMsParam
+      : (5 * 60 * 1000); // 5 min default idle auto-pause
     let inactivityTimer = null;
-    let livePollTimeoutId = null;
+
+    // Cadence constants (Section 3 Invariant: never poll faster than 5s per viewer)
+    const POLL_ACTIVE_MS = 10000;   // 10s active sync when rig is washing
+    const POLL_IDLE_MS = 25000;     // 25s heartbeat poll when rig is idle
+    const POLL_OFFLINE_MS = 30000;  // 30s backoff poll when rig is offline
+    const WINDOW_FETCH_MS = 30000;  // 30s window batch fetch during active wash
 
     let isRigActive = false;
     let lastBackfillMs = 0;
     const togLiveRate = document.getElementById('tog-live-rate');
     const lblSyncMode = document.getElementById('lbl-sync-mode');
-    const btnRate5s = null;
-    const btnRate2s = null;
 
     const wrapScrubber = document.getElementById('wrap-scrubber');
     const btnPrimaryAction = document.getElementById('btn-primary-action');
@@ -1371,20 +1478,21 @@ def generate_html(default_view='live'):
         btnSecondarySwitch.innerText = `Switch to Historical: ${{activeSessionName}}`;
         titleTimeline.innerText = 'Live Rig Telemetry Stream';
         subTimeline.innerText = 'Real-time incoming telemetry stream from ESP32';
-        lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (60s)';
+        lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (Adaptive)';
         if (togLiveRate) togLiveRate.style.display = 'inline-flex';
         updateRigStatusUI(isRigOnline);
         updateChartSubtitles();
-        if (inactivityBanner && !isUserInactive) inactivityBanner.style.display = 'none';
+        if (inactivityBanner && !isAfkFrozen) inactivityBanner.style.display = 'none';
         recordUserActivity();
-        checkRigHeartbeat();
+        generation++;
+        pollOnce(generation);
       }} else {{
         if (togLiveRate) togLiveRate.style.display = 'none';
-        if (livePollTimeoutId) {{
-          clearTimeout(livePollTimeoutId);
-          livePollTimeoutId = null;
-        }}
+        stopLivePolling();
         if (inactivityBanner) inactivityBanner.style.display = 'none';
+        const modal = document.getElementById('afk-freeze-modal');
+        if (modal) modal.style.display = 'none';
+        isAfkFrozen = false;
         if (isPlaying) togglePlayPause();
         if (sel) sel.value = activeSessionKey;
         wrapScrubber.style.display = 'flex';
@@ -1408,6 +1516,13 @@ def generate_html(default_view='live'):
       if (currentMode === 'live') {{
         isLivePaused = !isLivePaused;
         btnPrimaryAction.innerText = isLivePaused ? 'Resume Live Stream' : 'Pause Live Stream';
+        if (isLivePaused) {{
+          stopLivePolling();
+          showToast('⏸️ Live stream paused (network polling stopped)');
+        }} else {{
+          recordUserActivity();
+          resumeFromTabVisibility();
+        }}
       }} else {{
         togglePlayPause();
       }}
@@ -1416,27 +1531,20 @@ def generate_html(default_view='live'):
     function updateRigStatusUI(online) {{
       if (currentMode === 'live') {{
         if (online) {{
-          const syncLabel = isRigActive ? '10s Active' : '60s Idle';
           if (lblSyncMode) {{
-            if (isRigActive) {{
-              lblSyncMode.innerHTML = '⚡ 10s Active Sync';
-              lblSyncMode.className = 'span-btn active';
-              lblSyncMode.style.color = 'var(--teal-accent)';
-            }} else {{
-              lblSyncMode.innerHTML = '💤 60s Idle Heartbeat';
-              lblSyncMode.className = 'span-btn active';
-              lblSyncMode.style.color = 'var(--text-dim)';
-            }}
+            lblSyncMode.innerHTML = isRigActive ? '⚡ 10s Active Sync' : '💤 60s Idle Heartbeat';
+            lblSyncMode.className = 'span-btn active';
+            lblSyncMode.style.color = 'var(--teal-accent)';
           }}
           if (statusBadge) statusBadge.className = 'status-badge desktop-status-tag';
           if (statusDot) statusDot.className = 'status-dot';
-          if (lblStatusText) lblStatusText.innerText = isRigActive ? 'Live Rig Active (10s Sync)' : 'Live Rig Idle (60s Heartbeat)';
+          if (lblStatusText) lblStatusText.innerText = isRigActive ? 'Live Rig Active (10s Active Sync)' : 'Live Rig Idle (60s Idle Heartbeat)';
 
           if (statusBadgeMob) statusBadgeMob.className = 'status-badge mobile-status-tag';
           if (statusDotMob) statusDotMob.className = 'status-dot';
-          if (lblStatusTextMob) lblStatusTextMob.innerText = isRigActive ? 'Live 10s' : 'Idle 60s';
+          if (lblStatusTextMob) lblStatusTextMob.innerText = isRigActive ? 'Active 10s' : 'Idle 60s';
 
-          if (lblCurrTime) lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (60s)';
+          if (lblCurrTime) lblCurrTime.innerText = isRigActive ? 'LIVE (10s)' : 'LIVE (Idle)';
 
           if (offlineBanner) offlineBanner.style.display = 'none';
         }} else {{
@@ -1474,33 +1582,313 @@ def generate_html(default_view='live'):
     }}
 
     function recordUserActivity() {{
+      if (PAGE_DEFAULT_VIEW !== 'live' || currentMode !== 'live' || isAfkFrozen || isLivePaused) return;
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      if (isUserInactive) {{
-        resumeFromInactivity();
-      }} else {{
-        inactivityTimer = setTimeout(() => {{
-          if (currentMode === 'live') {{
-            pauseForInactivity();
-          }}
-        }}, INACTIVITY_TIMEOUT_MS);
+      inactivityTimer = setTimeout(() => {{
+        if (currentMode === 'live' && PAGE_DEFAULT_VIEW === 'live' && !isLivePaused) {{
+          freezeForAfk();
+        }}
+      }}, INACTIVITY_TIMEOUT_MS);
+    }}
+
+    // Helper: Stop all live polling and cancel pending network requests
+    function stopLivePolling() {{
+      generation++;
+      if (pollTimer) {{
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }}
+      if (inflight) {{
+        try {{ inflight.abort(); }} catch (_) {{}}
+        inflight = null;
       }}
     }}
 
-    function pauseForInactivity() {{
-      isUserInactive = true;
+    function freezeForAfk() {{
+      if (isAfkFrozen || PAGE_DEFAULT_VIEW !== 'live') return;
+      isAfkFrozen = true;
+      stopLivePolling();
+
+      frozenSessionId = activeLiveSessionId || null;
+      const pauseTimeStr = new Date().toLocaleTimeString();
+      const pauseEl = document.getElementById('afk-pause-time');
+      if (pauseEl) pauseEl.innerText = pauseTimeStr;
+
+      const modal = document.getElementById('afk-freeze-modal');
+      if (modal) modal.style.display = 'flex';
       if (inactivityBanner) inactivityBanner.style.display = 'flex';
-      if (livePollTimeoutId) {{
-        clearTimeout(livePollTimeoutId);
-        livePollTimeoutId = null;
+      showToast('⏸️ Live stream frozen due to inactivity');
+    }}
+
+    function hideAfkModal() {{
+      const modal = document.getElementById('afk-freeze-modal');
+      if (modal) modal.style.display = 'none';
+      if (inactivityBanner) inactivityBanner.style.display = 'none';
+    }}
+
+    // Helper: Epoch ms time base validators (> 1.7e12 corresponds to post-2023 epochs)
+    function liveEpochMs(d) {{
+      if (!d || typeof d !== 'object') return null;
+      const ts = d.ts;
+      return (typeof ts === 'number' && isFinite(ts) && ts > 1.7e12) ? ts : null;
+    }}
+
+    function windowEpochMs(w) {{
+      if (!w || typeof w !== 'object') return null;
+      const e = w.e;
+      return (typeof e === 'number' && isFinite(e) && e > 1.7e12) ? e : null;
+    }}
+
+    // Helper: Shared record converters (Tag 'w' for window, 'h' for heartbeat)
+    // No vdf fallback anywhere (w.vdf is frequency in Hz, not vibration amplitude)
+    function windowToRecord(w) {{
+      const e = windowEpochMs(w);
+      if (e === null) return null;
+      const ax = (typeof w.ax === 'number' && isFinite(w.ax)) ? w.ax : 0.0;
+      const ay = (typeof w.ay === 'number' && isFinite(w.ay)) ? w.ay : 0.0;
+      const az = (typeof w.az === 'number' && isFinite(w.az)) ? w.az : -9.81;
+      const rms = (typeof w.rms === 'number' && isFinite(w.rms)) ? w.rms : 120.0;
+      const pwr = (typeof w.pwr === 'number' && isFinite(w.pwr)) ? w.pwr : 0.0;
+      const sm = (typeof w.sm === 'number' && isFinite(w.sm)) ? w.sm : null;
+      return [e, ax, ay, az, rms, pwr, sm, 'w'];
+    }}
+
+    function liveToRecord(d, pointT) {{
+      if (pointT === null) return null;
+      const ax = (typeof d.ax === 'number' && isFinite(d.ax)) ? d.ax : 0.0;
+      const ay = (typeof d.ay === 'number' && isFinite(d.ay)) ? d.ay : 0.0;
+      const az = (typeof d.az === 'number' && isFinite(d.az)) ? d.az : -9.81;
+      const rms = (typeof d.rms === 'number' && isFinite(d.rms)) ? d.rms : 120.0;
+      const pwr = (d.power !== undefined && d.power !== null) ? d.power : (d.pwr !== undefined ? d.pwr : 0.0);
+      const vibStd = (d.vib_std !== undefined && d.vib_std !== null) ? d.vib_std : Math.abs(Math.sqrt(ax*ax + ay*ay + az*az) - 9.81);
+      return [pointT, ax, ay, az, rms, pwr, vibStd, 'h'];
+    }}
+
+    // Helper: Centralized merge helper
+    // Sorts by t, dedupes by t, drops 'h' records whose t >= earliest window t in incoming,
+    // trims to newest 120, and updates lastSeenT and lastWindowKey
+    function mergeRecords(incoming) {{
+      if (!incoming || incoming.length === 0) return;
+
+      const windowRecords = incoming.filter(r => r.length >= 8 && r[7] === 'w');
+      if (windowRecords.length > 0) {{
+        const minWindowT = Math.min(...windowRecords.map(r => r[0]));
+        LIVE_BUFFER = LIVE_BUFFER.filter(r => !(r.length >= 8 && r[7] === 'h' && r[0] >= minWindowT));
+      }}
+
+      LIVE_BUFFER = LIVE_BUFFER.concat(incoming);
+
+      // Prioritize 'w' over 'h' if timestamps collide
+      LIVE_BUFFER.sort((a, b) => {{
+        if (a[0] !== b[0]) return a[0] - b[0];
+        if (a[7] === 'w' && b[7] !== 'w') return 1;
+        if (b[7] === 'w' && a[7] !== 'w') return -1;
+        return 0;
+      }});
+
+      const uniqueMap = new Map();
+      for (const r of LIVE_BUFFER) {{
+        uniqueMap.set(r[0], r);
+      }}
+      LIVE_BUFFER = Array.from(uniqueMap.values()).sort((a, b) => a[0] - b[0]);
+
+      while (LIVE_BUFFER.length > 120) {{
+        LIVE_BUFFER.shift();
+      }}
+
+      if (LIVE_BUFFER.length > 0) {{
+        lastSeenT = LIVE_BUFFER[LIVE_BUFFER.length - 1][0];
+      }}
+
+      for (const r of incoming) {{
+        if (r._key) {{
+          if (!lastWindowKey || r._key > lastWindowKey) {{
+            lastWindowKey = r._key;
+          }}
+        }}
       }}
     }}
 
-    function resumeFromInactivity() {{
-      isUserInactive = false;
-      if (inactivityBanner) inactivityBanner.style.display = 'none';
-      recordUserActivity();
-      if (currentMode === 'live') {{
-        checkRigHeartbeat();
+    // Helper: Detect time gaps across unobserved intervals
+    // >20s for window ('w') records, >150s for heartbeat ('h') records, or tag transitions
+    function isGapBefore(points, i) {{
+      if (i <= 0 || !points || i >= points.length) return false;
+      const pPrev = points[i - 1];
+      const pCurr = points[i];
+      if (!pPrev || !pCurr) return false;
+      const tagPrev = pPrev.length >= 8 ? pPrev[7] : null;
+      const tagCurr = pCurr.length >= 8 ? pCurr[7] : null;
+      if (!tagPrev || !tagCurr) return false;
+      const dt = pCurr[0] - pPrev[0];
+      if (tagCurr === 'w' && dt > 20000) return true;
+      if (tagCurr === 'h' && dt > 150000) return true;
+      if (tagCurr !== tagPrev && dt > 20000) return true;
+      return false;
+    }}
+
+    // Sticky Edge-to-Direct Fallback Fetcher:
+    // If /api/live fails twice, sticks to direct Firebase for 60s to prevent double-fetching on every tick
+    async function fetchLiveResponse(signal) {{
+      const now = Date.now();
+      const preferDirect = (apiLiveFailCount >= 2 && (now - lastApiLiveFailTime < 60000));
+      const primaryUrl = preferDirect ? FIREBASE_FALLBACK_URL : LIVE_ENDPOINT;
+      const secondaryUrl = preferDirect ? LIVE_ENDPOINT : FIREBASE_FALLBACK_URL;
+
+      try {{
+        const res = await fetch(primaryUrl, {{ signal }});
+        if (res.ok) {{
+          if (!preferDirect) apiLiveFailCount = 0;
+          return res;
+        }}
+      }} catch (err) {{
+        if (err.name === 'AbortError') throw err;
+      }}
+
+      if (primaryUrl !== secondaryUrl) {{
+        apiLiveFailCount++;
+        lastApiLiveFailTime = now;
+        return await fetch(secondaryUrl, {{ signal }});
+      }}
+      throw new Error('All live endpoints failed');
+    }}
+
+    // Helper: Key-Cursor Bounded Window Fetch
+    // Queries /sessions/<sid>.json?orderBy="%24key"&startAt="<sinceKey>"&limitToLast=<limit>
+    async function fetchWindowsSince(sid, sinceKey = null, limit = 120, signal = null) {{
+      if (!sid) return [];
+      try {{
+        let qUrl = `${{FIREBASE_BASE_URL}}/sessions/${{encodeURIComponent(sid)}}.json?orderBy=%22%24key%22`;
+        if (sinceKey) {{
+          qUrl += `&startAt=%22${{encodeURIComponent(sinceKey)}}%22`;
+        }}
+        qUrl += `&limitToLast=${{limit}}`;
+
+        const res = await fetch(qUrl, signal ? {{ signal }} : {{}});
+        if (!res.ok) return [];
+        const winMap = await res.json();
+        if (!winMap || typeof winMap !== 'object') return [];
+
+        const sortedEntries = Object.entries(winMap).sort((a, b) => a[0].localeCompare(b[0]));
+        const records = [];
+        for (const [k, w] of sortedEntries) {{
+          if (sinceKey && k === sinceKey) continue; // Drop boundary duplicate
+          const rec = windowToRecord(w);
+          if (rec) {{
+            rec._key = k;
+            records.push(rec);
+          }}
+        }}
+        return records;
+      }} catch (err) {{
+        if (err.name === 'AbortError') throw err;
+        console.warn('fetchWindowsSince failed:', err);
+        return [];
+      }}
+    }}
+
+    async function confirmAndResume() {{
+      if (isResuming) return;
+      isResuming = true;
+      const myGen = ++generation; // This resume now owns the loop
+      const btn = document.getElementById('btn-confirm-resume');
+      if (btn) btn.innerText = 'Catching up data...';
+
+      try {{
+        // Network call #1: Fetch current rig status
+        let live = null;
+        try {{
+          const res = await fetchLiveResponse(inflight?.signal);
+          if (res && res.ok) live = await res.json();
+        }} catch (e) {{
+          if (e.name === 'AbortError') return;
+          console.warn('Resume initial fetch error:', e);
+        }}
+
+        // Generation check after await #1
+        if (myGen !== generation) return;
+
+        const currSid = live ? (live.session || live.sessionId || null) : null;
+
+        // Session boundary check
+        if (live && currSid && frozenSessionId && currSid === frozenSessionId) {{
+          // Network call #2: Bounded backfill using key cursor
+          const missed = await fetchWindowsSince(currSid, lastWindowKey, 120, inflight?.signal);
+
+          // Generation check after await #2
+          if (myGen !== generation) return;
+
+          if (missed && missed.length > 0) {{
+            mergeRecords(missed);
+            showToast(`⚡ Caught up ${{missed.length}} missed wash points`);
+          }}
+        }} else if (currSid && frozenSessionId && currSid !== frozenSessionId) {{
+          LIVE_BUFFER = [];
+          lastSeenT = null;
+          lastWindowKey = null;
+          showToast(`🔄 Rig switched session: ${{currSid}}`);
+        }}
+
+        isAfkFrozen = false;
+        hideAfkModal();
+        recordUserActivity();
+
+        if (LIVE_BUFFER.length > 0) {{
+          applyRecord(LIVE_BUFFER[LIVE_BUFFER.length - 1], true);
+          drawSpline();
+          drawXyz();
+          drawArea();
+          drawEnergy();
+        }}
+
+        pollOnce(myGen);
+      }} catch (err) {{
+        console.warn('Resume failed, starting cold:', err);
+        if (myGen === generation) {{
+          isAfkFrozen = false;
+          hideAfkModal();
+          recordUserActivity();
+          pollOnce(myGen);
+        }}
+      }} finally {{
+        isResuming = false;
+        if (btn) btn.innerText = '▶ Confirm & Resume Monitoring';
+      }}
+    }}
+
+    // Catch-up on tab visibility return (when not AFK frozen or paused)
+    async function resumeFromTabVisibility() {{
+      if (PAGE_DEFAULT_VIEW !== 'live' || currentMode !== 'live' || isLivePaused || document.hidden || isAfkFrozen) return;
+      const myGen = ++generation;
+      try {{
+        const res = await fetchLiveResponse(inflight?.signal);
+        if (myGen !== generation || document.hidden || isAfkFrozen || isLivePaused) return;
+        const live = await res.json();
+        if (myGen !== generation || document.hidden || isAfkFrozen || isLivePaused) return;
+
+        const currSid = live ? (live.session || live.sessionId || null) : null;
+        if (live && currSid && activeLiveSessionId && currSid === activeLiveSessionId) {{
+          const missed = await fetchWindowsSince(currSid, lastWindowKey, 120, inflight?.signal);
+          if (myGen !== generation || document.hidden || isAfkFrozen || isLivePaused) return;
+
+          if (missed && missed.length > 0) {{
+            mergeRecords(missed);
+          }}
+        }} else if (currSid && activeLiveSessionId && currSid !== activeLiveSessionId) {{
+          LIVE_BUFFER = [];
+          lastSeenT = null;
+          lastWindowKey = null;
+        }}
+
+        if (LIVE_BUFFER.length > 0) {{
+          applyRecord(LIVE_BUFFER[LIVE_BUFFER.length - 1], true);
+          drawSpline();
+          drawXyz();
+          drawArea();
+          drawEnergy();
+        }}
+        pollOnce(myGen);
+      }} catch (e) {{
+        if (myGen === generation && !isLivePaused && !document.hidden && !isAfkFrozen) pollOnce(myGen);
       }}
     }}
 
@@ -1509,142 +1897,118 @@ def generate_html(default_view='live'):
     }});
 
     function setLiveSyncRate(rate) {{
-      showToast('ℹ️ Adaptive sync: 10s during wash cycles, 60s idle heartbeat to conserve Firebase quota.');
+      showToast('⚡ Live sync: Adaptive streaming (10s active / 25s idle) with AFK freeze protection.');
     }}
 
-    function scheduleNextPoll() {{
-      if (livePollTimeoutId) {{
-        clearTimeout(livePollTimeoutId);
-        livePollTimeoutId = null;
-      }}
-      if (document.hidden || currentMode !== 'live' || isUserInactive) return;
+    async function pollOnce(myGen) {{
+      // Hard page-level guard against historical mode or inactive states running live controller
+      if (PAGE_DEFAULT_VIEW !== 'live' || currentMode !== 'live' || isAfkFrozen || isLivePaused || document.hidden) return;
+      if (myGen !== generation) return;
 
-      // Adaptive polling based on rig activity:
-      // When rig is active (washing): 10 seconds
-      // When rig is idle (standby): 25 seconds (checks for start of wash while saving quota)
-      // When rig is offline: 15 seconds
-      let delay = 15000;
-      if (isRigOnline) {{
-        delay = isRigActive ? 10000 : 25000;
-      }}
-      livePollTimeoutId = setTimeout(async () => {{
-        await checkRigHeartbeat();
-      }}, delay);
-    }}
-
-    async function checkRigHeartbeat() {{
-      if (document.hidden) return; // Conserve Firebase free-tier quota when tab is in background
-      if (currentMode !== 'live') return; // Strict isolation: Zero network calls in historical/archive mode
-      if (isUserInactive) return; // Zero network calls when user is idle
-
+      inflight = new AbortController();
       try {{
         let res;
         try {{
-          res = await fetch(LIVE_ENDPOINT);
-          if (!res.ok && LIVE_ENDPOINT !== FIREBASE_FALLBACK_URL) {{
-            res = await fetch(FIREBASE_FALLBACK_URL);
-          }}
+          res = await fetchLiveResponse(inflight.signal);
         }} catch (netErr) {{
-          if (LIVE_ENDPOINT !== FIREBASE_FALLBACK_URL) {{
-            res = await fetch(FIREBASE_FALLBACK_URL);
-          }} else {{
-            throw netErr;
-          }}
+          if (netErr.name === 'AbortError') return;
+          throw netErr;
         }}
 
+        if (myGen !== generation) return;
+
         const d = await res.json();
-        const wasOnlineBefore = isRigOnline;
+        if (myGen !== generation) return;
 
         if (d && (d.cnt !== undefined || d.uptime !== undefined || d.ts !== undefined)) {{
-          // In Firmware 07 (schema: 3), idle heartbeat is sent every 60s to conserve Firebase quota.
-          // While active/washing, it sends every 10s. For legacy fw, it is 2-5s.
           const maxAgeMs = (d.schema >= 3 && d.active === false) ? 75000 : 25000;
           const isFreshByTs = d.ts ? (Date.now() - d.ts < maxAgeMs) : true;
+          const pointT = liveEpochMs(d);
+
           const hasIncremented = (lastLivePacketCnt !== null && d.cnt !== undefined && d.cnt !== lastLivePacketCnt) ||
-                                 (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime);
+                                 (lastLivePacketUptime !== null && d.uptime !== undefined && d.uptime !== lastLivePacketUptime) ||
+                                 (lastSeenT !== null && pointT !== null && pointT !== lastSeenT);
 
           if (isFreshByTs) {{
-            if (hasIncremented || (lastPacketArrivedAt === 0 && d.uptime !== undefined)) {{
-              lastPacketArrivedAt = Date.now();
-            }}
             isRigOnline = true;
           }} else {{
             isRigOnline = false;
           }}
 
           isRigActive = (d.active === true);
+          const currSid = d.session || d.sessionId || null;
+
+          if (currSid && activeLiveSessionId && currSid !== activeLiveSessionId) {{
+            LIVE_BUFFER = [];
+            lastSeenT = null;
+            lastWindowKey = null;
+            showToast(`🔄 Rig started a new wash cycle: ${{currSid}}`);
+          }}
+          activeLiveSessionId = currSid;
+
           lastLivePacketCnt = d.cnt;
           lastLivePacketUptime = d.uptime;
 
-          // Push into Live rolling buffer
+          // Single source per state discipline:
+          // 1. When rig is idle (d.active !== true): trace is fed by /live heartbeat points.
+          // 2. When rig is washing (d.active === true): applyRecord() keeps readouts fresh every 10s,
+          //    but chart trace is fed strictly by window records (/sessions/<sid>) every 30s.
           if (!isLivePaused && isRigOnline) {{
-            const pwr = (d.power !== undefined && d.power !== null) ? d.power : (d.pwr !== undefined ? d.pwr : 0.0);
-            const vibStd = (d.vib_std !== undefined && d.vib_std !== null) ? d.vib_std : Math.abs(Math.sqrt(d.ax*d.ax + d.ay*d.ay + d.az*d.az) - 9.81);
-            const newRec = [d.uptime * 1000, d.ax, d.ay, d.az, d.rms, pwr, vibStd];
+            const newRec = liveToRecord(d, pointT);
+            if (newRec) {{
+              applyRecord(newRec, true);
 
-            if (hasIncremented || LIVE_BUFFER.length === 0 || (LIVE_BUFFER.length > 0 && LIVE_BUFFER[LIVE_BUFFER.length - 1][0] !== newRec[0])) {{
-              LIVE_BUFFER.push(newRec);
-              if (LIVE_BUFFER.length > 120) LIVE_BUFFER.shift();
-
-              if (currentMode === 'live') {{
-                applyRecord(newRec, true);
-                drawSpline();
-                drawXyz();
-                drawArea();
-                drawEnergy();
+              if (d.active !== true) {{
+                if (hasIncremented || LIVE_BUFFER.length === 0 || (pointT !== null && pointT !== lastSeenT)) {{
+                  mergeRecords([newRec]);
+                  if (currentMode === 'live') {{
+                    drawSpline();
+                    drawXyz();
+                    drawArea();
+                    drawEnergy();
+                  }}
+                }}
               }}
             }}
 
-            // If active wash session, backfill detailed 5s window summaries every ~30s
-            if (d.active && d.session && (Date.now() - lastBackfillMs > 30000)) {{
+            // If active wash session, fetch 5s window summaries every ~30s with race guards
+            if (d.active && d.session && (Date.now() - lastBackfillMs > WINDOW_FETCH_MS)) {{
               lastBackfillMs = Date.now();
-              backfillSessionWindows(d.session);
+              const fetchSid = d.session;
+              fetchWindowsSince(fetchSid, lastWindowKey, 12, inflight.signal).then(missed => {{
+                if (myGen !== generation || fetchSid !== activeLiveSessionId || currentMode !== 'live' || isAfkFrozen || isLivePaused || document.hidden) return;
+                if (missed && missed.length > 0) {{
+                  mergeRecords(missed);
+                  if (LIVE_BUFFER.length > 0) {{
+                    applyRecord(LIVE_BUFFER[LIVE_BUFFER.length - 1], true);
+                    drawSpline();
+                    drawXyz();
+                    drawArea();
+                    drawEnergy();
+                  }}
+                }}
+              }}).catch(err => {{
+                if (err.name !== 'AbortError') console.warn('Periodic window fetch error:', err);
+              }});
             }}
           }}
         }} else {{
           isRigOnline = false;
           isRigActive = false;
         }}
-      }} catch (e) {{
+      }} catch (err) {{
+        if (err.name === 'AbortError') return;
         isRigOnline = false;
         isRigActive = false;
       }}
+
       updateRigStatusUI(isRigOnline);
-      scheduleNextPoll();
-    }}
 
-    async function backfillSessionWindows(sessionId) {{
-      if (!sessionId) return;
-      try {{
-        const sessUrl = `${{FIREBASE_BASE_URL}}/sessions/${{sessionId}}.json?orderBy=%22%24key%22&limitToLast=8`;
-        const res = await fetch(sessUrl);
-        if (!res.ok) return;
-        const winMap = await res.json();
-        if (!winMap || typeof winMap !== 'object') return;
-
-        const existingTimes = new Set(LIVE_BUFFER.map(r => r[0]));
-        const added = [];
-        for (const [k, w] of Object.entries(winMap)) {{
-          if (!w || typeof w !== 'object' || w.t === undefined) continue;
-          const tMs = w.t;
-          if (!existingTimes.has(tMs)) {{
-            const wPwr = (w.pwr !== undefined) ? w.pwr : 0.0;
-            const wVibStd = (w.sm !== undefined) ? w.sm : (w.vdf || 0.03);
-            added.push([tMs, w.ax, w.ay, w.az, w.rms, wPwr, wVibStd]);
-          }}
-        }}
-        if (added.length > 0) {{
-          LIVE_BUFFER = LIVE_BUFFER.concat(added).sort((a, b) => a[0] - b[0]);
-          while (LIVE_BUFFER.length > 120) LIVE_BUFFER.shift();
-          if (currentMode === 'live') {{
-            drawSpline();
-            drawXyz();
-            drawArea();
-            drawEnergy();
-          }}
-        }}
-      }} catch (err) {{
-        // Silently handle backfill errors
+      // Reschedule next poll: 30s offline, 10s active, 25s idle (Section 3 Invariant: never < 5000ms)
+      if (myGen === generation && currentMode === 'live' && !isAfkFrozen && !isLivePaused && !document.hidden && PAGE_DEFAULT_VIEW === 'live') {{
+        const delay = !isRigOnline ? POLL_OFFLINE_MS : (isRigActive ? POLL_ACTIVE_MS : POLL_IDLE_MS);
+        if (pollTimer) clearTimeout(pollTimer);
+        pollTimer = setTimeout(() => pollOnce(myGen), delay);
       }}
     }}
 
@@ -1842,7 +2206,8 @@ def generate_html(default_view='live'):
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const normRms = points[i][4] / rmsMax;
         const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - (normRms * plotH));
-        if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
+        if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) splineCtx.moveTo(x, y);
+        else splineCtx.lineTo(x, y);
       }}
       splineCtx.stroke();
 
@@ -1871,7 +2236,8 @@ def generate_html(default_view='live'):
         const x = marginLeft + ((i / (points.length - 1)) * plotW);
         const v = getPointVibe(points[i]);
         const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
-        if (i === 0) splineCtx.moveTo(x, y); else splineCtx.lineTo(x, y);
+        if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) splineCtx.moveTo(x, y);
+        else splineCtx.lineTo(x, y);
       }}
       splineCtx.stroke();
 
@@ -2025,7 +2391,8 @@ def generate_html(default_view='live'):
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const az = points[i][3];
           const y = yGravity - ((az + 9.81) * scaleZ);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+          else xyzCtx.lineTo(x, y);
         }}
         xyzCtx.stroke();
       }}
@@ -2039,7 +2406,8 @@ def generate_html(default_view='live'):
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ay = points[i][2];
           const y = yZero - (ay * scaleXY);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+          else xyzCtx.lineTo(x, y);
         }}
         xyzCtx.stroke();
       }}
@@ -2053,7 +2421,8 @@ def generate_html(default_view='live'):
           const x = marginLeft + ((i / (points.length - 1)) * plotW);
           const ax = points[i][1];
           const y = yZero - (ax * scaleXY);
-          if (i === 0) xyzCtx.moveTo(x, y); else xyzCtx.lineTo(x, y);
+          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+          else xyzCtx.lineTo(x, y);
         }}
         xyzCtx.stroke();
       }}
@@ -2254,9 +2623,27 @@ def generate_html(default_view='live'):
       for (let i = 0; i < total; i++) {{
         const x = marginLeft + ((i / (total - 1)) * plotW);
         const y = getY(dataSeries[i][4]);
-        if (i === 0) areaCtx.moveTo(x, y); else areaCtx.lineTo(x, y);
+        if (i === 0 || (currentMode === 'live' && isGapBefore(dataSeries, i))) areaCtx.moveTo(x, y);
+        else areaCtx.lineTo(x, y);
       }}
       areaCtx.stroke();
+
+      // In live mode, draw a faint dashed vertical line at each gap break
+      if (currentMode === 'live') {{
+        areaCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        areaCtx.setLineDash([2 * dpr, 3 * dpr]);
+        areaCtx.lineWidth = 1 * dpr;
+        areaCtx.beginPath();
+        for (let i = 1; i < total; i++) {{
+          if (isGapBefore(dataSeries, i)) {{
+            const gx = marginLeft + ((i / (total - 1)) * plotW);
+            areaCtx.moveTo(gx, marginTop);
+            areaCtx.lineTo(gx, marginTop + plotH);
+          }}
+        }}
+        areaCtx.stroke();
+        areaCtx.setLineDash([]);
+      }}
 
       // Cursor scrubber line & dot
       const getX = (idx) => marginLeft + ((idx / (total - 1)) * plotW);
@@ -2472,7 +2859,8 @@ def generate_html(default_view='live'):
       for (let i = 0; i < total; i++) {{
         const x = marginLeft + ((i / (total - 1)) * plotW);
         const y = getY(getPowerAt(i));
-        if (i === 0) energyCtx.moveTo(x, y); else energyCtx.lineTo(x, y);
+        if (i === 0 || (currentMode === 'live' && isGapBefore(dataSeries, i))) energyCtx.moveTo(x, y);
+        else energyCtx.lineTo(x, y);
       }}
       energyCtx.stroke();
 
@@ -2753,9 +3141,10 @@ def generate_html(default_view='live'):
     setViewMode('{default_view}');
     window.addEventListener('load', () => {{
       resizeCanvases();
-      recordUserActivity();
-      if (currentMode === 'live') {{
-        checkRigHeartbeat();
+      if (PAGE_DEFAULT_VIEW === 'live' && currentMode === 'live') {{
+        recordUserActivity();
+        generation++;
+        pollOnce(generation);
       }}
       setupCanvasScrubbing(splineCvs);
       setupCanvasScrubbing(xyzCvs);
@@ -2763,11 +3152,18 @@ def generate_html(default_view='live'):
       if (energyCvs) setupCanvasScrubbing(energyCvs);
     }});
     document.addEventListener('visibilitychange', () => {{
-      if (!document.hidden && currentMode === 'live' && !isUserInactive) {{
-        checkRigHeartbeat();
-      }} else if (document.hidden && livePollTimeoutId) {{
-        clearTimeout(livePollTimeoutId);
-        livePollTimeoutId = null;
+      if (!document.hidden && currentMode === 'live' && PAGE_DEFAULT_VIEW === 'live') {{
+        if (isAfkFrozen || isLivePaused) {{
+          // If AFK frozen or manually paused, stay paused/frozen
+          return;
+        }}
+        // Not AFK or paused: catch up on what was missed while tab was backgrounded
+        recordUserActivity();
+        resumeFromTabVisibility();
+      }} else if (document.hidden) {{
+        if (currentMode === 'live' && PAGE_DEFAULT_VIEW === 'live' && !isAfkFrozen) {{
+          stopLivePolling();
+        }}
       }}
     }});
   </script>
