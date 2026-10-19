@@ -13,7 +13,7 @@ Rig: ESP32, MPU-6050 (vibration), INMP441 mic (16 kHz I2S), Tapo P110 (power, 1 
 |---|---|---|
 | Firmware 07 (on-device DSP, one feature vector per 5.024 s window, 200 Hz vibration FIFO, quota-aware Firebase) | [DONE] Compiled with `esp32:esp32@3.3.12`. DRAM overflow solved (outbox capacity 48 windows, batch body 4096, dynamic allocation for diagnostic snapshot). Flashed to ESP32 over COM6. Rig is actively running on external power, connected to Wi-Fi (`leo`), streaming Schema 3 telemetry to Firebase RTDB (`heap: ~52 kB` steady, `drops: 0`, `outbox: 0`). Dynamic vibration confirmed (`vib_std` spikes from 0.03 to 1.72 m/s² on physical motion/tapping). | `firmware/07_feature_streamer/` |
 | Quota-aware PC side (shared Firebase client, archiver daemon, incremental downloader, local-first SmartThings phases) | [DONE] Incremental downloader (`cloud_downloader.py`) and archive daemon (`auto_drive_sync_daemon.py`) verified against live Firebase; test session `wash_cycle_2026-10-19_0107.csv` (127 windows) successfully archived to Drive. | `firmware/*.py`, `firmware/tests/` |
-| Web Dashboard (`build_clean_dashboard.py` & HTML pages) | [DONE] Built and verified with `node --check` across all 4 pages (`https://washer-pdm.pages.dev`). Restored cadence invariants (10s active / 25s idle / 30s offline, no delay < 5000ms); unified time base to epoch ms (`d.ts` and `w.e`); single buffer source per state (heartbeat trace during idle, window batches during active wash); key-cursor backfill (`startAt`); centralized `mergeRecords()`; manual pause stops network traffic via `stopLivePolling()`; live gap breaks on canvas waveforms across unobserved time (>20s window / >150s heartbeat); AFK 5-min zero-request freeze with `?afk_test_ms=` test hook; Card 1 and Card 2 plot `vib_std` dynamic vibration standard deviation without invalid `vdf` fallback. | `build_clean_dashboard.py`, `*.html` |
+| Web Dashboard (`build_clean_dashboard.py` & HTML pages) | [DONE] Built and verified with `node --check` across all 4 pages (`https://washer-pdm.pages.dev`). Restored cadence invariants (10s active / 25s idle / 30s offline, no delay < 5000ms); unified time base to epoch ms (`d.ts` and `w.e`); single buffer source per state; key-cursor backfill (`startAt`); centralized `mergeRecords()`; manual pause stops traffic via `stopLivePolling()`; live gap breaks; AFK 5-min zero-request freeze; Card 1 plots `vib_mag_std` (σ) on honest 0 to 0.5+ m/s² scale with 0.03 sensor noise floor marker; Card 2 plots per-axis dynamic vibration (σx, σy, σz) hiding mean gravity lanes; State pill evaluates dynamic vibration across live and historic sessions; Card 2 header displays dominant vibration frequency in Hz (gated on running threshold > 0.08 m/s²; no rpm shown); legacy files preserve byte-identical |a| magnitude display. | `build_clean_dashboard.py`, `*.html` |
 | ML pipeline v3 | [DONE] runs on the 8 real legacy cycles | `ml/` |
 | Credentials | Hard-coded secrets removed from source. **Firebase secret and Wi-Fi password still need rotating** (they remain in Drive history and old `build/*.bin`) | `.env` only |
 | Archive | Superseded v1/v2 material moved, nothing deleted | `archive/ARCHIVE_LOG_2026-10-18.md` |
@@ -33,11 +33,16 @@ Current real-data result (legacy snapshot schema, Mahalanobis, nested LOCO): 0/8
 ## 4. Next steps (in order)
 1. Rotate Firebase secret + Wi-Fi password; add `OTA_PASS` to `.env`.
 2. **[COMPLETED]** Flash firmware 07, work through the hardware checklist, fix compile or heap problems (DRAM overflow resolved, flashed and streaming stably).
-3. Record 20+ cycles with the daemon running (verify SmartThings phases are saved), varied loads and programs, sensor fixed.
-4. `py ml/train_unsupervised_pdm.py` (auto-switches to the windowed schema at 3+ firmware-07 cycles).
-5. Collect audio clips (`firmware/collect_audio_clips.py`), run `ml/waveform_fault_study.py`.
-6. Safe, reversible perturbation runs tagged via `/tag` (unbalanced load, soft mat) as real test cases.
-7. Optional: pretrained audio embedding (PANNs/BEATs/OpenL3) fed into the same pipeline.
+3. **[READY]** Profile acoustic background noise and verify pump fill-phase correlation ([`docs/handoffs/TODO_BACKGROUND_NOISE_AND_DATA_COLLECTION.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/TODO_BACKGROUND_NOISE_AND_DATA_COLLECTION.md)):
+   - Lock INMP441 mounting position facing cabinet with directional acoustic baffle.
+   - Record 2–3 min baselines with washer off (compressor on/off, water pump on/off) via `firmware/collect_audio_clips.py`.
+   - Verify whether water pressure pump activates exclusively during water fill phases.
+   - Update `ml/feature_fusion.py` & `ml/detectors.py` to down-weight `ab0` / RMS, prioritize high bands (`ab1`–`ab5`, `ahr`, `ahk`), and enforce multimodal gating (acoustic alarm requires $P > 15\text{ W}$ or $\sigma_v > 0.1\text{ m/s}^2$).
+4. Record 20+ cycles with the daemon running (verify SmartThings phases are saved), varied loads and programs, sensor fixed.
+5. `py ml/train_unsupervised_pdm.py` (auto-switches to the windowed schema at 3+ firmware-07 cycles).
+6. Collect audio clips (`firmware/collect_audio_clips.py`), run `ml/waveform_fault_study.py`.
+7. Safe, reversible perturbation runs tagged via `/tag` (unbalanced load, soft mat) as real test cases.
+8. Optional: pretrained audio embedding (PANNs/BEATs/OpenL3) fed into the same pipeline.
 
 ## 5. Hackathon story [PROPOSAL]
 Pitch what is true: a low-cost, non-destructive multimodal edge sensor that learns each machine's own healthy baseline and flags sustained departures, with every claim backed by a leave-one-cycle-out report. Do not claim remaining-life or cost savings yet; frame them as what the platform enables once degradation data is collected. Strong, defensible points: on-device DSP (raw audio never leaves the device), tiny Firebase footprint, per-asset baselines (no labelled faults needed), transparent per-feature explanations.

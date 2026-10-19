@@ -1,13 +1,77 @@
 import json
 import os
 
+# =============================================================================
+# CSV Ingestion & Pre-computed Session Discovery
+# =============================================================================
+# Column meanings in Firmware 07 (V3 schema):
+# - accel_x, accel_y, accel_z (ax, ay, az): window MEANS (~ -0.66, +2.88, -9.00 m/s^2).
+#   These represent gravity tilt orientation, NOT dynamic vibration.
+# - vib_mag_std (sm): standard deviation of vector magnitude sqrt(x^2+y^2+z^2) (dynamic vibration).
+# - vib_std_x, vib_std_y, vib_std_z (sx, sy, sz): per-axis standard deviations.
+# - vib_dom_hz (vdf): dominant vibration frequency in 0.5-45 Hz (tracks drum speed during spin).
+# Legacy files (firmware 05/06) lack vib_mag_std; they provide 5s snapshot means and magnitude.
+# Output record layout for firmware 07: [t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]
+# Output record layout for legacy: [t, ax, ay, az, rms] or [t, ax, ay, az, rms, pwr]
 def load_csv(path):
     if not os.path.exists(path):
         return []
     with open(path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()[1:]
+        lines = f.readlines()
+    if not lines:
+        return []
+
+    header_line = lines[0].strip()
+    headers = [h.strip() for h in header_line.split(',')]
+
+    # Check if firmware 07 (V3 schema) with dynamic vibration features
+    if 'vib_mag_std' in headers:
+        col_map = {col: idx for idx, col in enumerate(headers)}
+        idx_t = col_map.get('timestamp_ms', 0)
+        idx_ax = col_map.get('accel_x', 1)
+        idx_ay = col_map.get('accel_y', 2)
+        idx_az = col_map.get('accel_z', 3)
+        idx_rms = col_map.get('audio_rms', 4)
+        idx_pwr = col_map.get('power_w')
+        idx_sm = col_map.get('vib_mag_std')
+        idx_sx = col_map.get('vib_std_x')
+        idx_sy = col_map.get('vib_std_y')
+        idx_sz = col_map.get('vib_std_z')
+        idx_vdf = col_map.get('vib_dom_hz')
+
+        def parse_float(val):
+            if val is None or val == '':
+                return None
+            try:
+                return round(float(val), 4)
+            except (ValueError, TypeError):
+                return None
+
+        rows = []
+        for l in lines[1:]:
+            parts = l.strip().split(',')
+            if len(parts) <= max(idx_t, idx_ax, idx_ay, idx_az, idx_rms):
+                continue
+            try:
+                t = int(float(parts[idx_t]))
+                ax = round(float(parts[idx_ax]), 4)
+                ay = round(float(parts[idx_ay]), 4)
+                az = round(float(parts[idx_az]), 4)
+                rms = round(float(parts[idx_rms]), 4)
+                pwr = parse_float(parts[idx_pwr]) if idx_pwr is not None and idx_pwr < len(parts) else None
+                sm = parse_float(parts[idx_sm]) if idx_sm is not None and idx_sm < len(parts) else None
+                sx = parse_float(parts[idx_sx]) if idx_sx is not None and idx_sx < len(parts) else None
+                sy = parse_float(parts[idx_sy]) if idx_sy is not None and idx_sy < len(parts) else None
+                sz = parse_float(parts[idx_sz]) if idx_sz is not None and idx_sz < len(parts) else None
+                vdf = parse_float(parts[idx_vdf]) if idx_vdf is not None and idx_vdf < len(parts) else None
+                rows.append([t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf])
+            except (ValueError, IndexError):
+                pass
+        return rows
+
+    # Legacy firmware 05/06 parser (kept strictly unchanged for byte-identical output)
     rows = []
-    for l in lines:
+    for l in lines[1:]:
         parts = l.strip().split(',')
         if len(parts) >= 5:
             try:
@@ -940,20 +1004,23 @@ def generate_html(default_view='live'):
             <button class="span-btn active" id="btn-xyz-full" onclick="setChartSpan('xyz', 'full')">Full Run</button>
             <button class="span-btn" id="btn-xyz-win" onclick="setChartSpan('xyz', 'win')">40s Window</button>
           </div>
+          <span class="axis-toggle-clean" id="pill-dom-freq" style="color: #60a5fa;" title="Dominant vibration frequency in 0.5–45 Hz. During spin this usually tracks drum speed (Hz &times; 60 &approx; rpm); not verified against a tachometer.">
+            Dom. freq: <strong id="vib-dom-freq" style="margin-left: 3px;">—</strong>
+          </span>
           <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
-            Ax: <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
+            <span id="lbl-pill-x">Ax:</span> <strong id="vibe-leg-x">-0.74</strong> m/s&sup2;
           </span>
           <span class="axis-toggle-clean" id="pill-tog-y" style="color: var(--coral-accent);" onclick="toggleAxis('y')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--coral-accent);"></span>
-            Ay: <strong id="vibe-leg-y">+1.40</strong> m/s&sup2;
+            <span id="lbl-pill-y">Ay:</span> <strong id="vibe-leg-y">+1.40</strong> m/s&sup2;
           </span>
           <span class="axis-toggle-clean" id="pill-tog-z" style="color: var(--purple-accent);" onclick="toggleAxis('z')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple-accent);"></span>
-            Az: <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
+            <span id="lbl-pill-z">Az:</span> <strong id="vibe-leg-z">-9.40</strong> m/s&sup2;
           </span>
-          <span class="axis-toggle-clean" style="color: #fff;">
-            |a|: <strong id="head-vibe-mag">9.53</strong> m/s&sup2;
+          <span class="axis-toggle-clean" id="pill-tog-mag" style="color: #fff;">
+            <span id="lbl-pill-mag">|a|:</span> <strong id="head-vibe-mag">9.53</strong> m/s&sup2;
           </span>
         </div>
       </div>
@@ -1089,22 +1156,109 @@ def generate_html(default_view='live'):
       else if (chart === 'xyz') drawXyz();
     }}
 
+    // =========================================================================
+    // Vibration Display Helpers
+    // Firmware 07 records provide per-window dynamic vibration standard deviations
+    // (vib_mag_std = p[6], vib_std_x = p[8], vib_std_y = p[9], vib_std_z = p[10],
+    // vib_dom_hz = p[11]). Window means (ax, ay, az = p[1..3]) are tilt/gravity.
+    // =========================================================================
+    function getVibStd(p) {{
+      return (p && p.length >= 7 && typeof p[6] === 'number' && Number.isFinite(p[6])) ? p[6] : null;
+    }}
+
+    function getAxisStd(p, axis) {{
+      if (!p || p.length < 9) return null;
+      const idx = (axis === 0 || axis === 'x') ? 8 : ((axis === 1 || axis === 'y') ? 9 : ((axis === 2 || axis === 'z') ? 10 : -1));
+      if (idx === -1 || p.length <= idx) return null;
+      const v = p[idx];
+      return (typeof v === 'number' && Number.isFinite(v)) ? v : null;
+    }}
+
+    function seriesHasVibStd(points) {{
+      if (!points || !points.length) return false;
+      return points.some(p => getVibStd(p) !== null);
+    }}
+
+    function seriesHasAxisStd(points) {{
+      if (!points || !points.length) return false;
+      return points.some(p => getAxisStd(p, 0) !== null);
+    }}
+
+    function getNiceVibScale(maxVal) {{
+      let top = Math.max(0.5, maxVal || 0.5);
+      let step = 0.25;
+      if (top <= 0.5) {{
+        top = 0.5;
+        step = 0.25;
+      }} else if (top <= 1.0) {{
+        top = 1.0;
+        step = 0.5;
+      }} else if (top <= 2.0) {{
+        top = Math.ceil(top * 2) / 2;
+        step = 0.5;
+      }} else {{
+        top = Math.ceil(top);
+        step = top <= 5 ? 1.0 : (top <= 10 ? 2.5 : Math.ceil(top / 4));
+      }}
+      const ticks = [];
+      for (let v = top; v >= -1e-6; v -= step) {{
+        ticks.push(Number(v.toFixed(2)));
+      }}
+      return {{ max: top, ticks: ticks }};
+    }}
+
+    function updateCard2Labels(isAxisSigma) {{
+      const titleXyz = document.getElementById('title-xyz');
+      const lblPillX = document.getElementById('lbl-pill-x');
+      const lblPillY = document.getElementById('lbl-pill-y');
+      const lblPillZ = document.getElementById('lbl-pill-z');
+      const lblPillMag = document.getElementById('lbl-pill-mag');
+
+      if (isAxisSigma) {{
+        if (titleXyz) titleXyz.innerText = 'Per-Axis Vibration (std per 5 s window)';
+        if (lblPillX) lblPillX.innerText = '\u03c3x:';
+        if (lblPillY) lblPillY.innerText = '\u03c3y:';
+        if (lblPillZ) lblPillZ.innerText = '\u03c3z:';
+        if (lblPillMag) lblPillMag.innerText = '\u03c3|a|:';
+      }} else {{
+        if (titleXyz) titleXyz.innerText = 'Tri-Axial Vibration (Ax, Ay, Az)';
+        if (lblPillX) lblPillX.innerText = 'Ax:';
+        if (lblPillY) lblPillY.innerText = 'Ay:';
+        if (lblPillZ) lblPillZ.innerText = 'Az:';
+        if (lblPillMag) lblPillMag.innerText = '|a|:';
+      }}
+    }}
+
     function updateChartSubtitles() {{
       const subSpline = document.getElementById('sub-spline');
       const subXyz = document.getElementById('sub-xyz');
       const togSpline = document.getElementById('tog-spline-mode');
       const togXyz = document.getElementById('tog-xyz-mode');
-      if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {{
+      const isHistoric = (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1);
+      const isSigma = isHistoric ? seriesHasVibStd(ACTIVE_DATA) : seriesHasVibStd(LIVE_BUFFER);
+      const isAxisSigma = isHistoric ? seriesHasAxisStd(ACTIVE_DATA) : seriesHasAxisStd(LIVE_BUFFER);
+
+      updateCard2Labels(isAxisSigma);
+
+      if (isHistoric) {{
         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
         if (subSpline) {{
-          subSpline.innerText = (chartSpanMode.spline === 'full')
-            ? `${{durMin}}-min complete run • Vibration resultant & Acoustic sound amplitude`
-            : `40s window • Vibration resultant & Acoustic sound amplitude`;
+          if (isSigma) {{
+            subSpline.innerText = `${{durMin}}-min run • Vibration \u03c3 (window std) & sound RMS`;
+          }} else {{
+            subSpline.innerText = `${{durMin}}-min run • Legacy 5 s snapshots: |a| magnitude (not vibration std) & sound`;
+          }}
         }}
         if (subXyz) {{
-          subXyz.innerText = (chartSpanMode.xyz === 'full')
-            ? `${{durMin}}-min complete run • Isolated X/Y & Z oscilloscope lanes`
-            : `40s window • Isolated X/Y & Z oscilloscope lanes`;
+          if (isAxisSigma) {{
+            subXyz.innerText = (chartSpanMode.xyz === 'full')
+              ? `${{durMin}}-min run • Per-axis vibration std (\u03c3x, \u03c3y, \u03c3z)`
+              : `40s window • Per-axis vibration std (\u03c3x, \u03c3y, \u03c3z)`;
+          }} else {{
+            subXyz.innerText = (chartSpanMode.xyz === 'full')
+              ? `${{durMin}}-min complete run • Isolated X/Y & Z oscilloscope lanes`
+              : `40s window • Isolated X/Y & Z oscilloscope lanes`;
+          }}
         }}
         const btnSplineFull = document.getElementById('btn-spline-full');
         const btnXyzFull = document.getElementById('btn-xyz-full');
@@ -1114,8 +1268,16 @@ def generate_html(default_view='live'):
         if (togSpline) togSpline.style.display = 'inline-flex';
         if (togXyz) togXyz.style.display = 'inline-flex';
       }} else {{
-        if (subSpline) subSpline.innerText = 'Vibration resultant • Acoustic sound amplitude';
-        if (subXyz) subXyz.innerText = 'MPU-6050 Accelerometer • Isolated X/Y & Z oscilloscope lanes';
+        if (subSpline) {{
+          subSpline.innerText = isSigma
+            ? 'Live vibration \u03c3 (window std) & sound RMS'
+            : 'Vibration resultant • Acoustic sound amplitude';
+        }}
+        if (subXyz) {{
+          subXyz.innerText = isAxisSigma
+            ? 'MPU-6050 Accelerometer • Per-axis vibration std (\u03c3x, \u03c3y, \u03c3z)'
+            : 'MPU-6050 Accelerometer • Isolated X/Y & Z oscilloscope lanes';
+        }}
         if (togSpline) togSpline.style.display = 'none';
         if (togXyz) togXyz.style.display = 'none';
       }}
@@ -1641,7 +1803,11 @@ def generate_html(default_view='live'):
       const rms = (typeof w.rms === 'number' && isFinite(w.rms)) ? w.rms : 120.0;
       const pwr = (typeof w.pwr === 'number' && isFinite(w.pwr)) ? w.pwr : 0.0;
       const sm = (typeof w.sm === 'number' && isFinite(w.sm)) ? w.sm : null;
-      return [e, ax, ay, az, rms, pwr, sm, 'w'];
+      const sx = (typeof w.sx === 'number' && isFinite(w.sx)) ? w.sx : null;
+      const sy = (typeof w.sy === 'number' && isFinite(w.sy)) ? w.sy : null;
+      const sz = (typeof w.sz === 'number' && isFinite(w.sz)) ? w.sz : null;
+      const vdf = (typeof w.vdf === 'number' && isFinite(w.vdf)) ? w.vdf : null;
+      return [e, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf];
     }}
 
     function liveToRecord(d, pointT) {{
@@ -2006,7 +2172,7 @@ def generate_html(default_view='live'):
     function applyRecord(rec, isFromLive = false) {{
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
-      const vibStd = (rec.length >= 7 && rec[6] !== undefined && rec[6] !== null && typeof rec[6] === 'number' && Number.isFinite(rec[6])) ? rec[6] : null;
+      const vibStd = getVibStd(rec);
 
       if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
       if (timelineHeadSpike) {{
@@ -2018,18 +2184,11 @@ def generate_html(default_view='live'):
         timelineHeadSpike.title = 'Provisional: vibration std > 0.08 m/s² (same as firmware fallback); retune after first firmware-07 wash';
       }}
 
-      if (headVibeMag) {{
-        if (isFromLive && vibStd !== null) {{
-          headVibeMag.innerHTML = `${{vibe.toFixed(2)}} <span style="color: var(--teal-accent); font-size: 11px; font-weight: 500;">(&sigma;: ${{vibStd.toFixed(2)}})</span>`;
-        }} else {{
-          headVibeMag.innerText = vibe.toFixed(2);
-        }}
-      }}
-
+      // Card 1 legend: show 'Vib (σ)' with 3 decimals whenever vibStd is available, in both live and historic
       const curVibeEl = document.getElementById('spline-cur-vibe');
       const curVibeTitle = document.getElementById('lbl-spline-vibe-title');
       if (curVibeEl) {{
-        if (isFromLive && vibStd !== null) {{
+        if (vibStd !== null) {{
           if (curVibeTitle) curVibeTitle.innerText = 'Vib (\u03c3)';
           curVibeEl.innerText = vibStd.toFixed(3);
         }} else {{
@@ -2040,12 +2199,47 @@ def generate_html(default_view='live'):
       const curRmsEl = document.getElementById('spline-cur-rms');
       if (curRmsEl) curRmsEl.innerText = rms.toFixed(1);
 
-      const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
-      const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
-      const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
-      vibeLegX.innerText = strX;
-      vibeLegY.innerText = strY;
-      vibeLegZ.innerText = strZ;
+      // Card 2 pills & title: per-axis vibration std in sigma mode vs mean lanes in legacy mode
+      const isAxisSigma = (currentMode === 'historic')
+        ? seriesHasAxisStd(ACTIVE_DATA)
+        : (seriesHasAxisStd(LIVE_BUFFER) || (rec && getAxisStd(rec, 0) !== null));
+
+      updateCard2Labels(isAxisSigma);
+
+      if (isAxisSigma) {{
+        const sx = getAxisStd(rec, 0);
+        const sy = getAxisStd(rec, 1);
+        const sz = getAxisStd(rec, 2);
+        vibeLegX.innerText = sx !== null ? sx.toFixed(3) : '—';
+        vibeLegY.innerText = sy !== null ? sy.toFixed(3) : '—';
+        vibeLegZ.innerText = sz !== null ? sz.toFixed(3) : '—';
+        if (headVibeMag) headVibeMag.innerText = vibStd !== null ? vibStd.toFixed(3) : '—';
+      }} else {{
+        const strX = (ax >= 0 ? '+' : '') + ax.toFixed(2);
+        const strY = (ay >= 0 ? '+' : '') + ay.toFixed(2);
+        const strZ = (az >= 0 ? '+' : '') + az.toFixed(2);
+        vibeLegX.innerText = strX;
+        vibeLegY.innerText = strY;
+        vibeLegZ.innerText = strZ;
+        if (headVibeMag) {{
+          if (isFromLive && vibStd !== null) {{
+            headVibeMag.innerHTML = `${{vibe.toFixed(2)}} <span style="color: var(--teal-accent); font-size: 11px; font-weight: 500;">(&sigma;: ${{vibStd.toFixed(2)}})</span>`;
+          }} else {{
+            headVibeMag.innerText = vibe.toFixed(2);
+          }}
+        }}
+      }}
+
+      // Dominant frequency readout: gated on VIB_RUNNING_THRESHOLD
+      const vibDomFreqEl = document.getElementById('vib-dom-freq');
+      if (vibDomFreqEl) {{
+        const vdf = (rec && rec.length >= 12 && typeof rec[11] === 'number' && Number.isFinite(rec[11])) ? rec[11] : null;
+        if (vibStd !== null && vibStd > VIB_RUNNING_THRESHOLD && vdf !== null) {{
+          vibDomFreqEl.innerText = `${{vdf.toFixed(1)}} Hz`;
+        }} else {{
+          vibDomFreqEl.innerText = '—';
+        }}
+      }}
 
       if (!isFromLive && ACTIVE_DATA && ACTIVE_DATA.length > 0) {{
         const startT = ACTIVE_DATA[0][0];
@@ -2127,51 +2321,89 @@ def generate_html(default_view='live'):
       }});
       splineCtx.fillText('RMS', w - marginRight + (5 * dpr), marginTop - (4 * dpr));
 
-      function getPointVibe(p) {{
-        if (currentMode === 'live' && p.length >= 7 && p[6] !== undefined && p[6] !== null) {{
-          // In live mode with Schema 3, p[6] is vib_std (dynamic vibration).
-          // Map to 9.81 baseline so dynamic vibration peaks visibly above 9.81.
-          return 9.81 + (p[6] * 1.5);
+      const isSigmaMode = seriesHasVibStd(points);
+
+      let vibMax = 1.0;
+      let scaleVibe = 1.0;
+
+      if (isSigmaMode) {{
+        // Sigma mode (Firmware 07): honest dynamic vibration scale from 0 to nice max (>= 0.5)
+        let maxVibInPoints = 0.0;
+        for (let i = 0; i < points.length; i++) {{
+          const s = getVibStd(points[i]);
+          if (s !== null && s > maxVibInPoints) maxVibInPoints = s;
         }}
-        return Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3]);
-      }}
+        const vScale = getNiceVibScale(maxVibInPoints);
+        vibMax = vScale.max;
 
-      // Left side: Vibration m/s^2 ticks & dynamic scaling
-      const maxVibe = points.reduce((m, p) => Math.max(m, getPointVibe(p)), 9.81);
-      const minVibe = points.reduce((m, p) => Math.min(m, getPointVibe(p)), 9.81);
-      const vibeSpread = Math.max(2.5, maxVibe - 9.81, 9.81 - minVibe);
-      const scaleVibe = Math.min((isMobile ? 20 : 25) * dpr, (plotH * 0.38) / vibeSpread);
+        vScale.ticks.forEach(val => {{
+          const y = marginTop + plotH - ((val / vibMax) * plotH);
+          splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+          splineCtx.beginPath();
+          splineCtx.moveTo(marginLeft, y);
+          splineCtx.lineTo(w - marginRight, y);
+          splineCtx.stroke();
 
-      const vibeTicks = [
-        {{ val: 12.0, lbl: '12.0' }},
-        {{ val: 9.81, lbl: isMobile ? '9.81' : '9.81 (1g)' }},
-        {{ val: 8.0, lbl: '8.0' }}
-      ];
-      vibeTicks.forEach(t => {{
-        const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * scaleVibe);
-        splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+          splineCtx.fillStyle = 'rgba(0, 240, 210, 0.7)';
+          splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+          splineCtx.textAlign = 'right';
+          splineCtx.fillText(val.toFixed(val < 1 && val > 0 ? 2 : 1), marginLeft - (5 * dpr), y + (3 * dpr));
+        }});
+        splineCtx.fillText('\u03c3 m/s\u00b2', marginLeft - (5 * dpr), marginTop - (4 * dpr));
+        splineCtx.textAlign = 'left';
+
+        // Dashed Sensor Noise Floor Marker (~0.03 m/s^2)
+        const yFloor = marginTop + plotH - ((0.03 / vibMax) * plotH);
+        splineCtx.strokeStyle = 'rgba(0, 240, 210, 0.35)';
+        splineCtx.setLineDash([3 * dpr, 3 * dpr]);
         splineCtx.beginPath();
-        splineCtx.moveTo(marginLeft, y);
-        splineCtx.lineTo(w - marginRight, y);
+        splineCtx.moveTo(marginLeft, yFloor);
+        splineCtx.lineTo(w - marginRight, yFloor);
         splineCtx.stroke();
+        splineCtx.setLineDash([]);
 
-        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
-        splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
-        splineCtx.textAlign = 'right';
-        splineCtx.fillText(t.lbl, marginLeft - (5 * dpr), y + (3 * dpr));
-      }});
-      splineCtx.fillText('m/s²', marginLeft - (5 * dpr), marginTop - (4 * dpr));
-      splineCtx.textAlign = 'left';
+        splineCtx.fillStyle = 'rgba(0, 240, 210, 0.5)';
+        splineCtx.font = `500 ${{ (isMobile ? 7 : 7.5) * dpr }}px 'JetBrains Mono', monospace`;
+        splineCtx.textAlign = 'left';
+        splineCtx.fillText('sensor floor ~0.03', marginLeft + (4 * dpr), yFloor - (3 * dpr));
+      }} else {{
+        // Legacy mode (Firmware 05/06 snapshots): |a| resultant around 9.81
+        const maxVibe = points.reduce((m, p) => Math.max(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
+        const minVibe = points.reduce((m, p) => Math.min(m, Math.sqrt(p[1]*p[1] + p[2]*p[2] + p[3]*p[3])), 9.81);
+        const vibeSpread = Math.max(2.5, maxVibe - 9.81, 9.81 - minVibe);
+        scaleVibe = Math.min((isMobile ? 20 : 25) * dpr, (plotH * 0.38) / vibeSpread);
 
-      // Dashed 1g Gravity Baseline
-      const y1g = marginTop + (plotH * 0.45);
-      splineCtx.strokeStyle = 'rgba(0, 240, 210, 0.2)';
-      splineCtx.setLineDash([3 * dpr, 3 * dpr]);
-      splineCtx.beginPath();
-      splineCtx.moveTo(marginLeft, y1g);
-      splineCtx.lineTo(w - marginRight, y1g);
-      splineCtx.stroke();
-      splineCtx.setLineDash([]);
+        const vibeTicks = [
+          {{ val: 12.0, lbl: '12.0' }},
+          {{ val: 9.81, lbl: isMobile ? '9.81' : '9.81 (1g)' }},
+          {{ val: 8.0, lbl: '8.0' }}
+        ];
+        vibeTicks.forEach(t => {{
+          const y = marginTop + (plotH * 0.45) - ((t.val - 9.81) * scaleVibe);
+          splineCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+          splineCtx.beginPath();
+          splineCtx.moveTo(marginLeft, y);
+          splineCtx.lineTo(w - marginRight, y);
+          splineCtx.stroke();
+
+          splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
+          splineCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+          splineCtx.textAlign = 'right';
+          splineCtx.fillText(t.lbl, marginLeft - (5 * dpr), y + (3 * dpr));
+        }});
+        splineCtx.fillText('m/s\u00b2', marginLeft - (5 * dpr), marginTop - (4 * dpr));
+        splineCtx.textAlign = 'left';
+
+        // Dashed 1g Gravity Baseline
+        const y1g = marginTop + (plotH * 0.45);
+        splineCtx.strokeStyle = 'rgba(0, 240, 210, 0.2)';
+        splineCtx.setLineDash([3 * dpr, 3 * dpr]);
+        splineCtx.beginPath();
+        splineCtx.moveTo(marginLeft, y1g);
+        splineCtx.lineTo(w - marginRight, y1g);
+        splineCtx.stroke();
+        splineCtx.setLineDash([]);
+      }}
 
       if (points.length < 2) return;
 
@@ -2208,34 +2440,90 @@ def generate_html(default_view='live'):
       splineCtx.stroke();
 
       // 2. Draw Vibration Wave (Teal) strictly within [marginLeft, w - marginRight]
-      const gradTeal = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
-      gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
-      gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
+      if (isSigmaMode) {{
+        const gradTeal = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+        gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
+        gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
 
-      splineCtx.beginPath();
-      splineCtx.moveTo(marginLeft, marginTop + plotH);
-      for (let i = 0; i < points.length; i++) {{
-        const x = marginLeft + ((i / (points.length - 1)) * plotW);
-        const v = getPointVibe(points[i]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
-        splineCtx.lineTo(x, y);
-      }}
-      splineCtx.lineTo(w - marginRight, marginTop + plotH);
-      splineCtx.closePath();
-      splineCtx.fillStyle = gradTeal;
-      splineCtx.fill();
+        splineCtx.beginPath();
+        let inSubpath = false;
+        for (let i = 0; i < points.length; i++) {{
+          const v = getVibStd(points[i]);
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          if (v !== null) {{
+            const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((v / vibMax) * plotH));
+            if (!inSubpath) {{
+              splineCtx.moveTo(x, marginTop + plotH);
+              splineCtx.lineTo(x, y);
+              inSubpath = true;
+            }} else {{
+              splineCtx.lineTo(x, y);
+            }}
+          }} else if (inSubpath) {{
+            const prevX = marginLeft + (((i - 1) / (points.length - 1)) * plotW);
+            splineCtx.lineTo(prevX, marginTop + plotH);
+            splineCtx.closePath();
+            inSubpath = false;
+          }}
+        }}
+        if (inSubpath) {{
+          const lastX = marginLeft + plotW;
+          splineCtx.lineTo(lastX, marginTop + plotH);
+          splineCtx.closePath();
+        }}
+        splineCtx.fillStyle = gradTeal;
+        splineCtx.fill();
 
-      splineCtx.beginPath();
-      splineCtx.strokeStyle = '#00f0d2';
-      splineCtx.lineWidth = strokeW;
-      for (let i = 0; i < points.length; i++) {{
-        const x = marginLeft + ((i / (points.length - 1)) * plotW);
-        const v = getPointVibe(points[i]);
-        const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
-        if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) splineCtx.moveTo(x, y);
-        else splineCtx.lineTo(x, y);
+        splineCtx.beginPath();
+        splineCtx.strokeStyle = '#00f0d2';
+        splineCtx.lineWidth = strokeW;
+        let lastValid = false;
+        for (let i = 0; i < points.length; i++) {{
+          const v = getVibStd(points[i]);
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          if (v !== null) {{
+            const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((v / vibMax) * plotH));
+            if (!lastValid || (currentMode === 'live' && isGapBefore(points, i))) {{
+              splineCtx.moveTo(x, y);
+            }} else {{
+              splineCtx.lineTo(x, y);
+            }}
+            lastValid = true;
+          }} else {{
+            lastValid = false;
+          }}
+        }}
+        splineCtx.stroke();
+      }} else {{
+        const gradTeal = splineCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+        gradTeal.addColorStop(0, 'rgba(0, 240, 210, 0.2)');
+        gradTeal.addColorStop(1, 'rgba(0, 240, 210, 0.0)');
+
+        splineCtx.beginPath();
+        splineCtx.moveTo(marginLeft, marginTop + plotH);
+        for (let i = 0; i < points.length; i++) {{
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+          const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
+          splineCtx.lineTo(x, y);
+        }}
+        splineCtx.lineTo(w - marginRight, marginTop + plotH);
+        splineCtx.closePath();
+        splineCtx.fillStyle = gradTeal;
+        splineCtx.fill();
+
+        splineCtx.beginPath();
+        splineCtx.strokeStyle = '#00f0d2';
+        splineCtx.lineWidth = strokeW;
+        for (let i = 0; i < points.length; i++) {{
+          const x = marginLeft + ((i / (points.length - 1)) * plotW);
+          const v = Math.sqrt(points[i][1]*points[i][1] + points[i][2]*points[i][2] + points[i][3]*points[i][3]);
+          const y = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
+          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) splineCtx.moveTo(x, y);
+          else splineCtx.lineTo(x, y);
+        }}
+        splineCtx.stroke();
       }}
-      splineCtx.stroke();
 
       // Vertical Playhead & Active point dots
       if (curRelIdx >= 0 && curRelIdx < points.length) {{
@@ -2263,15 +2551,29 @@ def generate_html(default_view='live'):
         splineCtx.stroke();
 
         // Active Vibration dot (Teal)
-        const v = getPointVibe(curPt);
-        const cyVibe = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
-        splineCtx.fillStyle = '#00f0d2';
-        splineCtx.beginPath();
-        splineCtx.arc(cx, cyVibe, 4 * dpr, 0, Math.PI * 2);
-        splineCtx.fill();
-        splineCtx.strokeStyle = '#ffffff';
-        splineCtx.lineWidth = 1 * dpr;
-        splineCtx.stroke();
+        if (isSigmaMode) {{
+          const curVibStd = getVibStd(curPt);
+          if (curVibStd !== null) {{
+            const cyVibe = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((curVibStd / vibMax) * plotH));
+            splineCtx.fillStyle = '#00f0d2';
+            splineCtx.beginPath();
+            splineCtx.arc(cx, cyVibe, 4 * dpr, 0, Math.PI * 2);
+            splineCtx.fill();
+            splineCtx.strokeStyle = '#ffffff';
+            splineCtx.lineWidth = 1 * dpr;
+            splineCtx.stroke();
+          }}
+        }} else {{
+          const v = Math.sqrt(curPt[1]*curPt[1] + curPt[2]*curPt[2] + curPt[3]*curPt[3]);
+          const cyVibe = marginTop + (plotH * 0.45) - ((v - 9.81) * scaleVibe);
+          splineCtx.fillStyle = '#00f0d2';
+          splineCtx.beginPath();
+          splineCtx.arc(cx, cyVibe, 4 * dpr, 0, Math.PI * 2);
+          splineCtx.fill();
+          splineCtx.strokeStyle = '#ffffff';
+          splineCtx.lineWidth = 1 * dpr;
+          splineCtx.stroke();
+        }}
       }}
     }}
 
@@ -2289,21 +2591,6 @@ def generate_html(default_view='live'):
       const marginBottom = (isMobile ? 18 : 22) * dpr;
       const plotW = w - marginLeft - marginRight;
       const plotH = h - marginTop - marginBottom;
-
-      const yZero = marginTop + (plotH * 0.32);
-      const scaleXY = (isMobile ? 10 : 12) * dpr;
-      const yGravity = marginTop + (plotH * 0.78);
-      const scaleZ = (isMobile ? 10 : 12) * dpr;
-
-      // Vertical separator line
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      xyzCtx.lineWidth = 1 * dpr;
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, marginTop);
-      xyzCtx.lineTo(marginLeft, h - marginBottom);
-      xyzCtx.moveTo(w - marginRight, marginTop);
-      xyzCtx.lineTo(w - marginRight, h - marginBottom);
-      xyzCtx.stroke();
 
       let points;
       let curRelIdx = 0;
@@ -2326,101 +2613,226 @@ def generate_html(default_view='live'):
         curRelIdx = currentIndex - startIdx;
       }}
 
+      // Vertical separator line
+      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      xyzCtx.lineWidth = 1 * dpr;
+      xyzCtx.beginPath();
+      xyzCtx.moveTo(marginLeft, marginTop);
+      xyzCtx.lineTo(marginLeft, h - marginBottom);
+      xyzCtx.moveTo(w - marginRight, marginTop);
+      xyzCtx.lineTo(w - marginRight, h - marginBottom);
+      xyzCtx.stroke();
+
       // Time grid & labels across the bottom (in full historical mode)
       if (isFull) {{
         drawTimeGrid(xyzCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
       }}
 
-      // Baseline grid lines (cleanly spaced, zero gutter collisions)
-      const hLines = isMobile ? [
-        {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0', col: 'rgba(255, 255, 255, 0.25)' }},
-        {{ y: yZero, lbl: '0.0', col: 'rgba(255, 255, 255, 0.45)' }},
-        {{ y: yGravity, lbl: '-9.81', col: 'rgba(167, 139, 250, 0.6)' }},
-        {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0', col: 'rgba(167, 139, 250, 0.3)' }}
-      ] : [
-        {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s²', col: 'rgba(255, 255, 255, 0.25)' }},
-        {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
-        {{ y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' }},
-        {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s²', col: 'rgba(167, 139, 250, 0.3)' }}
-      ];
+      const isAxisSigmaMode = seriesHasAxisStd(points);
+      updateCard2Labels(isAxisSigmaMode);
 
-      hLines.forEach(l => {{
-        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      let axisVibMax = 1.0;
+      const yZero = marginTop + (plotH * 0.32);
+      const scaleXY = (isMobile ? 10 : 12) * dpr;
+      const yGravity = marginTop + (plotH * 0.78);
+      const scaleZ = (isMobile ? 10 : 12) * dpr;
+
+      if (isAxisSigmaMode) {{
+        // Sigma mode: shared axis 0 to nice max (>= 0.5 m/s^2)
+        let maxAxisSigma = 0.5;
+        for (let i = 0; i < points.length; i++) {{
+          const sx = getAxisStd(points[i], 0);
+          const sy = getAxisStd(points[i], 1);
+          const sz = getAxisStd(points[i], 2);
+          if (sx !== null && sx > maxAxisSigma) maxAxisSigma = sx;
+          if (sy !== null && sy > maxAxisSigma) maxAxisSigma = sy;
+          if (sz !== null && sz > maxAxisSigma) maxAxisSigma = sz;
+        }}
+        const vScale = getNiceVibScale(maxAxisSigma);
+        axisVibMax = vScale.max;
+
+        vScale.ticks.forEach(val => {{
+          const y = marginTop + plotH - ((val / axisVibMax) * plotH);
+          xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+          xyzCtx.beginPath();
+          xyzCtx.moveTo(marginLeft, y);
+          xyzCtx.lineTo(w - marginRight, y);
+          xyzCtx.stroke();
+
+          xyzCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+          xyzCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+          xyzCtx.textAlign = 'right';
+          xyzCtx.fillText(val.toFixed(val < 1 && val > 0 ? 2 : 1), marginLeft - (5 * dpr), y + (3 * dpr));
+        }});
+        xyzCtx.fillText('\u03c3 m/s\u00b2', marginLeft - (5 * dpr), marginTop - (4 * dpr));
+        xyzCtx.textAlign = 'left';
+
+        // Dashed Sensor Noise Floor Marker (~0.03 m/s^2)
+        const yFloor = marginTop + plotH - ((0.03 / axisVibMax) * plotH);
+        xyzCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
+        xyzCtx.setLineDash([3 * dpr, 3 * dpr]);
         xyzCtx.beginPath();
-        xyzCtx.moveTo(marginLeft, l.y);
-        xyzCtx.lineTo(w - marginRight, l.y);
+        xyzCtx.moveTo(marginLeft, yFloor);
+        xyzCtx.lineTo(w - marginRight, yFloor);
+        xyzCtx.stroke();
+        xyzCtx.setLineDash([]);
+      }} else {{
+        // Legacy mode: Baseline grid lines (cleanly spaced, zero gutter collisions)
+        const hLines = isMobile ? [
+          {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0', col: 'rgba(255, 255, 255, 0.25)' }},
+          {{ y: yZero, lbl: '0.0', col: 'rgba(255, 255, 255, 0.45)' }},
+          {{ y: yGravity, lbl: '-9.81', col: 'rgba(167, 139, 250, 0.6)' }},
+          {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0', col: 'rgba(167, 139, 250, 0.3)' }}
+        ] : [
+          {{ y: yZero - (4.0 * scaleXY), lbl: '+4.0 m/s\u00b2', col: 'rgba(255, 255, 255, 0.25)' }},
+          {{ y: yZero, lbl: '0.0 (X/Y)', col: 'rgba(255, 255, 255, 0.45)' }},
+          {{ y: yGravity, lbl: '-9.81 (Z)', col: 'rgba(167, 139, 250, 0.6)' }},
+          {{ y: yGravity - ((-13.0 + 9.81) * scaleZ), lbl: '-13.0 m/s\u00b2', col: 'rgba(167, 139, 250, 0.3)' }}
+        ];
+
+        hLines.forEach(l => {{
+          xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+          xyzCtx.beginPath();
+          xyzCtx.moveTo(marginLeft, l.y);
+          xyzCtx.lineTo(w - marginRight, l.y);
+          xyzCtx.stroke();
+
+          xyzCtx.fillStyle = l.col;
+          xyzCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
+          xyzCtx.textAlign = 'right';
+          xyzCtx.fillText(l.lbl, marginLeft - (5 * dpr), l.y + (3 * dpr));
+        }});
+        xyzCtx.textAlign = 'left';
+
+        // Dashed Zero Baseline
+        xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(marginLeft, yZero);
+        xyzCtx.lineTo(w - marginRight, yZero);
         xyzCtx.stroke();
 
-        xyzCtx.fillStyle = l.col;
-        xyzCtx.font = `600 ${{ (isMobile ? 7.5 : 8) * dpr }}px 'JetBrains Mono', monospace`;
-        xyzCtx.textAlign = 'right';
-        xyzCtx.fillText(l.lbl, marginLeft - (5 * dpr), l.y + (3 * dpr));
-      }});
-      xyzCtx.textAlign = 'left';
-
-      // Dashed Zero Baseline
-      xyzCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      xyzCtx.setLineDash([4 * dpr, 4 * dpr]);
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, yZero);
-      xyzCtx.lineTo(w - marginRight, yZero);
-      xyzCtx.stroke();
-
-      // Dashed Gravity Baseline
-      xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
-      xyzCtx.beginPath();
-      xyzCtx.moveTo(marginLeft, yGravity);
-      xyzCtx.lineTo(w - marginRight, yGravity);
-      xyzCtx.stroke();
-      xyzCtx.setLineDash([]);
+        // Dashed Gravity Baseline
+        xyzCtx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
+        xyzCtx.beginPath();
+        xyzCtx.moveTo(marginLeft, yGravity);
+        xyzCtx.lineTo(w - marginRight, yGravity);
+        xyzCtx.stroke();
+        xyzCtx.setLineDash([]);
+      }}
 
       if (points.length < 2) return;
 
       const strokeW = (isFull && points.length > 500) ? (1.5 * dpr) : (2 * dpr);
 
-      // Plot Az (Purple)
-      if (axisVisible.z) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#a78bfa';
-        xyzCtx.lineWidth = strokeW;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const az = points[i][3];
-          const y = yGravity - ((az + 9.81) * scaleZ);
-          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
-          else xyzCtx.lineTo(x, y);
+      if (isAxisSigmaMode) {{
+        // Plot σz (Purple)
+        if (axisVisible.z) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#a78bfa';
+          xyzCtx.lineWidth = strokeW;
+          let lastValid = false;
+          for (let i = 0; i < points.length; i++) {{
+            const sz = getAxisStd(points[i], 2);
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            if (sz !== null) {{
+              const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sz / axisVibMax) * plotH));
+              if (!lastValid || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+              else xyzCtx.lineTo(x, y);
+              lastValid = true;
+            }} else {{
+              lastValid = false;
+            }}
+          }}
+          xyzCtx.stroke();
         }}
-        xyzCtx.stroke();
-      }}
 
-      // Plot Ay (Coral)
-      if (axisVisible.y) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#fb923c';
-        xyzCtx.lineWidth = strokeW;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const ay = points[i][2];
-          const y = yZero - (ay * scaleXY);
-          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
-          else xyzCtx.lineTo(x, y);
+        // Plot σy (Coral)
+        if (axisVisible.y) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#fb923c';
+          xyzCtx.lineWidth = strokeW;
+          let lastValid = false;
+          for (let i = 0; i < points.length; i++) {{
+            const sy = getAxisStd(points[i], 1);
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            if (sy !== null) {{
+              const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sy / axisVibMax) * plotH));
+              if (!lastValid || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+              else xyzCtx.lineTo(x, y);
+              lastValid = true;
+            }} else {{
+              lastValid = false;
+            }}
+          }}
+          xyzCtx.stroke();
         }}
-        xyzCtx.stroke();
-      }}
 
-      // Plot Ax (Teal)
-      if (axisVisible.x) {{
-        xyzCtx.beginPath();
-        xyzCtx.strokeStyle = '#00f0d2';
-        xyzCtx.lineWidth = strokeW;
-        for (let i = 0; i < points.length; i++) {{
-          const x = marginLeft + ((i / (points.length - 1)) * plotW);
-          const ax = points[i][1];
-          const y = yZero - (ax * scaleXY);
-          if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
-          else xyzCtx.lineTo(x, y);
+        // Plot σx (Teal)
+        if (axisVisible.x) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#00f0d2';
+          xyzCtx.lineWidth = strokeW;
+          let lastValid = false;
+          for (let i = 0; i < points.length; i++) {{
+            const sx = getAxisStd(points[i], 0);
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            if (sx !== null) {{
+              const y = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sx / axisVibMax) * plotH));
+              if (!lastValid || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+              else xyzCtx.lineTo(x, y);
+              lastValid = true;
+            }} else {{
+              lastValid = false;
+            }}
+          }}
+          xyzCtx.stroke();
         }}
-        xyzCtx.stroke();
+      }} else {{
+        // Legacy mode: Plot Az (Purple)
+        if (axisVisible.z) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#a78bfa';
+          xyzCtx.lineWidth = strokeW;
+          for (let i = 0; i < points.length; i++) {{
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            const az = points[i][3];
+            const y = yGravity - ((az + 9.81) * scaleZ);
+            if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+            else xyzCtx.lineTo(x, y);
+          }}
+          xyzCtx.stroke();
+        }}
+
+        // Legacy mode: Plot Ay (Coral)
+        if (axisVisible.y) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#fb923c';
+          xyzCtx.lineWidth = strokeW;
+          for (let i = 0; i < points.length; i++) {{
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            const ay = points[i][2];
+            const y = yZero - (ay * scaleXY);
+            if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+            else xyzCtx.lineTo(x, y);
+          }}
+          xyzCtx.stroke();
+        }}
+
+        // Legacy mode: Plot Ax (Teal)
+        if (axisVisible.x) {{
+          xyzCtx.beginPath();
+          xyzCtx.strokeStyle = '#00f0d2';
+          xyzCtx.lineWidth = strokeW;
+          for (let i = 0; i < points.length; i++) {{
+            const x = marginLeft + ((i / (points.length - 1)) * plotW);
+            const ax = points[i][1];
+            const y = yZero - (ax * scaleXY);
+            if (i === 0 || (currentMode === 'live' && isGapBefore(points, i))) xyzCtx.moveTo(x, y);
+            else xyzCtx.lineTo(x, y);
+          }}
+          xyzCtx.stroke();
+        }}
       }}
 
       // Active cursor dots & vertical scrubber line
@@ -2436,45 +2848,90 @@ def generate_html(default_view='live'):
         xyzCtx.stroke();
 
         const pt = points[curRelIdx];
-        if (axisVisible.z) {{
-          const cyZ = yGravity - ((pt[3] + 9.81) * scaleZ);
-          xyzCtx.fillStyle = '#a78bfa';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-          xyzCtx.strokeStyle = '#ffffff';
-          xyzCtx.lineWidth = 1 * dpr;
-          xyzCtx.stroke();
-        }}
-        if (axisVisible.x) {{
-          const cyX = yZero - (pt[1] * scaleXY);
-          xyzCtx.fillStyle = '#00f0d2';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-          xyzCtx.strokeStyle = '#ffffff';
-          xyzCtx.lineWidth = 1 * dpr;
-          xyzCtx.stroke();
-        }}
-        if (axisVisible.y) {{
-          const cyY = yZero - (pt[2] * scaleXY);
-          xyzCtx.fillStyle = '#fb923c';
-          xyzCtx.beginPath();
-          xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
-          xyzCtx.fill();
-          xyzCtx.strokeStyle = '#ffffff';
-          xyzCtx.lineWidth = 1 * dpr;
-          xyzCtx.stroke();
+        if (isAxisSigmaMode) {{
+          if (axisVisible.z) {{
+            const sz = getAxisStd(pt, 2);
+            if (sz !== null) {{
+              const cyZ = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sz / axisVibMax) * plotH));
+              xyzCtx.fillStyle = '#a78bfa';
+              xyzCtx.beginPath();
+              xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+              xyzCtx.fill();
+              xyzCtx.strokeStyle = '#ffffff';
+              xyzCtx.lineWidth = 1 * dpr;
+              xyzCtx.stroke();
+            }}
+          }}
+          if (axisVisible.x) {{
+            const sx = getAxisStd(pt, 0);
+            if (sx !== null) {{
+              const cyX = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sx / axisVibMax) * plotH));
+              xyzCtx.fillStyle = '#00f0d2';
+              xyzCtx.beginPath();
+              xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+              xyzCtx.fill();
+              xyzCtx.strokeStyle = '#ffffff';
+              xyzCtx.lineWidth = 1 * dpr;
+              xyzCtx.stroke();
+            }}
+          }}
+          if (axisVisible.y) {{
+            const sy = getAxisStd(pt, 1);
+            if (sy !== null) {{
+              const cyY = Math.max(marginTop + (1 * dpr), marginTop + plotH - ((sy / axisVibMax) * plotH));
+              xyzCtx.fillStyle = '#fb923c';
+              xyzCtx.beginPath();
+              xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+              xyzCtx.fill();
+              xyzCtx.strokeStyle = '#ffffff';
+              xyzCtx.lineWidth = 1 * dpr;
+              xyzCtx.stroke();
+            }}
+          }}
+        }} else {{
+          // Legacy mode: cursor dots at mean lanes
+          if (axisVisible.z) {{
+            const cyZ = yGravity - ((pt[3] + 9.81) * scaleZ);
+            xyzCtx.fillStyle = '#a78bfa';
+            xyzCtx.beginPath();
+            xyzCtx.arc(cx, cyZ, 4 * dpr, 0, Math.PI * 2);
+            xyzCtx.fill();
+            xyzCtx.strokeStyle = '#ffffff';
+            xyzCtx.lineWidth = 1 * dpr;
+            xyzCtx.stroke();
+          }}
+          if (axisVisible.x) {{
+            const cyX = yZero - (pt[1] * scaleXY);
+            xyzCtx.fillStyle = '#00f0d2';
+            xyzCtx.beginPath();
+            xyzCtx.arc(cx, cyX, 4 * dpr, 0, Math.PI * 2);
+            xyzCtx.fill();
+            xyzCtx.strokeStyle = '#ffffff';
+            xyzCtx.lineWidth = 1 * dpr;
+            xyzCtx.stroke();
+          }}
+          if (axisVisible.y) {{
+            const cyY = yZero - (pt[2] * scaleXY);
+            xyzCtx.fillStyle = '#fb923c';
+            xyzCtx.beginPath();
+            xyzCtx.arc(cx, cyY, 4 * dpr, 0, Math.PI * 2);
+            xyzCtx.fill();
+            xyzCtx.strokeStyle = '#ffffff';
+            xyzCtx.lineWidth = 1 * dpr;
+            xyzCtx.stroke();
+          }}
         }}
       }}
 
-      // Dynamic Anti-Collision Placement: Always render baseline badges on opposite side of active cursor, AFTER curves are drawn!
-      const isCursorOnLeftXyz = (points.length > 1) ? ((curRelIdx / (points.length - 1)) < 0.5) : true;
-      const badgeAlign = isCursorOnLeftXyz ? 'right' : 'left';
-      const badgeX = isCursorOnLeftXyz ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
+      // Dynamic Anti-Collision Placement: In legacy mode only, render baseline badges on opposite side of active cursor
+      if (!isAxisSigmaMode) {{
+        const isCursorOnLeftXyz = (points.length > 1) ? ((curRelIdx / (points.length - 1)) < 0.5) : true;
+        const badgeAlign = isCursorOnLeftXyz ? 'right' : 'left';
+        const badgeX = isCursorOnLeftXyz ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
 
-      drawPillBadge(xyzCtx, badgeX, yZero - (10 * dpr), isMobile ? '0.0 Baseline' : 'X/Y Zero Baseline', 'rgba(255,255,255,0.45)', badgeAlign, dpr);
-      drawPillBadge(xyzCtx, badgeX, yGravity - (10 * dpr), isMobile ? 'Z 1g Gravity' : 'Z 1g Gravity (-9.81 m/s²)', '#a78bfa', badgeAlign, dpr);
+        drawPillBadge(xyzCtx, badgeX, yZero - (10 * dpr), isMobile ? '0.0 Baseline' : 'X/Y Zero Baseline', 'rgba(255,255,255,0.45)', badgeAlign, dpr);
+        drawPillBadge(xyzCtx, badgeX, yGravity - (10 * dpr), isMobile ? 'Z 1g Gravity' : 'Z 1g Gravity (-9.81 m/s²)', '#a78bfa', badgeAlign, dpr);
+      }}
     }}
 
     // Canvas 3: Timeline & Controls (Zero overlapping badges, Clean Scrubber)

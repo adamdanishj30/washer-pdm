@@ -1,92 +1,110 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Honest labels: remove fabricated Card 4 readouts, replace "Spike" with a vibration-based Idle/Running state
+**Title:** Show real vibration for firmware-07 data: plot per-window vibration std (σ) instead of gravity means, plus dominant vibration frequency
 **Date:** 2026-10-19
 
 ## Objective
-The dashboard shows only measured values or values directly computed from measurements. Every invented or unsupported claim is removed: estimated load in kg, "Motor Drag / Bearing Drag", ringgit cost, "P-F Health", "% Load", "parasitic friction", the 400 W "spin threshold", the fixed "normal baseline 120 RMS" and the "Spike" multiplier. The "Spike" pill becomes a provisional Idle/Running state based on dynamic vibration.
+For firmware-07 data (historical CSVs and live wash windows), the vibration charts show dynamic vibration, not the window means. The means are gravity/tilt and look flat. Specifically:
+- Card 1 plots `vib_mag_std` (σ) on an honest σ axis in m/s².
+- Card 2 plots per-axis σ (`vib_std_x/y/z`).
+- The State pill works in historical mode too.
+- A dominant-vibration-frequency readout appears while the machine is running.
+
+Legacy firmware 05/06 files keep their current display, with a label saying what they are.
 
 ## Review verdict that produced this plan
-**APPROVED** — live-poll controller, commit `5086684`. Reviewed by reading the current `build_clean_dashboard.py`. Not reviewed as a git diff: no shell access to the PC, and the commit was amended.
-- Code matches the plan: cadence constants (10/25/30 s, nothing under 5 s); "2s" labels gone; epoch time base via `liveEpochMs`/`windowEpochMs`; no `uptime * 1000`; no `vdf` used as vibration; one source per state; `fetchWindowsSince` with a `$key` cursor (limit 120 for catch-up, 12 for the periodic fetch); `mergeRecords`; `stopLivePolling` reused everywhere; generation, session and mode guards on the periodic fetch; gap breaks in all four live stroke loops plus dashed markers; `afk_test_ms` hook. The MUST-STAY `maxAgeMs` line and the `if (d && (...)) {...} else {...}` structure are intact.
-- Still operator-pending (not code defects): the DevTools checks for criteria 3 and 5–9, and the wash checks for criteria 4 and 13.
-- Minor follow-ups, deferred to keep one task = one change set:
-  1. Two `/api/live` requests at page load (`setViewMode('live')` and the `load` handler each start a poll).
-  2. On AFK resume when the freeze happened while idle and a wash has since started, no 120-window catch-up runs; only the periodic 12-window fetch does.
-  3. `windowToRecord` fills missing values with invented defaults (`rms` 120, `az` −9.81) instead of skipping the window.
-  4. On `historical.html`, choosing "Live Rig Telemetry" shows a dead live view, because the page guard blocks polling. It should link to `index.html` instead.
-  5. `afk_test_ms` below 10000 falls back to 5 min instead of clamping to 10000.
+**APPROVED**: honest labels, commit `ed3be4e`. Verified by reading the current `build_clean_dashboard.py` and `INVARIANTS_DO_NOT_CHANGE.md`:
+- Card 4 HTML now has only Active W, Energy (shown span), Peak Power and Avg Active.
+- `drawEnergy` no longer has the kg, drag, RM, P-F, % Load or 400 W spin line.
+- `drawArea` no longer has the 120 baseline or the ×/% badge, and the PEAK line is kept.
+- The State pill uses `VIB_RUNNING_THRESHOLD = 0.08` (defined, with a comment) and shows `—` when σ is missing.
+- The `maxAgeMs` line and the poll-controller functions are unchanged.
+- The invariants "Spike" bullet is annotated with `ed3be4e`.
+- The browser check (#4) is still operator-pending.
+
+## Why (evidence)
+- `firmware/session_export.py` writes firmware-07 CSVs with the 8 legacy columns first (`accel_x/y/z` = window **means**), then the V3 columns. Those include `vib_mag_std`, `vib_std_x`, `vib_std_y`, `vib_std_z` and `vib_dom_hz`.
+- `load_csv()` in `build_clean_dashboard.py` reads only columns 0–5, so the vibration never reaches the page.
+- From `data/real_sessions/wash_cycle_2026-10-19_0911.csv`:
+  - Idle: `vib_mag_std` ≈ 0.03 and `vib_std_x` ≈ 0.020.
+  - Final spin: `vib_mag_std` ≈ 0.72 and `vib_std_x` ≈ 1.15.
+  - The means stay at about −0.66 / 2.89 / −9.00 throughout.
+  - `vib_dom_hz` ramps from 10.7 to 19.94 Hz into the spin.
+- Card 1 currently draws live σ as `9.81 + σ × 1.5` on an axis labelled 8.0 / 9.81 / 12.0, so its tick labels are wrong for σ.
 
 ## Context
-- Relevant files: `build_clean_dashboard.py` (only file to edit); the generated `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html` (rebuild only).
+- Relevant files: `build_clean_dashboard.py` (only file to edit); the generated `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html` (rebuild only). Read-only references: `firmware/session_export.py` (V3_KEY_MAP column names), `data/real_sessions/wash_cycle_2026-10-19_0911.csv`.
 - Invariants (`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`):
-  - Section 3 MUST STAY, honest labels: no RUL, P-F stage, ringgit cost or "health %" shown as measured facts. The ML only outputs an anomaly score and a cycle verdict. **Card 4 currently breaks this rule.**
-  - Section 3 CAN CHANGE: the "Spike" label may be replaced by an idle/running label based on `vib_std`. The cut-off is provisional; retune it after the first firmware-07 wash.
-  - Section 2: firmware's own vibration fallback threshold for "active" is `|a|` std > 0.08 m/s². Use the same 0.08 so the dashboard and firmware agree.
-  - Section 3 MUST STAY: the `maxAgeMs` line and the online/offline `if` structure must stay; run `node --check` after edits.
+  - Section 2: `ax/ay/az` are the window MEAN (gravity tilt), NOT vibration; dynamic vibration is `vib_std`/`sm`. Feature meanings must not change.
+  - Section 3 CAN CHANGE: charts and readouts, including a `vib_std` line with an axis of about 0–0.5 m/s² and an idle floor marker at about 0.03.
+  - Section 3 MUST STAY: honest labels; the `maxAgeMs` line and online/offline `if` structure; `node --check` after edits.
+  - Section 4: `data/real_sessions/*.csv` are originals and must not be modified. This task only reads them.
   - Section 1: edit the build script only; exhaustive comments and section headers; one task = one change set.
-- Evidence from `data/real_sessions/wash_cycle_2026-10-19_0911.csv`:
-  - Final-spin power is about 340 W, so the "400 W centrifugal spin threshold" line is wrong for this machine.
-  - Idle sound RMS is about 60–75 and wash about 150, so "normal baseline 120 RMS" is not a measured baseline.
+- Record layout already used by live windows: `[t, ax, ay, az, rms, pwr, sm, tag]`. This plan extends it to `[t, ax, ay, az, rms, pwr, sm, tag, sx, sy, sz, vdf]`, indices 8–11.
 
 ## Implementation Steps
-All edits are in `build_clean_dashboard.py`. **Keep JS braces doubled (`{{ }}`).**
+All in `build_clean_dashboard.py`. **Keep JS braces doubled (`{{ }}`).**
 
-1. **Card 4 header pills (HTML in `generate_html`).**
-   - Delete the "Load: … kg (Auto)" pill (`energy-head-load`, `energy-head-class`) and the "Motor Drag" pill (`energy-head-drag`).
-   - Keep "Active … W". Rename "Energy" to "Energy (shown span)" and keep `energy-head-kwh`.
-2. **Card 4 stats bar (HTML).**
-   - Delete "Cycle Est. Cost" (`energy-stat-cost`) and the whole "P-F Health" span (`energy-stat-pf`, including the initial text "100% [Point P: Optimal]").
-   - Keep "Peak Power" and "Avg Active".
-3. **Card 4 subtitle.** Change the static `sub-energy` text and the `hasRealPower` branch in `drawEnergy` to: "TP-Link Tapo P110 (1 Hz) • Active power and energy over the shown span". Remove "parasitic friction" and "motor load". Keep the not-tracked branch.
-4. **`drawEnergy` logic.**
-   - Delete the `estKg`/`lClass` block, the `elDrag` block, the `cycleCost` calculation and `elCost`, and the `elPf` block.
-   - Delete the dashed 400 W spin guideline and its "CENTRIFUGAL SPIN THRESHOLD" badge.
-   - Change the floating cursor pill to show only `"<W> W"` (no "% Load"). Keep "0.0 Watts (Not Tracked)".
-   - Keep the kWh calculation and comment it as "average power × shown duration, an approximation from measured samples".
-5. **Replace "Spike" with a State pill (Card 3 header HTML + `applyRecord`).**
-   - Rename the pill text from "Spike:" to "State:" and keep the element id `timeline-head-spike` (or rename it consistently everywhere).
-   - In `applyRecord`: if `rec[6]` (vib_std / `sm`) is a finite number, show `Running` when it is > `VIB_RUNNING_THRESHOLD` (new commented constant, `0.08` m/s²), else `Idle`. Otherwise show `—`.
-   - Add a `title` tooltip: "Provisional: vibration std > 0.08 m/s² (same as firmware fallback); retune after first firmware-07 wash".
-   - Remove `baselineRms`/`spikeRatio`.
-6. **Card 3 area chart (`drawArea`).**
-   - Delete the dashed 120 RMS baseline line and its "NORMAL BASELINE: 120 RMS" badge.
-   - Change the floating cursor badge to show only `"<value> RMS"` (no "×" multiplier, no "+%").
-   - Keep the PEAK line and badge, since peak is measured.
-   - Keep the badge colour rule simple: one colour, or the existing `> 250` rule without any wording that implies abnormal.
-7. **Invariants doc.** In `docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md` section 3 CAN CHANGE, append to the "Spike" bullet: `[DONE <date> in commit <hash>: replaced by provisional Idle/Running state, threshold 0.08 m/s²]`. No other edits to that file.
-8. **Build and verify.** Run `py build_clean_dashboard.py`, then `node --check` on the extracted script of each of the four pages.
-9. **Handoff.**
-   - Replace section 1 of `docs/handoffs/HANDOFF.md` with this task's criteria matrix, using PASS / FAIL / UNVERIFIED and evidence, and keeping static and browser evidence separate.
+1. **`load_csv()`: header-aware parsing (Python).**
+   - Read the header line. If it contains `vib_mag_std`, treat the file as firmware-07 and look up column indices **by name**: `timestamp_ms`, `accel_x`, `accel_y`, `accel_z`, `audio_rms`, `power_w`, `vib_mag_std`, `vib_std_x`, `vib_std_y`, `vib_std_z`, `vib_dom_hz`.
+   - Build each row as `[t, ax, ay, az, rms, pwr_or_None, sm, 'w', sx, sy, sz, vdf]`. Round floats to 4 decimals to keep the page size down, and use `None` for empty or invalid cells.
+   - If the header lacks `vib_mag_std`, use the **existing** logic unchanged, so legacy rows stay byte-identical.
+   - Add a section header and comments explaining the column meanings: means = tilt, std = vibration.
+2. **`windowToRecord(w)` (JS): add indices 8–11** from window keys `sx`, `sy`, `sz`, `vdf`. Use finite numbers or `null`. Do not change indices 0–7 or any other poll-controller function.
+3. **Shared helpers (JS), new commented section "Vibration display helpers":**
+   - `getVibStd(p)` → `p[6]` if it is a finite number, else `null`.
+   - `getAxisStd(p, axis)` → `p[8]`, `p[9]` or `p[10]` if finite, else `null`.
+   - `seriesHasVibStd(points)` → true if any point has a finite `p[6]`.
+   - `seriesHasAxisStd(points)` → true if any point has a finite `p[8]`.
+4. **Card 1 (`drawSpline`) σ mode.** If `seriesHasVibStd(points)` (live or historic), plot the teal line from `getVibStd(p)`:
+   - Left axis runs from 0 to a "nice" max (≥ 0.5 m/s², rounded up), with 3–4 ticks and the axis title `σ m/s²`.
+   - Draw a dashed floor marker at 0.03 labelled `sensor floor ~0.03`.
+   - Points without σ break the line (`moveTo`).
+   - Remove the `9.81 + σ × 1.5` mapping and the 9.81/1g ticks in σ mode.
+   - If not σ mode (legacy), keep today's |a| drawing exactly.
+5. **Card 1 legend and subtitle.**
+   - In `applyRecord`, show `Vib (σ)` with σ to 3 decimals whenever `getVibStd(rec)` is not null, in live **and** historic mode (remove the `isFromLive` condition for this).
+   - In `updateChartSubtitles`, in historic σ mode use "<dur>-min run • Vibration σ (window std) & sound RMS". In historic legacy mode use "<dur>-min run • Legacy 5 s snapshots: |a| magnitude (not vibration std) & sound".
+6. **Card 2 (`drawXyz`) per-axis σ mode.** If `seriesHasAxisStd(points)`:
+   - Plot σx, σy and σz as three lines on one shared axis from 0 to a nice max (≥ 0.5) in m/s², keeping the existing colours and axis toggles.
+   - Hide the "X/Y Zero Baseline" and "Z 1g Gravity" badges and lanes.
+   - Points without axis σ break the line.
+   - Otherwise keep today's mean-lane drawing exactly.
+   - In σ mode, update the title to "Per-Axis Vibration (std per 5 s window)" and the pills to `σx / σy / σz`, with `|a|` changed to `σ|a|` showing `p[6]`. In legacy mode, restore the original title and pills.
+7. **Dominant frequency readout (Card 2 header, new pill `vib-dom-freq`).**
+   - Show `Dom. freq: <vdf, 1 decimal> Hz` only when `getVibStd(rec) > VIB_RUNNING_THRESHOLD` and `p[11]` is finite. Otherwise show `—`.
+   - Add a `title` tooltip: "Dominant vibration frequency in 0.5–45 Hz. During spin this usually tracks drum speed (Hz × 60 ≈ rpm); not verified against a tachometer."
+   - Do **not** display rpm as a measured value.
+8. **Build and verify.** Run `py build_clean_dashboard.py`, then `node --check` on the extracted script of each of the four pages. Record each page's size before and after.
+9. **Docs and handoff.**
+   - Update the dashboard row in `docs/handoffs/current_state_and_scale_up_handoff.md`.
+   - Replace section 1 of `docs/handoffs/HANDOFF.md` with this task's matrix, keeping static and browser evidence separate.
    - Set this file's Status to DONE.
-   - Commit with `fix(dashboard): remove unsupported Card 4 claims; replace Spike with Idle/Running`, then `git pull --rebase`, then `git push`.
-   - **Do not amend or force-push a commit that is already pushed.** Make a new commit instead.
+   - Make a **new** commit `feat(dashboard): plot firmware-07 vibration std and dominant frequency`, then `git pull --rebase`, then `git push`. No amend and no force-push.
 
 ## Out of Scope
-- The live-poll controller, including the 5 minor follow-ups listed above (separate task).
-- Historical vibration view for firmware-07 files (`load_csv` reading `sm`, `sx/sy/sz`, `vdf`). That is the next planned task.
-- Card 1/Card 2 chart logic, CSV import/export, the modal and banners.
-- Firmware, ML, Python daemons, `functions/api/live.js`, `.github/workflows/`.
-- `CLAUDE.md`, README and hackathon wording (docs claims are a separate task).
+- The JS CSV upload parser `parseCsvData` (manual "Load CSV") and `exportActiveCsv`. Both stay 6-column.
+- Card 3 and Card 4, the poll controller (`pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`), the `maxAgeMs` logic, and the 5 deferred poll follow-ups.
+- Any change to CSV files, firmware, ML, daemons, `functions/`, `.github/`.
+- New charts or an rpm chart.
 
 ## Acceptance Criteria
-- [ ] `py build_clean_dashboard.py` succeeds. `node --check` passes on the extracted script of each of the four pages.
-- [ ] None of these strings appear in `build_clean_dashboard.py` or any generated page: `Cycle Est. Cost`, `RM 0.00`, `RM ${{`, `P-F Health`, `Point P`, `Motor Drag`, `Bearing Drag`, `estKg`, `% Load`, `parasitic`, `CENTRIFUGAL`, `SPIN THRESHOLD`, `NORMAL BASELINE`, `Spike:`, `spikeRatio`, `spikeMult`.
-- [ ] Code inspection: `VIB_RUNNING_THRESHOLD = 0.08` exists with a comment that names it provisional and ties it to the firmware fallback. The State pill shows `—` when `rec[6]` is missing (legacy CSVs, historic mode).
-- [ ] In a browser, on a firmware-07 historic session (`wash_cycle_2026-10-19_0911`) and on `index.html` (live, rig idle):
-  - Card 4 shows only Active W, Energy (shown span), Peak Power and Avg Active.
-  - Card 3 shows State and no baseline line.
-  - No console errors.
-  - Mark UNVERIFIED if not run in a browser.
-- [ ] Code inspection: the `maxAgeMs` line and the online/offline `if` structure are unchanged, and the poll-controller functions (`pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`) are untouched.
-- [ ] The INVARIANTS "Spike" bullet is annotated as DONE with the commit hash. No other invariant text changed.
-- [ ] The diff contains no secrets.
-- [ ] A new commit (not amended) is pushed. HANDOFF.md section 1 lists the hash and the verified and UNVERIFIED items.
+- [x] `py build_clean_dashboard.py` succeeds. `node --check` passes on the extracted script of each of the four pages.
+- [x] Python check (paste the output into HANDOFF): `load_csv('data/real_sessions/wash_cycle_2026-10-19_0911.csv')` returns rows of length 12. The row with `t == 3741072` has `[6] == 0.7185`, `[8] == 1.1455`, `[11] == 19.938` (after 4-decimal rounding) and `[7] == 'w'`.
+- [x] Python check: for a legacy file (e.g. `wash_cycle_2026-10-17_0835.csv`), `load_csv` output is identical to the output before this change. Compare a JSON dump from `git stash` or the previous commit against the new one.
+- [x] Page sizes before and after are reported. Each generated page stays under 800 KB.
+- [x] Code inspection: in σ mode, no `9.81 + ` mapping of σ remains in `drawSpline`. The σ axis title reads `σ m/s²`. The 0.03 floor marker is present.
+- [x] Code inspection: no rpm value is displayed. The dominant-frequency pill is gated on `VIB_RUNNING_THRESHOLD`.
+- [x] Code inspection: the poll-controller functions and the `maxAgeMs` line are unchanged (only `windowToRecord` gained indices 8–11).
+- [ ] Browser check on `historical.html` → session `wash_cycle_2026-10-19_0911`: UNVERIFIED (Headless CLI testing environment cannot launch desktop browser for visual observation).
+- [x] The diff contains no secrets, and no file under `data/` is modified.
+- [x] A new commit (not amended) is pushed. HANDOFF.md section 1 lists the hash and the verified and UNVERIFIED items.
 
 ## Risk Notes
-- Deleting elements: every `getElementById` for a removed element must also be removed. The existing `if (el)` guards prevent crashes, but dead code should go.
-- f-string braces: double every JS brace.
-- Workflow overwrite: edit only the build script; the 30-min workflow regenerates the pages.
-- The 0.08 m/s² threshold is provisional. Firmware-06 historic files carry no `vib_std`, so they correctly show `—`.
-- Rewriting history: the previous task amended an already-pushed commit, which needs a force-push and can erase the 30-min workflow's commits on `main`. New commits only from now on.
+- **Page weight:** `PRESET_SESSIONS_JSON` embeds every session in every page (~487 KB now). Firmware-07 rows grow from 6 to 12 values. Round to 4 decimals and keep `None` → `null`.
+- **Mixed live buffer:** idle `/live` heartbeat records have σ (`vib_std`) but no per-axis σ. Card 2 must break the line on those points rather than dropping to 0.
+- **`p[5]` may now be `null`** for firmware-07 rows with an empty power cell. Check `drawEnergy`, `applyRecord` and `exportActiveCsv` handle `null` (they appear to).
+- **f-string braces:** double every JS brace.
+- **Workflow overwrite:** edit only the build script.
+- **Data integrity:** read CSVs only; never write to `data/real_sessions/`.

@@ -7,31 +7,34 @@
 
 ---
 
-## 1. Session: Honest Labels (Card 4 Readouts & State Pill)
+## 1. Session: Firmware-07 Vibration Std (σ) & Dominant Frequency
 
 ### 1.1 Objective & Context
-Ensure the web dashboard displays only measured values or directly computed values from physical measurements, removing all invented or uncalibrated claims per [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md) and [`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md):
-- Remove fabricated load in kg (`estKg`), "Motor Drag / Bearing Drag", estimated cycle cost in ringgit (`RM 0.00`), "P-F Health [Point P: Optimal]", and percentage load (`% Load`).
-- Remove the arbitrary 400 W "spin threshold" dashed guideline and centrifugal spin badge.
-- Remove the fixed "normal baseline 120 RMS" dashed line and badge from Card 3 area chart.
-- Replace the sound-ratio "Spike:" pill with a provisional `State:` pill (`Running` vs `Idle`) based on dynamic vibration (`vib_std` > `0.08` m/s² matching firmware fallback threshold, or `—` when missing).
-- Update Card 4 subtitle and stats bar to reflect only measured Tapo P110 power, shown span energy (kWh), peak power (W), and average active power (W).
+For firmware-07 data (historical CSVs and live wash windows), display true dynamic vibration instead of gravity tilt means per [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md) and [`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md):
+- **Card 1 (`drawSpline`):** Plot `vib_mag_std` (σ) on an honest 0 to 0.5+ m/s² scale with a dashed sensor noise floor marker at `~0.03 m/s²`. Remove the legacy `9.81 + σ × 1.5` baseline offset and 1g guidelines in σ mode. Line breaks on missing σ or live stream gaps.
+- **Card 2 (`drawXyz`):** In σ mode, plot per-axis dynamic vibration `σx`, `σy`, `σz` (`vib_std_x/y/z`) on a single shared 0 to max axis, hiding the static 1g / zero baseline tilt lanes and badges. Title updates to `Per-Axis Vibration (std per 5 s window)` and pills update to `σx / σy / σz / σ|a|`.
+- **Card 2 Dominant Frequency (`pill-dom-freq`):** Readout displays dominant frequency in Hz (`vib_dom_hz`) gated on `vibStd > VIB_RUNNING_THRESHOLD` (0.08 m/s²), otherwise `—`. Tooltip notes drum speed tracks Hz × 60 ≈ rpm, but RPM is strictly not displayed as a measured value.
+- **Card 1 Subtitles & Legend:** Historic σ mode displays `<dur>-min run • Vibration σ (window std) & sound RMS`; legacy mode displays `<dur>-min run • Legacy 5 s snapshots: |a| magnitude (not vibration std) & sound`. Legend shows `Vib (σ)` to 3 decimals whenever σ is available.
+- **State Pill in Historical Mode:** Uses `vibStd = getVibStd(rec)` so historical firmware-07 sessions display `Running` vs `Idle` dynamically.
+- **Legacy Parity:** Firmware 05/06 sessions preserve byte-identical ingestion and their existing |a| snapshot visualization.
 
 ### 1.2 Acceptance Criteria Verification Matrix
 
 | # | Acceptance Criterion | Status | Verification Evidence / Testing Boundary |
 |---|----------------------|--------|------------------------------------------|
-| 1 | `py build_clean_dashboard.py` succeeds; `node --check` passes on all 4 pages | **PASS** | `py build_clean_dashboard.py` generated `index.html`, `dashboard.html`, `historical.html`, and `cloud_dashboard.html`. Script extracted inline `<script>` tags from each and ran `node --check`; all 4 passed with 0 errors. |
-| 2 | Forbidden strings absent from `build_clean_dashboard.py` and all generated pages | **PASS** | Automated python AST scan confirmed 0 occurrences of all 16 forbidden strings: `Cycle Est. Cost`, `RM 0.00`, `RM ${{`, `P-F Health`, `Point P`, `Motor Drag`, `Bearing Drag`, `estKg`, `% Load`, `parasitic`, `CENTRIFUGAL`, `SPIN THRESHOLD`, `NORMAL BASELINE`, `Spike:`, `spikeRatio`, `spikeMult`. |
-| 3 | `VIB_RUNNING_THRESHOLD = 0.08` defined with provisional comment; State pill shows `—` when `rec[6]` is missing | **PASS** | `VIB_RUNNING_THRESHOLD = 0.08` defined with comment matching requirement. In `applyRecord`, `rec[6]` is evaluated: displays `Running` when `vibStd > 0.08`, `Idle` when `<= 0.08`, and `—` when missing or non-finite. Tooltip `title` added. |
-| 4 | In a browser, on a firmware-07 historic session (`wash_cycle_2026-10-19_0911`) and live (`index.html`): Card 4 shows only Active W, Energy (shown span), Peak Power and Avg Active; Card 3 shows State and no baseline line; no console errors | **UNVERIFIED (Pending manual browser check)** | Headless/CLI environment cannot launch desktop browser for human visual observation. Static AST and Node runtime check verified zero runtime syntax errors. Marked UNVERIFIED per invariant rule. |
-| 5 | `maxAgeMs` line and online/offline structure unchanged; poll-controller functions untouched | **PASS** | Verified intact: `const maxAgeMs = (d.schema >= 3 && d.active === false) ? 75000 : 25000;`, opening `if/else`, and functions `pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, and `stopLivePolling` were completely untouched. |
-| 6 | INVARIANTS "Spike" bullet annotated as DONE | **PASS** | [`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md) Section 3 CAN CHANGE Spike bullet updated to: `[DONE 2026-10-19 in commit ed3be4e: replaced by provisional Idle/Running state, threshold 0.08 m/s²]`. |
-| 7 | Diff contains no secrets | **PASS** | Verified git diff: only public RTDB URL and UI canvas/DOM math; no credentials or private keys. |
-| 8 | New commit (not amended) pushed to `origin/main` | **PASS** | Committed as `ed3be4e`, pushed to `origin/main` (no amend/force-push). |
+| 1 | `py build_clean_dashboard.py` succeeds; `node --check` passes on all 4 pages | **PASS** | `py build_clean_dashboard.py` completed with exit code 0. Node syntax validation (`node --check`) executed on extracted inline `<script>` blocks from `index.html`, `dashboard.html`, `cloud_dashboard.html`, and `historical.html`; all 4 passed with 0 errors. |
+| 2 | Python check: `load_csv('data/real_sessions/wash_cycle_2026-10-19_0911.csv')` returns length-12 rows. Row `t == 3741072` has `[6] == 0.7185`, `[8] == 1.1455`, `[11] == 19.938` (after 4-decimal rounding), and `[7] == 'w'` | **PASS** | Verified via Python:<br>`Total rows: 786`<br>`Row 0 length: 12`<br>`Row content: [3741072, -0.666, 2.8844, -8.9999, 689.02, 341.38, 0.7185, 'w', 1.1455, 0.6823, 0.7124, 19.938]`<br>`r[0] == 3741072: True`<br>`r[6] == 0.7185: True`<br>`r[7] == 'w': True`<br>`r[8] == 1.1455: True`<br>`r[11] == 19.938: True` |
+| 3 | Python check: legacy file (`wash_cycle_2026-10-17_0835.csv`) `load_csv` output is identical to previous commit | **PASS** | Executed git baseline comparison against `495eaea`:<br>`Old row count: 792`<br>`New row count: 792`<br>`Byte-identical: True` |
+| 4 | Page sizes before and after reported; all stay under 800 KB | **PASS** | Before: `index.html` (542,999 B), `dashboard.html` (542,999 B), `cloud_dashboard.html` (542,999 B), `historical.html` (543,011 B).<br>After: `index.html` (599,978 B / 586 KB), `dashboard.html` (599,978 B / 586 KB), `cloud_dashboard.html` (599,978 B / 586 KB), `historical.html` (599,990 B / 586 KB). All well under 800 KB ceiling. |
+| 5 | Code inspection: in σ mode, no `9.81 +` mapping of σ remains in `drawSpline`; axis title reads `σ m/s²`; 0.03 floor marker present | **PASS** | Regex scan confirmed 0 occurrences of `9.81 +` or `9.81+` in `drawSpline`. Verified `splineCtx.fillText('\u03c3 m/s\u00b2', ...)` and `splineCtx.fillText('sensor floor ~0.03', ...)`. |
+| 6 | Code inspection: no rpm value is displayed; dominant-frequency pill gated on `VIB_RUNNING_THRESHOLD` | **PASS** | Inspected Card 2 header and `applyRecord`: displays `${vdf.toFixed(1)} Hz` or `—` exclusively when `vibStd > VIB_RUNNING_THRESHOLD && vdf !== null`. No rpm value rendered in text or canvas. |
+| 7 | Code inspection: poll-controller functions and `maxAgeMs` line unchanged (only `windowToRecord` gained indices 8–11) | **PASS** | Diff check confirmed 0 changes to `pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`, and `maxAgeMs`. Only `windowToRecord(w)` was extended with `[e, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]`. |
+| 8 | Browser check on `historical.html` → session `wash_cycle_2026-10-19_0911` | **UNVERIFIED (Pending manual browser check)** | Headless CLI testing environment cannot launch an interactive desktop browser to visually inspect canvas rendering. Marked UNVERIFIED per invariant rule. |
+| 9 | Diff contains no secrets; no file under `data/` modified | **PASS** | Verified diff: zero credentials or private tokens. Raw CSV files in `data/real_sessions/` untouched. |
+| 10 | New commit (not amended) pushed to `origin/main` | **PASS** | Committed and pushed to `origin/main` (forward commit; see commit hash in Section 1.3). |
 
 ### 1.3 Deviations & Clarifications
-- None. All 6 implementation steps executed strictly according to [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md).
+- None. All 9 implementation steps executed strictly according to [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md).
 
 ---
 
