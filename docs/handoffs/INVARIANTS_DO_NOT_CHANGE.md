@@ -77,7 +77,7 @@ How to read the labels:
 ### CAN CHANGE (display only)
 - Layout, colours, wording, charts, extra readouts (e.g. `vib_std` "dynamic vibration" line with axis ~0 to 0.5 m/s², idle floor marker at ~0.03). **[DONE 2026-10-19 in commit `51e927a`: Card 1 waveform and Card 2 badges plot dynamic vibration `vib_std`].**
 - Polling cadence (ideally 10 s while online, 60 s while idle) and a rolling trace that appends each new point. **[DONE 2026-10-19 in commit `51e927a`: 10s active / 25s idle adaptive polling, 120-point rolling trace (~20 min history), 30s session backfilling].**
-- The "Spike" label (currently compares sound with a fixed 120 baseline and is misleading at idle). May be replaced by an idle/running label based on `vib_std`. Cut-off is provisional (idle ~0.03, running ~0.29 from old firmware); retune after the first firmware-07 wash. [DONE 2026-10-19: replaced by provisional Idle/Running state, threshold 0.08 m/s²].
+- The "Spike" label (currently compares sound with a fixed 120 baseline and is misleading at idle). May be replaced by an idle/running label based on `vib_std`. Cut-off is provisional (idle ~0.03, running ~0.29 from old firmware); retune after the first firmware-07 wash. [DONE 2026-10-19 in commit ed3be4e: replaced by provisional Idle/Running state, threshold 0.08 m/s²].
 
 ### Reference numbers (for sanity checks, from recorded data)
 - Idle sound RMS median ~100-170 (p5-p95: 30-384). Running median ~199 (p5-p95: 52-637). Sound alone cannot separate idle from running.
