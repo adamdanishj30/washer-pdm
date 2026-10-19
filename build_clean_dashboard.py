@@ -978,7 +978,7 @@ def generate_html(default_view='live'):
             Current: <strong id="timeline-head-rms">105.6</strong> RMS
           </span>
           <span class="axis-toggle-clean" style="color: var(--coral-accent);">
-            Spike: <strong id="timeline-head-spike">1.0x</strong>
+            State: <strong id="timeline-head-spike" title="Provisional: vibration std > 0.08 m/s² (same as firmware fallback); retune after first firmware-07 wash">—</strong>
           </span>
           <span class="time-readout-pill" id="lbl-curr-time">
             LIVE (Adaptive)
@@ -1021,7 +1021,7 @@ def generate_html(default_view='live'):
       <div class="card-header-row">
         <div>
           <span class="card-title-text" id="title-energy">⚡ Electrical Power &amp; Energy Consumption</span>
-          <span class="card-sub-txt" id="sub-energy">TP-Link Tapo P110 (1 Hz KLAP) &bull; Active motor load, cycle energy, and parasitic friction</span>
+          <span class="card-sub-txt" id="sub-energy">TP-Link Tapo P110 (1 Hz) &bull; Active power and energy over the shown span</span>
         </div>
         <div class="vibe-badges-container">
           <span class="axis-toggle-clean" style="color: #facc15;">
@@ -1030,28 +1030,16 @@ def generate_html(default_view='live'):
           </span>
           <span class="axis-toggle-clean" style="color: var(--teal-accent);">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
-            Energy: <strong id="energy-head-kwh">0.00</strong> kWh
-          </span>
-          <span class="axis-toggle-clean" style="color: var(--coral-accent);">
-            Load: <strong id="energy-head-load">-- kg</strong> (<span id="energy-head-class">Auto</span>)
-          </span>
-          <span class="axis-toggle-clean" style="color: #4ade80;">
-            Motor Drag: <strong id="energy-head-drag">0% (Normal)</strong>
+            Energy (shown span): <strong id="energy-head-kwh">0.00</strong> kWh
           </span>
         </div>
       </div>
       <div class="canvas-container-box box-energy">
         <canvas id="energy-canvas"></canvas>
       </div>
-      <div class="energy-metrics-bar" style="display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-sub); font-size: 11px; color: var(--text-dim); flex-wrap: wrap; justify-content: space-between;">
-        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-          <span>Peak Power: <strong id="energy-stat-peak" style="color: var(--text-main); font-family: 'JetBrains Mono', monospace;">0 W</strong></span>
-          <span>Avg Active: <strong id="energy-stat-avg" style="color: var(--text-main); font-family: 'JetBrains Mono', monospace;">0 W</strong></span>
-          <span>Cycle Est. Cost: <strong id="energy-stat-cost" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">RM 0.00</strong></span>
-        </div>
-        <div style="display: flex; gap: 12px;">
-          <span>P-F Health: <strong id="energy-stat-pf" style="color: #4ade80; font-family: 'JetBrains Mono', monospace;">100% [Point P: Optimal]</strong></span>
-        </div>
+      <div class="energy-metrics-bar" style="display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-sub); font-size: 11px; color: var(--text-dim); flex-wrap: wrap;">
+        <span>Peak Power: <strong id="energy-stat-peak" style="color: var(--text-main); font-family: 'JetBrains Mono', monospace;">0 W</strong></span>
+        <span>Avg Active: <strong id="energy-stat-avg" style="color: var(--text-main); font-family: 'JetBrains Mono', monospace;">0 W</strong></span>
       </div>
     </div>
 
@@ -1193,6 +1181,9 @@ def generate_html(default_view='live'):
     const POLL_IDLE_MS = 25000;     // 25s heartbeat poll when rig is idle
     const POLL_OFFLINE_MS = 30000;  // 30s backoff poll when rig is offline
     const WINDOW_FETCH_MS = 30000;  // 30s window batch fetch during active wash
+    // Provisional vibration threshold to discriminate idle from running state.
+    // Matches firmware fallback threshold (|a| std > 0.08 m/s²); retune after first firmware-07 wash.
+    const VIB_RUNNING_THRESHOLD = 0.08;
 
     let isRigActive = false;
     let lastBackfillMs = 0;
@@ -2015,12 +2006,17 @@ def generate_html(default_view='live'):
     function applyRecord(rec, isFromLive = false) {{
       const [t, ax, ay, az, rms] = rec;
       const vibe = Math.sqrt(ax*ax + ay*ay + az*az);
-      const vibStd = (rec.length >= 7 && rec[6] !== undefined && rec[6] !== null) ? rec[6] : null;
-      const baselineRms = 120.0;
-      const spikeRatio = Math.max(1.0, (rms / baselineRms)).toFixed(1);
+      const vibStd = (rec.length >= 7 && rec[6] !== undefined && rec[6] !== null && typeof rec[6] === 'number' && Number.isFinite(rec[6])) ? rec[6] : null;
 
       if (timelineHeadRms) timelineHeadRms.innerText = rms.toFixed(1);
-      if (timelineHeadSpike) timelineHeadSpike.innerText = `${{spikeRatio}}x`;
+      if (timelineHeadSpike) {{
+        if (vibStd !== null) {{
+          timelineHeadSpike.innerText = vibStd > VIB_RUNNING_THRESHOLD ? 'Running' : 'Idle';
+        }} else {{
+          timelineHeadSpike.innerText = '—';
+        }}
+        timelineHeadSpike.title = 'Provisional: vibration std > 0.08 m/s² (same as firmware fallback); retune after first firmware-07 wash';
+      }}
 
       if (headVibeMag) {{
         if (isFromLive && vibStd !== null) {{
@@ -2552,18 +2548,7 @@ def generate_html(default_view='live'):
       areaCtx.fillText('RMS', marginLeft - (5 * dpr), marginTop - (6 * dpr));
       areaCtx.textAlign = 'left';
 
-      // Baseline Dashed Line
-      const yBase = getY(120.0);
-      areaCtx.strokeStyle = 'rgba(0, 240, 210, 0.25)';
-      areaCtx.lineWidth = 1 * dpr;
-      areaCtx.setLineDash([3 * dpr, 3 * dpr]);
-      areaCtx.beginPath();
-      areaCtx.moveTo(marginLeft, yBase);
-      areaCtx.lineTo(w - marginRight, yBase);
-      areaCtx.stroke();
-      areaCtx.setLineDash([]);
-
-      // Peak Spike Dashed Line (Dynamic in Live mode, Historical in Historic mode)
+      // Peak Dashed Line (Dynamic in Live mode, Historical in Historic mode)
       let showPeak = false;
       let peakVal = 511.2;
       let peakLabel = '';
@@ -2582,7 +2567,7 @@ def generate_html(default_view='live'):
         }}
         peakVal = peakRec[4];
         const peakMin = ((peakRec[0] - dataSeries[0][0]) / 60000).toFixed(1);
-        peakLabel = isMobile ? `PEAK: ${{peakVal.toFixed(1)}} (${{peakMin}}m)` : `PEAK SPIKE: ${{peakVal.toFixed(1)}} RMS (${{peakMin}}m)`;
+        peakLabel = isMobile ? `PEAK: ${{peakVal.toFixed(1)}} (${{peakMin}}m)` : `PEAK: ${{peakVal.toFixed(1)}} RMS (${{peakMin}}m)`;
       }}
 
       let yPeak = 0;
@@ -2666,12 +2651,8 @@ def generate_html(default_view='live'):
       areaCtx.lineWidth = 1 * dpr;
       areaCtx.stroke();
 
-      // Dynamic Anti-Collision Placement: Always draw baseline & peak on OPPOSITE side of active cursor, AFTER curves are drawn!
+      // Dynamic Anti-Collision Placement: Always draw peak on OPPOSITE side of active cursor, AFTER curves are drawn!
       const isCursorOnLeft = (total > 1) ? ((curPointIdx / (total - 1)) < 0.5) : true;
-      const baseAlign = isCursorOnLeft ? 'right' : 'left';
-      const baseX = isCursorOnLeft ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
-      drawPillBadge(areaCtx, baseX, yBase - (10 * dpr), isMobile ? 'BASELINE: 120' : 'NORMAL BASELINE: 120 RMS', '#00f0d2', baseAlign, dpr);
-
       if (showPeak) {{
         const isPeakOnLeft = (!isCursorOnLeft && curRms > 300 && curX > (w - marginRight - (160 * dpr)));
         const peakAlign = isPeakOnLeft ? 'left' : 'right';
@@ -2680,9 +2661,7 @@ def generate_html(default_view='live'):
       }}
 
       // Floating cursor badge (Cleanly bounded, flips if near edges, never clipped)
-      const spikeMult = Math.max(1.0, curRms / 120.0).toFixed(1);
-      const spikePctVal = Math.round(((curRms - 120.0) / 120.0) * 100);
-      const badgeText = isMobile ? `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x)` : `${{curRms.toFixed(1)}} RMS (${{spikeMult}}x ${{spikePctVal > 0 ? '+' + spikePctVal + '%' : 'base'}})`;
+      const badgeText = `${{curRms.toFixed(1)}} RMS`;
 
       areaCtx.font = `700 ${{ (isMobile ? 7.5 : 8.5) * dpr }}px 'JetBrains Mono', monospace`;
       const tw = areaCtx.measureText(badgeText).width;
@@ -2765,7 +2744,7 @@ def generate_html(default_view='live'):
       const subEnergy = document.getElementById('sub-energy');
       if (subEnergy) {{
         if (hasRealPower) {{
-          subEnergy.innerHTML = 'TP-Link Tapo P110 (1 Hz KLAP Telemetry) &bull; Active motor load, cycle energy, and parasitic friction';
+          subEnergy.innerHTML = 'TP-Link Tapo P110 (1 Hz) &bull; Active power and energy over the shown span';
         }} else {{
           subEnergy.innerHTML = 'Active power not tracked for this cycle (0.0 W baseline) &bull; Tapo P110 monitoring inactive';
         }}
@@ -2823,17 +2802,6 @@ def generate_html(default_view='live'):
         drawTimeGrid(energyCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
       }}
 
-      // Spin guideline (400W)
-      const ySpin = getY(400);
-      energyCtx.strokeStyle = 'rgba(250, 204, 21, 0.25)';
-      energyCtx.lineWidth = 1 * dpr;
-      energyCtx.setLineDash([3 * dpr, 3 * dpr]);
-      energyCtx.beginPath();
-      energyCtx.moveTo(marginLeft, ySpin);
-      energyCtx.lineTo(w - marginRight, ySpin);
-      energyCtx.stroke();
-      energyCtx.setLineDash([]);
-
       // Fill area under power curve
       const grad = energyCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       grad.addColorStop(0, 'rgba(250, 204, 21, 0.28)');
@@ -2885,15 +2853,9 @@ def generate_html(default_view='live'):
       energyCtx.lineWidth = 1 * dpr;
       energyCtx.stroke();
 
-      // Guideline badge on opposite side
-      const isCursorOnLeft = (total > 1) ? ((curPointIdx / (total - 1)) < 0.5) : true;
-      const baseAlign = isCursorOnLeft ? 'right' : 'left';
-      const baseX = isCursorOnLeft ? (w - marginRight - (6 * dpr)) : (marginLeft + (8 * dpr));
-      drawPillBadge(energyCtx, baseX, ySpin - (10 * dpr), isMobile ? 'SPIN THRESHOLD: 400W' : 'CENTRIFUGAL SPIN THRESHOLD: 400W', '#facc15', baseAlign, dpr);
-
       // Floating cursor pill
       const badgeText = hasRealPower
-        ? `${{curPwr.toFixed(1)}} Watts (${{Math.round((curPwr / pwrMax) * 100)}}% Load)`
+        ? `${{curPwr.toFixed(1)}} W`
         : '0.0 Watts (Not Tracked)';
       energyCtx.font = `700 ${{(isMobile ? 7.5 : 8.5) * dpr}}px 'JetBrains Mono', monospace`;
       const tw = energyCtx.measureText(badgeText).width;
@@ -2933,55 +2895,19 @@ def generate_html(default_view='live'):
       }}
 
       // Update stat cards
+      // Average power × shown duration, an approximation from measured samples
       const durHours = (total > 1) ? ((dataSeries[total - 1][0] - dataSeries[0][0]) / 3600000.0) : 0.05;
       const cycleKwh = hasRealPower ? ((avgPwr * durHours) / 1000.0) : 0.0;
-      const cycleCost = cycleKwh * 0.28;
 
       const elWatts = document.getElementById('energy-head-watts');
       if (elWatts) elWatts.innerText = curPwr.toFixed(1);
       const elKwh = document.getElementById('energy-head-kwh');
       if (elKwh) elKwh.innerText = cycleKwh.toFixed(2);
 
-      const elLoad = document.getElementById('energy-head-load');
-      const elClass = document.getElementById('energy-head-class');
-      let estKg = 5.2;
-      let lClass = 'MEDIUM';
-      if (maxPwrObserved > 550) {{ estKg = 7.8; lClass = 'HEAVY'; }}
-      else if (maxPwrObserved < 420) {{ estKg = 2.8; lClass = 'LIGHT'; }}
-      if (elLoad) elLoad.innerText = hasRealPower ? `${{estKg.toFixed(1)}} kg` : '-- kg';
-      if (elClass) elClass.innerText = hasRealPower ? lClass : 'Untracked';
-
-      const elDrag = document.getElementById('energy-head-drag');
-      if (elDrag) {{
-        if (!hasRealPower) {{
-          elDrag.innerText = 'Untracked';
-          elDrag.style.color = 'var(--text-muted)';
-        }} else if (curPwr > 580 && Math.sqrt(dataSeries[curPointIdx][1]**2 + dataSeries[curPointIdx][2]**2 + dataSeries[curPointIdx][3]**2) < 10.0) {{
-          elDrag.innerText = '+18% (Bearing Drag)';
-          elDrag.style.color = '#fb923c';
-        }} else {{
-          elDrag.innerText = '0% (Normal)';
-          elDrag.style.color = '#4ade80';
-        }}
-      }}
-
       const elPeak = document.getElementById('energy-stat-peak');
       if (elPeak) elPeak.innerText = hasRealPower ? `${{maxPwrObserved.toFixed(0)}} W` : '0 W';
       const elAvg = document.getElementById('energy-stat-avg');
       if (elAvg) elAvg.innerText = hasRealPower ? `${{avgPwr.toFixed(0)}} W` : '0 W';
-      const elCost = document.getElementById('energy-stat-cost');
-      if (elCost) elCost.innerText = hasRealPower ? `RM ${{cycleCost.toFixed(2)}}` : 'RM 0.00';
-
-      const elPf = document.getElementById('energy-stat-pf');
-      if (elPf) {{
-        if (!hasRealPower) {{
-          elPf.innerText = 'UNTRACKED';
-          elPf.style.color = 'var(--text-muted)';
-        }} else {{
-          elPf.innerText = 'NOMINAL';
-          elPf.style.color = '#4ade80';
-        }}
-      }}
     }}
 
     function onScrub(val) {{

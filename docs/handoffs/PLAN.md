@@ -1,121 +1,92 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Fix live-poll controller: restore cadence invariant, epoch time base, single buffer source, race guards, gap breaks
+**Title:** Honest labels: remove fabricated Card 4 readouts, replace "Spike" with a vibration-based Idle/Running state
 **Date:** 2026-10-19
 
 ## Objective
-The live dashboard's AFK-freeze / catch-up controller complies with the invariants again (no polling faster than 5 s per viewer; approved cadence 10 s active / 25 s idle). It uses one epoch-ms time base for live points and session windows, never interleaves two record sources in the chart buffer, draws unobserved time as a visible break, and has no remaining stale-callback races or quota leaks.
+The dashboard shows only measured values or values directly computed from measurements. Every invented or unsupported claim is removed: estimated load in kg, "Motor Drag / Bearing Drag", ringgit cost, "P-F Health", "% Load", "parasitic friction", the 400 W "spin threshold", the fixed "normal baseline 120 RMS" and the "Spike" multiplier. The "Spike" pill becomes a provisional Idle/Running state based on dynamic vibration.
 
 ## Review verdict that produced this plan
-**CHANGES NEEDED** on the AFK freeze + backfill work. Reviewed from the working-tree source of `build_clean_dashboard.py`. There was no `docs/handoffs/HANDOFF.md` and no commit list, so no git diff was checked.
-
-| # | Severity | Finding | Where |
-|---|---|---|---|
-| 1 | **Blocker (invariant)** | `pollOnce` reschedules every **2000 ms** while online. INVARIANTS section 3 (MUST STAY): no polling faster than 5 s per viewer. Firmware 07 only writes `/live` every 10 s active / 60 s idle, so most 2 s requests return the same object. UI labels advertise "2s". | `pollOnce` reschedule block; `updateRigStatusUI`; `setViewMode`; `setLiveSyncRate` |
-| 2 | **Blocker (data)** | Mixed time bases. Live points use `d.uptime * 1000` (device uptime, 1 s resolution). Session windows use `w.t` (device millis). Uptime resets on reboot, so a mid-session reboot moves the cursor backwards and `w.t > lastSeenT` then drops every window. Live and window timestamps never match exactly, so dedupe by `t` never fires. Both nodes carry epoch ms: `/live.ts` and window key `e` (`firmware/session_export.py`, V3_KEY_MAP). | `pollOnce`, `fetchBackfillWindows`, `backfillSessionWindows` |
-| 3 | Major | During an active session, `LIVE_BUFFER` interleaves `/live` points (every 10 s) and session windows (every 5.024 s). This creates near-duplicates, and since charts place x by index, the spacing is distorted. | `pollOnce` + `backfillSessionWindows` |
-| 4 | Major | Vibration fallback `w.vdf` is `vib_dom_hz`, a **frequency in Hz**, so a wrong unit gets plotted as m/s². | `fetchBackfillWindows`, `backfillSessionWindows` |
-| 5 | Major (race) | `backfillSessionWindows()` has no generation or session guard. An in-flight call for the old session can re-add old windows after a session-change reset, or draw after a switch to historic mode. | `backfillSessionWindows` |
-| 6 | Major (quota) | Manual "Pause Live Stream" (`isLivePaused`) keeps polling and only stops appending. | `onPrimaryAction`, `pollOnce` |
-| 7 | Minor | No visual break after catch-up or a hidden-tab period, so lines connect across unobserved time. | all `draw*` stroke loops |
-| 8 | Minor | Window fetches always pull `limitToLast=120` on resume and `limitToLast=8` every 30 s instead of using a key cursor. | backfill helpers |
-
-Verified OK: window keys are `w` + 6 digits under `/sessions/<sid>`, with no metadata siblings (metadata lives in `/session_meta`). So `orderBy="$key"` is valid and needs no index. The other items from the previous review are present: page-level guard, sticky fallback, generation checks in `confirmAndResume`, staying frozen on visibility return, and no buffer wipe on a null session.
+**APPROVED** — live-poll controller, commit `5086684`. Reviewed by reading the current `build_clean_dashboard.py`. Not reviewed as a git diff: no shell access to the PC, and the commit was amended.
+- Code matches the plan: cadence constants (10/25/30 s, nothing under 5 s); "2s" labels gone; epoch time base via `liveEpochMs`/`windowEpochMs`; no `uptime * 1000`; no `vdf` used as vibration; one source per state; `fetchWindowsSince` with a `$key` cursor (limit 120 for catch-up, 12 for the periodic fetch); `mergeRecords`; `stopLivePolling` reused everywhere; generation, session and mode guards on the periodic fetch; gap breaks in all four live stroke loops plus dashed markers; `afk_test_ms` hook. The MUST-STAY `maxAgeMs` line and the `if (d && (...)) {...} else {...}` structure are intact.
+- Still operator-pending (not code defects): the DevTools checks for criteria 3 and 5–9, and the wash checks for criteria 4 and 13.
+- Minor follow-ups, deferred to keep one task = one change set:
+  1. Two `/api/live` requests at page load (`setViewMode('live')` and the `load` handler each start a poll).
+  2. On AFK resume when the freeze happened while idle and a wash has since started, no 120-window catch-up runs; only the periodic 12-window fetch does.
+  3. `windowToRecord` fills missing values with invented defaults (`rms` 120, `az` −9.81) instead of skipping the window.
+  4. On `historical.html`, choosing "Live Rig Telemetry" shows a dead live view, because the page guard blocks polling. It should link to `index.html` instead.
+  5. `afk_test_ms` below 10000 falls back to 5 min instead of clamping to 10000.
 
 ## Context
-- Relevant files:
-  - `build_clean_dashboard.py`: the only file to edit (JS lives inside `generate_html()`'s f-string).
-  - Generated by the build, never hand-edited: `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html`.
-  - Read-only reference: `firmware/07_feature_streamer/README.md` (Firebase layout, `/live` cadence, 6-window batches ~30 s); `firmware/session_export.py` (V3_KEY_MAP: `e` = epoch_ms, `sm` = vib_mag_std, `vdf` = vib_dom_hz).
-- Invariants that matter here (`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`):
-  - Section 1: edit the build script, not the generated pages; exhaustive inline comments + section headers; one task = one change set.
-  - Section 3 MUST STAY: no polling faster than 5 s per viewer; no new always-on listener; `/api/live` with Firebase fallback; the line `maxAgeMs = (d.schema >= 3 && d.active === false) ? 75000 : 25000` and the full `if (d && (d.cnt !== undefined || ...)) {...} else {...}` structure stay intact; run `node --check` after every edit.
-  - Section 3 CAN CHANGE: polling cadence; the approved design is 10 s active / 25 s idle (commit `51e927a`).
-  - Section 2: `/live` heartbeat is 10 s active / 60 s idle; windows are batched 6 per PATCH (about every 30 s).
-- Note: `CLAUDE.md` says "never poll faster than 30 s" for the PC scripts. The browser is governed by the invariants file (at least 5 s per viewer). Going back to 2 s would be a MUST-STAY change needing Adam's sign-off and an invariants edit. It is **not** part of this plan.
+- Relevant files: `build_clean_dashboard.py` (only file to edit); the generated `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html` (rebuild only).
+- Invariants (`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`):
+  - Section 3 MUST STAY, honest labels: no RUL, P-F stage, ringgit cost or "health %" shown as measured facts. The ML only outputs an anomaly score and a cycle verdict. **Card 4 currently breaks this rule.**
+  - Section 3 CAN CHANGE: the "Spike" label may be replaced by an idle/running label based on `vib_std`. The cut-off is provisional; retune it after the first firmware-07 wash.
+  - Section 2: firmware's own vibration fallback threshold for "active" is `|a|` std > 0.08 m/s². Use the same 0.08 so the dashboard and firmware agree.
+  - Section 3 MUST STAY: the `maxAgeMs` line and the online/offline `if` structure must stay; run `node --check` after edits.
+  - Section 1: edit the build script only; exhaustive comments and section headers; one task = one change set.
+- Evidence from `data/real_sessions/wash_cycle_2026-10-19_0911.csv`:
+  - Final-spin power is about 340 W, so the "400 W centrifugal spin threshold" line is wrong for this machine.
+  - Idle sound RMS is about 60–75 and wash about 150, so "normal baseline 120 RMS" is not a measured baseline.
 
 ## Implementation Steps
-All steps edit `build_clean_dashboard.py` inside the `<script>` of `generate_html()`. **JS braces must stay doubled (`{{ }}`) because this is a Python f-string.**
+All edits are in `build_clean_dashboard.py`. **Keep JS braces doubled (`{{ }}`).**
 
-1. **Cadence constants.** In the controller state block (next to `INACTIVITY_TIMEOUT_MS`), add commented constants: `POLL_ACTIVE_MS = 10000`, `POLL_IDLE_MS = 25000`, `POLL_OFFLINE_MS = 30000`, `WINDOW_FETCH_MS = 30000`. In `pollOnce`'s reschedule, use: offline → `POLL_OFFLINE_MS`; online and `isRigActive` → `POLL_ACTIVE_MS`; online and idle → `POLL_IDLE_MS`. Replace the literal `30000` in the periodic window-fetch check with `WINDOW_FETCH_MS`. No delay in the live controller may be below 5000.
-
-2. **Honest cadence labels.** Replace every user-facing "2s" string: `lblSyncMode`, `lblStatusText`, `lblStatusTextMob` and `lblCurrTime` in `updateRigStatusUI`; `lblCurrTime` in `setViewMode`; the toast in `setLiveSyncRate`. Active → "10s Active Sync"; idle → "60s Idle Heartbeat". Change the `<option value="live">` text "(5s Sync)" to "(Adaptive Sync)". Delete the dead `btnRate5s` / `btnRate2s` constants.
-
-3. **One epoch time base.** Add two helpers:
-   - `liveEpochMs(d)`: returns `d.ts` when it is a finite number > 1.7e12, else `null`.
-   - `windowEpochMs(w)`: the same check on `w.e`.
-
-   In `pollOnce`, set `pointT = liveEpochMs(d)`. If it is `null`, update status and readouts but append nothing. Remove `d.uptime * 1000` and the comment claiming both nodes use uptime ms. `lastSeenT` always holds epoch ms.
-
-4. **Shared record converters (fixes #4).**
-   - `windowToRecord(w)` → `[e, ax, ay, az, rms, pwr ?? 0, sm ?? null, 'w']`. Skip windows without a valid `e`. **No `vdf` fallback anywhere.**
-   - Live records get the tag `'h'` (heartbeat) at index 7.
-   - Check that `applyRecord`, all `draw*` functions and `exportActiveCsv` tolerate the extra element. Export still writes columns 0–5 only.
-
-5. **One source per state (fixes #3).**
-   - In `pollOnce`, append the `/live` record to `LIVE_BUFFER` only when the rig is online and `d.active !== true` (idle heartbeat trace).
-   - When `d.active === true`, still call `applyRecord(newRec, true)` so the readouts stay fresh, but do not append. During a wash, the chart is fed only by window records (step 6).
-
-6. **Key-cursor window fetch (fixes #8).**
-   - Replace `fetchBackfillWindows` and `backfillSessionWindows` with one function, `fetchWindowsSince(sid, sinceKey, limit, signal)`. Query: `orderBy="$key"`, `startAt="<sinceKey>"` (omit when `sinceKey` is null), `limitToLast=<limit>`, URL-encoded.
-   - Track `lastWindowKey` (e.g. `"w000482"`) next to `lastSeenT`, and reset both wherever the buffer is reset.
-   - Drop the returned entry whose key equals `sinceKey`. Firebase returns an unordered object, so sort the results by key.
-   - Use `limit = 120` for resume and visibility catch-up, and `limit = 12` for the periodic 30 s fetch.
-
-7. **Single merge helper.** Add `mergeRecords(records)`. It sorts by `t`, dedupes by `t`, removes any `'h'` records whose `t` ≥ the earliest window `t` in the incoming batch, trims to the newest 120, and updates `lastSeenT` and `lastWindowKey`. Use it everywhere records are added: `pollOnce`, the periodic fetch, `confirmAndResume`, `resumeFromTabVisibility`. Delete the duplicated concat/shift blocks.
-
-8. **Race guards on the periodic fetch (fixes #5).** Call the periodic fetch only from `pollOnce`, passing `myGen`. Capture `sid` before the `await`. After it, discard the result if `myGen !== generation`, `sid !== activeLiveSessionId`, or `currentMode !== 'live'`.
-
-9. **Manual pause stops traffic (fixes #6).**
-   - Add `stopLivePolling()`: bump `generation`, clear `pollTimer`, abort `inflight`. Use it in place of the four duplicated stop blocks (in `freezeForAfk`, the visibility-hidden handler, `setViewMode('historic')`, and manual pause).
-   - In `onPrimaryAction` (live branch): pausing calls `stopLivePolling()`; resuming calls `resumeFromTabVisibility()`.
-   - Add `isLivePaused` to the early-return guards in `pollOnce` and `resumeFromTabVisibility`, and to the visibility-visible branch.
-
-10. **Gap breaks (fixes #7).**
-    - Add `isGapBefore(points, i)`. It returns true when `i > 0`, both records have a tag, and `points[i][0] - points[i-1][0]` exceeds 20000 ms for `'w'` records or 150000 ms for `'h'` records.
-    - **Live mode only:** in the stroke loops of `drawSpline` (both curves), `drawXyz` (three axes), `drawArea` (top stroke) and `drawEnergy` (top stroke), use `moveTo` instead of `lineTo` when `isGapBefore` is true. In `drawArea`, also draw one faint dashed vertical line at each gap.
-    - Fill paths and historic-mode drawing stay unchanged.
-
-11. **AFK test hook.** `INACTIVITY_TIMEOUT_MS` reads an optional URL parameter `afk_test_ms` (an integer clamped to at least 10000), defaulting to 5 minutes. Comment it as a testing aid.
-
-12. **Build and verify.** Run `py build_clean_dashboard.py`. Extract the inline script from each of the four pages and run `node --check` on each.
-
-13. **Docs and handoff (same commit).**
-    - Update the dashboard row in `docs/handoffs/current_state_and_scale_up_handoff.md`: cadence, AFK freeze, epoch cursor.
-    - Create `docs/handoffs/HANDOFF.md` with: commit hash(es), each acceptance criterion marked PASS / FAIL / UNVERIFIED with evidence, and anything you deviated from.
-    - Set this file's Status to DONE.
-    - Commit with `fix(dashboard): ...`, then `git pull --rebase`, then `git push`.
+1. **Card 4 header pills (HTML in `generate_html`).**
+   - Delete the "Load: … kg (Auto)" pill (`energy-head-load`, `energy-head-class`) and the "Motor Drag" pill (`energy-head-drag`).
+   - Keep "Active … W". Rename "Energy" to "Energy (shown span)" and keep `energy-head-kwh`.
+2. **Card 4 stats bar (HTML).**
+   - Delete "Cycle Est. Cost" (`energy-stat-cost`) and the whole "P-F Health" span (`energy-stat-pf`, including the initial text "100% [Point P: Optimal]").
+   - Keep "Peak Power" and "Avg Active".
+3. **Card 4 subtitle.** Change the static `sub-energy` text and the `hasRealPower` branch in `drawEnergy` to: "TP-Link Tapo P110 (1 Hz) • Active power and energy over the shown span". Remove "parasitic friction" and "motor load". Keep the not-tracked branch.
+4. **`drawEnergy` logic.**
+   - Delete the `estKg`/`lClass` block, the `elDrag` block, the `cycleCost` calculation and `elCost`, and the `elPf` block.
+   - Delete the dashed 400 W spin guideline and its "CENTRIFUGAL SPIN THRESHOLD" badge.
+   - Change the floating cursor pill to show only `"<W> W"` (no "% Load"). Keep "0.0 Watts (Not Tracked)".
+   - Keep the kWh calculation and comment it as "average power × shown duration, an approximation from measured samples".
+5. **Replace "Spike" with a State pill (Card 3 header HTML + `applyRecord`).**
+   - Rename the pill text from "Spike:" to "State:" and keep the element id `timeline-head-spike` (or rename it consistently everywhere).
+   - In `applyRecord`: if `rec[6]` (vib_std / `sm`) is a finite number, show `Running` when it is > `VIB_RUNNING_THRESHOLD` (new commented constant, `0.08` m/s²), else `Idle`. Otherwise show `—`.
+   - Add a `title` tooltip: "Provisional: vibration std > 0.08 m/s² (same as firmware fallback); retune after first firmware-07 wash".
+   - Remove `baselineRms`/`spikeRatio`.
+6. **Card 3 area chart (`drawArea`).**
+   - Delete the dashed 120 RMS baseline line and its "NORMAL BASELINE: 120 RMS" badge.
+   - Change the floating cursor badge to show only `"<value> RMS"` (no "×" multiplier, no "+%").
+   - Keep the PEAK line and badge, since peak is measured.
+   - Keep the badge colour rule simple: one colour, or the existing `> 250` rule without any wording that implies abnormal.
+7. **Invariants doc.** In `docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md` section 3 CAN CHANGE, append to the "Spike" bullet: `[DONE <date> in commit <hash>: replaced by provisional Idle/Running state, threshold 0.08 m/s²]`. No other edits to that file.
+8. **Build and verify.** Run `py build_clean_dashboard.py`, then `node --check` on the extracted script of each of the four pages.
+9. **Handoff.**
+   - Replace section 1 of `docs/handoffs/HANDOFF.md` with this task's criteria matrix, using PASS / FAIL / UNVERIFIED and evidence, and keeping static and browser evidence separate.
+   - Set this file's Status to DONE.
+   - Commit with `fix(dashboard): remove unsupported Card 4 claims; replace Spike with Idle/Running`, then `git pull --rebase`, then `git push`.
+   - **Do not amend or force-push a commit that is already pushed.** Make a new commit instead.
 
 ## Out of Scope
-- Card 4 readouts (RM cost, "P-F Health", "Motor Drag %", "Load kg") and the "Spike" label. These are a known honest-label invariant problem and will be the **next** separate task. Do not touch them here.
-- `functions/api/live.js`, firmware, ML, Python daemons, `.github/workflows/`.
-- Firebase SDK / WebSocket / SSE listeners (the invariants forbid a new always-on listener).
-- The activity-event list (`mousemove`, `scroll` etc. stay as they are).
-- Historic-mode rendering, CSV load/export behaviour, and the modal/banner visual design.
-- Any MUST-STAY item, including the online/offline `maxAgeMs` logic.
+- The live-poll controller, including the 5 minor follow-ups listed above (separate task).
+- Historical vibration view for firmware-07 files (`load_csv` reading `sm`, `sx/sy/sz`, `vdf`). That is the next planned task.
+- Card 1/Card 2 chart logic, CSV import/export, the modal and banners.
+- Firmware, ML, Python daemons, `functions/api/live.js`, `.github/workflows/`.
+- `CLAUDE.md`, README and hackathon wording (docs claims are a separate task).
 
 ## Acceptance Criteria
-- [ ] `py build_clean_dashboard.py` succeeds and regenerates all four pages. `node --check` passes on the extracted script of each page.
-- [ ] In `build_clean_dashboard.py`: no live-controller `setTimeout`/`setInterval` delay below 5000 ms, and the strings "2s Live Stream", "LIVE (2s)" and "(2s Sync)" no longer appear.
-- [ ] DevTools Network on `index.html` with the rig idle: `/api/live` requests are at least 25 s apart.
-- [ ] During a wash: `/api/live` at least 10 s apart and `/sessions/...` at least 30 s apart. Mark UNVERIFIED if no wash happens during testing.
-- [ ] `historical.html` makes zero requests to `/api/live`, `live.json` or `/sessions` over 5 minutes.
-- [ ] Manual "Pause Live Stream" gives zero live requests for 2 minutes. "Resume" restarts polling within one cycle.
-- [ ] With `?afk_test_ms=20000`, the modal appears after 20 s idle and requests stay at zero for at least 2 minutes. Resume makes at most 3 requests before normal cadence. Rapidly double-clicking Resume still leaves exactly one polling loop (spacing unchanged).
-- [ ] Hiding the tab for 60 s and returning (not AFK) causes one catch-up and then one loop.
-- [ ] Clicking Resume and immediately hiding the tab leaves no duplicate loop on return.
-- [ ] Code inspection: every `LIVE_BUFFER` record's `t` comes from `d.ts` or `w.e`; no `uptime * 1000`; no `vdf` used as a vibration value.
-- [ ] Code inspection: the `maxAgeMs` line and the `if (d && (d.cnt !== undefined || ...)) {...} else {...}` structure are unchanged.
-- [ ] Window fetch URLs use `orderBy="$key"` and `limitToLast` ≤ 120, plus `startAt` once a cursor exists.
-- [ ] Session-change reset and gap breaks are checked during a real wash if one happens; otherwise they are listed as UNVERIFIED in HANDOFF.md.
-- [ ] The diff contains no secrets (`.env` values, `FIREBASE_AUTH`, Wi-Fi, Tapo). The public RTDB URL already in the file is fine.
-- [ ] Pushed. HANDOFF.md lists the commit hash, the verified items and the UNVERIFIED items.
+- [ ] `py build_clean_dashboard.py` succeeds. `node --check` passes on the extracted script of each of the four pages.
+- [ ] None of these strings appear in `build_clean_dashboard.py` or any generated page: `Cycle Est. Cost`, `RM 0.00`, `RM ${{`, `P-F Health`, `Point P`, `Motor Drag`, `Bearing Drag`, `estKg`, `% Load`, `parasitic`, `CENTRIFUGAL`, `SPIN THRESHOLD`, `NORMAL BASELINE`, `Spike:`, `spikeRatio`, `spikeMult`.
+- [ ] Code inspection: `VIB_RUNNING_THRESHOLD = 0.08` exists with a comment that names it provisional and ties it to the firmware fallback. The State pill shows `—` when `rec[6]` is missing (legacy CSVs, historic mode).
+- [ ] In a browser, on a firmware-07 historic session (`wash_cycle_2026-10-19_0911`) and on `index.html` (live, rig idle):
+  - Card 4 shows only Active W, Energy (shown span), Peak Power and Avg Active.
+  - Card 3 shows State and no baseline line.
+  - No console errors.
+  - Mark UNVERIFIED if not run in a browser.
+- [ ] Code inspection: the `maxAgeMs` line and the online/offline `if` structure are unchanged, and the poll-controller functions (`pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`) are untouched.
+- [ ] The INVARIANTS "Spike" bullet is annotated as DONE with the commit hash. No other invariant text changed.
+- [ ] The diff contains no secrets.
+- [ ] A new commit (not amended) is pushed. HANDOFF.md section 1 lists the hash and the verified and UNVERIFIED items.
 
 ## Risk Notes
-- **f-string braces:** a single `{` or `}` in the JS breaks the Python build or emits wrong JS. Double every brace.
-- **Workflow overwrite:** `cloud_pdm_sync.yml` regenerates the pages every 30 min from the build script, so any fix made only in the HTML is reverted. Edit the build script only.
-- **Deploy:** nothing goes live until the push and the Cloudflare Pages deploy.
-- **Record shape:** adding index 7 changes `LIVE_BUFFER` entries. Check every consumer.
-- **Chart latency during a wash:** the trace now advances when a window batch lands (about every 30 s). Readouts still update every 10 s. This is intended.
-- **Quota:** window fetches go directly to Firebase without the edge cache, at about one small request per 30 s per viewer, only during a wash. Acceptable at the current ~5 MB/week baseline.
+- Deleting elements: every `getElementById` for a removed element must also be removed. The existing `if (el)` guards prevent crashes, but dead code should go.
+- f-string braces: double every JS brace.
+- Workflow overwrite: edit only the build script; the 30-min workflow regenerates the pages.
+- The 0.08 m/s² threshold is provisional. Firmware-06 historic files carry no `vib_std`, so they correctly show `—`.
+- Rewriting history: the previous task amended an already-pushed commit, which needs a force-push and can erase the 30-min workflow's commits on `main`. New commits only from now on.
