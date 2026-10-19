@@ -31,10 +31,10 @@ For firmware-07 data (historical CSVs and live wash windows), display true dynam
 | 7 | Code inspection: poll-controller functions and `maxAgeMs` line unchanged (only `windowToRecord` gained indices 8–11) | **PASS** | Diff check confirmed 0 changes to `pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`, and `maxAgeMs`. Only `windowToRecord(w)` was extended with `[e, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]`. |
 | 8 | Browser check on `historical.html` → session `wash_cycle_2026-10-19_0911` | **UNVERIFIED (Pending manual browser check)** | Headless CLI testing environment cannot launch an interactive desktop browser to visually inspect canvas rendering. Marked UNVERIFIED per invariant rule. |
 | 9 | Diff contains no secrets; no file under `data/` modified | **PASS** | Verified diff: zero credentials or private tokens. Raw CSV files in `data/real_sessions/` untouched. |
-| 10 | New commit (not amended) pushed to `origin/main` | **PASS** | Committed and pushed to `origin/main` (forward commit; see commit hash in Section 1.3). |
+| 10 | New commit (not amended) pushed to `origin/main` | **PASS** | Committed as `03495d3`, pushed to `origin/main` (forward commit; see commit hash in Section 1.3). |
 
 ### 1.3 Deviations & Clarifications
-- None. All 9 implementation steps executed strictly according to [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md).
+- None. All 9 implementation steps executed strictly according to [`docs/handoffs/PLAN.md`](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/PLAN.md). Forward commit hash: `03495d3`.
 
 ---
 
