@@ -1,55 +1,38 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Remove the hardcoded Firebase secret from the Google Apps Script copy and mark the script as legacy (not for firmware 07)
+**Title:** Regenerate the 2-page brief PDF (and the Hackathon doc PDFs, if they have a generator) after Claude's 20 Oct number sync
 **Date:** 2026-10-20
 
-## Objective
-`scripts/google_apps_script_drive_sync.js` still has a hardcoded `FIREBASE_AUTH` fallback (`getProperty("FIREBASE_AUTH") || "<literal>"`). After this task the repo copy contains no credential, refuses to run its Firebase write without the Script Property, and carries a clear LEGACY banner so nobody re-deploys it for firmware 07. Both local commits (this one and `084b74f`) are then pushed together after Adam rotates the secret.
-
-## Queue note
-`docs/handoffs/PLAN_QUEUED_2_regenerate_pdfs_after_number_sync.md` (PDF regeneration) runs after this one. Do not start it now.
-
 ## Review verdict that produced this plan
-APPROVED: commit `084b74f` (CI fallback credentials removed). Claude read the workflow on disk: no `||` fallback for the three credentials, none of the literals, guard step present, YAML structure intact. Local commit only, as planned. History exposure reported by count only (Firebase secret: 5 commits; PAT: 1; device ID: 2), so rotation remains the real fix. The handoff flagged this Apps Script file; Claude read it and found more than the literal (below).
+APPROVED (2026-10-20 12:50): commit `ad99735` (Apps Script secret removed). Claude read `scripts/google_apps_script_drive_sync.js` on disk: no credential literal, `FIREBASE_AUTH` from Script Properties only, the authenticated PUT is skipped with a log message when it is missing, LEGACY banner present; `CLAUDE.md` names the daemon as the current archiver. One inconsistency: the handoff says to push "`8b69a09` and this commit", but the CI credentials commit was reported as `084b74f`. Step 0 below resolves it.
 
-## Why (evidence, Claude read the file on 2026-10-20)
-- Line ~32: `FIREBASE_AUTH = SCRIPT_PROPS.getProperty("FIREBASE_AUTH") || "<literal>"`, the same leaked secret as the workflow. Invariants §1 rule 2: no hardcoded fallback credentials anywhere.
-- It writes a **5-column legacy CSV** (`timestamp_ms, accel_x, accel_y, accel_z, audio_rms`) into `data/`. For firmware-07 sessions that drops `vib_mag_std`, `vib_dom_hz`, power and the other 40 columns. The quota-aware daemon (`firmware/auto_drive_sync_daemon.py`) is the current archiver and writes the full 45-column record to `data/real_sessions/`.
-- Its offline rule (25 s of no change in `/live`) predates the firmware-07 idle heartbeat (60 s), so if it is still deployed it would treat every idle gap as "offline". There are no 19/20 Oct files in `data/` from it, which suggests it is not running, but only Adam can confirm on script.google.com.
+## Objective
+Claude updated the text of several docs on 20 Oct 12:30 (numbers re-counted after the 20 Oct wash; one labelled model-test line added; "4 sensors" changed to "3 sensors, machine state planned"). The PDFs were not regenerated, so they are stale. After this task, every PDF matches its source text.
 
-## Context
-- Edit `scripts/google_apps_script_drive_sync.js` only. Do not delete or move it (Invariants §1 rule 1).
-- Code style: exhaustive inline comments and clear section headers.
-- **Never print, paste or log the credential value** in chat, HANDOFF, commit messages or test output.
+## What Claude changed (text only, already saved)
+- `docs/proposals/PROPOSAL_WRITING_GUIDE.md` §2, §3, §4, §7: 11 sessions, 8,379 rows, 19.9 Hz in both firmware-07 washes, phase labels not saved, programme/load not logged, LOCO wording rules, 3 sensors.
+- `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.md` and `generate_2page_pdf.py` (same changes in both): metric strip 11 / 3, "Machine State (planned)", "66-minute cycle on 19 Oct" (was "latest"), data-in-hand 11 sessions / 8,379 rows.
+- `docs/proposals/HACKATHON_INFO_AND_AI_EXECUTIVE_SUMMARY.md`: numbers, 3 sensors, LOCO line, two new judge Q&As; Q2 = 175 words, Q3 = 178 words (limits 180).
+- `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md` (v3.1) and `Hackathon/SCRIPT_READ_ALOUD.md`: demo segment 2:36 and 2:41 lines, slides 6 and 8, ML note, decision line.
+- `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.md` §10 and `docs/handoffs/current_state_and_scale_up_handoff.md` §5: numbers.
 
 ## Implementation Steps
-1. Replace the `FIREBASE_AUTH` line so it reads only `SCRIPT_PROPS.getProperty("FIREBASE_AUTH")` with no fallback. Leave the public `FIREBASE_HOST` fallback as is.
-2. Before the authenticated `archived_sessions` PUT, skip the write and `Logger.log` a clear message if `FIREBASE_AUTH` is empty (e.g. "FIREBASE_AUTH Script Property not set; archive marker not written"). Keep the rest of the function's behaviour unchanged.
-3. Add a LEGACY banner at the top of the header comment: superseded for firmware 07 by `firmware/auto_drive_sync_daemon.py`; it writes 5-column legacy CSVs and drops firmware-07 features; do not deploy or re-run `installTrigger` for firmware 07; credentials come only from Script Properties.
-4. Update the "QUICK SETUP" steps in the header to say: set `FIREBASE_AUTH` in Project Settings -> Script Properties first (no value in code).
-5. Verify with `git grep -l -F` (using the literal from the workflow's git history held in a local shell variable, never echoed) that no tracked file in the working tree contains the Firebase secret any more. Report paths only.
-6. Syntax check: `node --check` cannot parse Apps Script globals reliably, so run `node -e "new Function(require('fs').readFileSync('scripts/google_apps_script_drive_sync.js','utf8'))"` to confirm it parses.
-7. Update `CLAUDE.md` Tech Stack: mark "Google Apps Script (Cloud-to-Drive auto sync)" as legacy, with the daemon as the current archiver. One line.
-8. Write HANDOFF.md (keep `Open UNVERIFIED items (carried forward)`; add "Whether the Apps Script trigger is still deployed (Adam to check script.google.com)"). Commit locally: `fix(scripts): remove hardcoded Firebase secret from legacy Apps Script`. **Do NOT push** until Adam confirms the manual steps below.
-
-## Manual steps for Adam (add to the rotation already listed in `PLAN_DONE_2026-10-20_ci_fallback_credentials.md`)
-1. Open https://script.google.com and look for the Washer PdM project. If it exists, open Triggers (clock icon) and delete the `checkRigAndSyncToDrive` trigger. It is superseded and would stop working after rotation anyway.
-2. Rotate the Firebase database secret (Firebase console -> Project settings -> Service accounts -> Database secrets: add new, delete old). Put the new one in `.env` and in GitHub Actions secrets as `FIREBASE_AUTH`; re-flash firmware 07 via `flash_firmware.py` when no wash is running and confirm `/api/live` updates.
-3. Revoke the old SmartThings PAT; set `SMARTTHINGS_DEVICE_ID` (and `SMARTTHINGS_REFRESH_TOKEN` if used) as GitHub secrets.
-4. Tell Antigravity to push both commits, then run the workflow once from the Actions tab and confirm it passes.
+0. Read-only check, no push: run `git log origin/main..HEAD --oneline` and paste the full list into HANDOFF. Expected: `084b74f` (CI fallback credentials) and `ad99735` (Apps Script), plus this task's commit once made. Explain any other hash (e.g. `8b69a09`): which task it came from and whether it was rebased or amended. Run `git show --stat` on each unpushed commit and confirm none touches a file outside what its plan allowed and none adds a credential (check with the local-variable method from the CI plan; never print a value).
+1. Run `py -3 docs/proposals/generate_2page_pdf.py`; confirm `Total Pages: 2`.
+2. Render both pages to PNG and check the bottom of each page by eye for cut-off text (the page boxes hide overflow). The "Machine State (planned)" box text is ~10 characters longer than before; check that box too.
+3. Search the regenerated PDF text for `7,414`, `10 real`, `Archived`, `latest 66`, and confirm none remain; confirm `8,379` and `11` appear.
+4. `Hackathon/*.pdf` (VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT, SCRIPT_READ_ALOUD, SDP_HACKATHON_BRIEFING_SUMMARY): find how they were produced (search the repo for a generator or the command used). If there is a generator, regenerate them and check by eye. If there is none, do NOT invent one: list them in HANDOFF as stale so Adam can re-export or delete them.
+5. Write HANDOFF.md (keep the `Open UNVERIFIED items (carried forward)` section). Commit locally: `docs(proposals): regenerate PDFs after 20 Oct number sync`. Push only if Adam says so.
 
 ## Out of Scope
-- Rewriting git history.
-- Any other file except `CLAUDE.md` (one line).
-- Changing what the Apps Script archives or its schedule (it is being retired, not fixed).
+- Any text change (if you find a wrong number, report it; do not fix it).
+- The master dossier (`PROPOSAL_Apex_PdM_Township_of_Tomorrow.*`, under rewrite).
 - Firmware, dashboard, ML, data, `.github/`.
 
 ## Acceptance Criteria
-- [x] The Apps Script contains no `FIREBASE_AUTH` fallback and no credential literal.
-- [x] The authenticated PUT is skipped with a log message when the Script Property is missing.
-- [x] LEGACY banner and updated setup steps present.
-- [x] Step 5 search: no tracked working-tree file contains the Firebase secret (paths only reported).
-- [x] Step 6 parse check passes.
-- [x] `CLAUDE.md` marks the Apps Script as legacy.
-- [x] Only the script, `CLAUDE.md`, PLAN.md and HANDOFF.md changed; no credential value in any diff, log or doc; commit local, not pushed.
+- [x] 2-page PDF regenerated, `Total Pages: 2`, both pages checked by eye, no cut-off text.
+- [x] Step 3 search clean.
+- [x] Hackathon PDFs regenerated with their real generator, or listed as stale in HANDOFF.
+- [x] Only PDFs, the regenerated `proposal_2page_presentation.html`, PLAN.md and HANDOFF.md changed.
+- [x] Step 0: unpushed commit list pasted into HANDOFF, every hash explained, `git show --stat` scope confirmed, no credentials. Nothing pushed (pushing waits for Adam's secret rotation).

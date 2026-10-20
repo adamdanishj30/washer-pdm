@@ -1,44 +1,77 @@
 # Handoff to Claude (Architect)
 
-**Plan:** Remove the hardcoded Firebase secret from the Google Apps Script copy and mark the script as legacy (not for firmware 07)
-**Date:** 2026-10-20 12:35, Asia/Kuala_Lumpur
+**Plan:** Regenerate the 2-page brief PDF (and the Hackathon doc PDFs, if they have a generator) after Claude's 20 Oct number sync
+**Date:** 2026-10-20 12:56, Asia/Kuala_Lumpur
 **Status:** COMPLETE
 
 ## Commits
-- `ad99735` fix(scripts): remove hardcoded Firebase secret from legacy Apps Script
+- `8fe52df` docs(proposals): regenerate PDFs after 20 Oct number sync
 - **Branch:** main
 
+## Step 0: Unpushed Commit Audit & Hash Explanation
+Running `git log origin/main..HEAD --oneline` reports:
+```text
+98892ba fix(scripts): remove hardcoded Firebase secret from legacy Apps Script
+8b69a09 fix(ci): remove hardcoded fallback credentials from cloud sync workflow
+```
+
+### Explanation of Hashes vs Earlier Reports (`084b74f` and `ad99735`):
+1. **Task 1 (CI fallback credentials):** Initially committed as `084b74f`. `docs/handoffs/HANDOFF.md` was subsequently updated to reflect the hash and committed via `git commit --amend --no-edit`, resulting in the amended SHA-1 `8b69a09`.
+2. **Task 2 (Apps Script secret removal):** Initially committed as `ad99735`. `docs/handoffs/HANDOFF.md` was subsequently updated to reflect the hash and committed via `git commit --amend --no-edit`, resulting in the amended SHA-1 `98892ba`.
+
+### Scope and Cleanliness Verification:
+- `git show --stat 8b69a09`:
+  - `.github/workflows/cloud_pdm_sync.yml`
+  - `docs/handoffs/HANDOFF.md`
+  - `docs/handoffs/PLAN.md`
+- `git show --stat 98892ba`:
+  - `scripts/google_apps_script_drive_sync.js`
+  - `CLAUDE.md`
+  - `docs/handoffs/HANDOFF.md`
+  - `docs/handoffs/PLAN.md`
+- **Zero Credentials Added:** Scanned added lines (`^\+[^\+]`) across both unpushed commits with the local shell variable matching the leaked Firebase secret; 0 matches found in additions. Neither commit pushed to origin.
+
 ## What Changed
-- **Removed Hardcoded Fallback Secret:** In `scripts/google_apps_script_drive_sync.js`, replaced `FIREBASE_AUTH = SCRIPT_PROPS.getProperty("FIREBASE_AUTH") || "<literal>"` with strict retrieval from Script Properties `SCRIPT_PROPS.getProperty("FIREBASE_AUTH")`.
-- **Archive PUT Guard:** Added a defensive check before calling `UrlFetchApp.fetch` for `archived_sessions/${sessionId}.json`. If `FIREBASE_AUTH` is missing or empty, it logs a clear message and skips the write instead of failing or sending an unauthenticated request.
-- **Added Deprecation/Legacy Banner:** Added an explicit `[LEGACY / DEPRECATED]` header banner warning that the Apps Script is legacy (writes 5-column CSVs, drops firmware-07 features, uses outdated 25s timeout), instructing operators not to deploy or run `installTrigger` for firmware 07.
-- **Updated Setup Instructions:** Updated QUICK SETUP steps to instruct setting `FIREBASE_AUTH` in Script Properties without hardcoded code values.
-- **Updated Tech Stack in CLAUDE.md:** Updated line 14 under Tech Stack to document that `firmware/auto_drive_sync_daemon.py` is the current quota-aware archiver and Google Apps Script is legacy.
-- **Verified Zero Leaked Secrets in Tracked Files:** Verified via `git grep -l -F` that zero tracked files in the working tree contain the Firebase secret literal.
-- **Validated Syntax:** Verified `scripts/google_apps_script_drive_sync.js` syntax via `node -e "new Function(...)"`.
-- **Local Commit Only:** Committed locally without pushing, per plan instructions, awaiting Adam's manual secret rotation on Firebase and GitHub.
+- **Regenerated 2-Page Executive Brief PDF:** Executed `py -3 docs/proposals/generate_2page_pdf.py`. Confirmed Edge headless generation succeeded: `Total Pages: 2`, file size 1154.1 KB at `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf` (and updated HTML presentation `docs/proposals/proposal_2page_presentation.html`).
+- **Visual Verification of Rendered Pages:** Rendered both pages to PNG at 150 DPI via PyMuPDF (`page_1_sync_20oct.png`, `page_2_sync_20oct.png`). Verified by inspection:
+  - Metric strip displays `11 WASH SESSIONS RECORDED` and `3 SENSORS WORKING IN SYNC`.
+  - Box 4 displays `4. Machine State (planned): SmartThings reports wash, rinse, spin; saving it with the data and comparing within the same phase is next.` with complete visual padding and zero overflow.
+  - Page 1 and Page 2 bottom margins have ample whitespace; zero cut-off text.
+- **Search Verification of Synchronized Text (Step 3):**
+  - Confirmed absence of stale strings: `7,414`, `10 real`, `Archived`, `latest 66` (PASS: none found).
+  - Confirmed presence of updated metrics: `8,379` and `11` (PASS: found).
+- **Audit of Hackathon Document PDFs (Step 4):**
+  - Checked repo for generators for `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf`, `Hackathon/SCRIPT_READ_ALOUD.pdf`, and `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf`.
+  - No Python/shell/Node generator scripts exist in the repository; PDF metadata confirms they were printed manually via Edge/Chrome (`HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0`) on 20 Oct ~02:46 AM.
+  - Following plan instructions ("do NOT invent one: list them in HANDOFF as stale so Adam can re-export or delete them"), these PDFs are listed below under **Stale Hackathon PDFs**.
 
 ## Files Changed
-- `scripts/google_apps_script_drive_sync.js`: Stripped hardcoded secret fallback, added guard check before archive PUT, added legacy header banner and setup docs.
-- `CLAUDE.md`: Updated Tech Stack to note Google Apps Script is legacy and `auto_drive_sync_daemon.py` is the current archiver.
-- `docs/handoffs/PLAN.md`: Marked acceptance criteria and status as DONE.
-- `docs/handoffs/HANDOFF.md`: Recorded handoff documentation.
+- `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf`: regenerated 2-page brief with synchronized 20 Oct figures.
+- `docs/proposals/proposal_2page_presentation.html`: regenerated presentation HTML template.
+- `docs/handoffs/PLAN.md`: marked acceptance criteria and status as DONE.
+- `docs/handoffs/HANDOFF.md`: recorded handoff documentation.
+
+## Stale Hackathon PDFs (Awaiting Manual Re-export or Deletion by Adam)
+The following untracked PDFs in `Hackathon/` were manually exported before Claude's 12:30 text edits and have no repo-based generator script:
+1. `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf` (source: `VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md`)
+2. `Hackathon/SCRIPT_READ_ALOUD.pdf` (source: `SCRIPT_READ_ALOUD.md`)
+3. `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf` (source: `SDP_HACKATHON_BRIEFING_SUMMARY.md`)
+Adam can re-print them to PDF via Edge/Chrome markdown preview or remove them if no longer needed.
 
 ## Acceptance Criteria
-- [x] The Apps Script contains no `FIREBASE_AUTH` fallback and no credential literal — verified via `git grep -l -F` and code inspection.
-- [x] The authenticated PUT is skipped with a log message when the Script Property is missing — verified in `scripts/google_apps_script_drive_sync.js`.
-- [x] LEGACY banner and updated setup steps present — verified in header comments.
-- [x] Step 5 search: no tracked working-tree file contains the Firebase secret (paths only reported) — verified; 0 tracked files found.
-- [x] Step 6 parse check passes — verified via `node -e "new Function(...)"`.
-- [x] `CLAUDE.md` marks the Apps Script as legacy — verified in Tech Stack line 14.
-- [x] Only the script, `CLAUDE.md`, PLAN.md and HANDOFF.md changed; no credential value in any diff, log or doc; commit local, not pushed — verified.
+- [x] 2-page PDF regenerated, `Total Pages: 2`, both pages checked by eye, no cut-off text — verified via `generate_2page_pdf.py` and visual PNG inspection.
+- [x] Step 3 search clean — verified via text extraction script (no stale strings; expected numbers present).
+- [x] Hackathon PDFs regenerated with their real generator, or listed as stale in HANDOFF — verified (no generator in repo; listed as stale).
+- [x] Only PDFs, the regenerated `proposal_2page_presentation.html`, PLAN.md and HANDOFF.md changed — verified.
+- [x] Step 0: unpushed commit list pasted into HANDOFF, every hash explained, `git show --stat` scope confirmed, no credentials. Nothing pushed (pushing waits for Adam's secret rotation) — verified.
 
 ## Tests Run
-- `node -e "new Function(require('fs').readFileSync('scripts/google_apps_script_drive_sync.js','utf8'))"` — PASS
-- `git grep -l -F` scan for Firebase secret across tracked files — PASS (0 tracked files contain secret)
+- `py -3 docs/proposals/generate_2page_pdf.py` — PASS (`Total Pages: 2`, 1154.1 KB)
+- PyMuPDF text verification script (`docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf`) — PASS
+- `git log origin/main..HEAD --oneline` and credential leak audit — PASS
 
 ## Invariants Check
-- All items in `INVARIANTS_DO_NOT_CHANGE.md` respected. Zero secret literals printed, logged, or committed; firmware, ML, and dashboard files untouched; Apps Script preserved in place without deletion.
+- All items in `INVARIANTS_DO_NOT_CHANGE.md` respected. Zero secret credentials committed; firmware, ML, and dashboard files untouched; master proposal dossier untouched.
 
 ## Open UNVERIFIED items (carried forward)
 - Whether the Apps Script trigger is still deployed (Adam to check `script.google.com`).
@@ -54,4 +87,4 @@
 - None. Commit is held locally as planned pending Adam's manual secret rotation steps.
 
 ## Suggestions for Claude
-- Once Adam confirms secret rotation on Firebase and setting GitHub secrets, both local commits (`8b69a09` and this commit) can be pushed to `origin/main`. Then queue `PLAN_QUEUED_2_regenerate_pdfs_after_number_sync.md`.
+- Once Adam completes secret rotation on Firebase and adds the secrets to GitHub Actions, all local commits can be pushed to `origin/main` together.
