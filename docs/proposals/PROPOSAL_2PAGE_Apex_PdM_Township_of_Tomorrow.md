@@ -5,81 +5,90 @@
 
 ### 1. Title of the Idea
 **Apex PdM: Township-Scale Asset Health & Air-Conditioning Predictive Maintenance Platform**  
-*Subtitle: Eliminating Parasitic Energy Waste & Premature Landfill Scrap from Scaled Testbed to Commercial Infrastructure*  
-**Live Working Prototype & Telemetry Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
-**Track Alignment:** **PLANET** (Energy Optimization & Circular Economy) with **PEOPLE** (Digital Living) synergy.
+*A low-cost sensor pod that feels, hears and measures machines, so township teams fix small problems before they become big breakdowns.*  
+**Live Working Prototype & Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
+**Stage:** Working prototype (TRL 4–5) with live data online  
+**Track Alignment:** **PLANET: 02 Circular Economy** (with Energy Efficiency in the narrative) with **PEOPLE** (Digital Living) synergy.
+
+| 10 | 4 | 20×+ | ~RM 170 |
+|---|---|---|---|
+| Real wash sessions archived | Sensors working in sync | Vibration jump, idle → spin | Pilot kit cost, off the shelf |
 
 ---
 
 ### 2. Problem Statement
 
 * **What is the issue?**  
-  Mechanical rotating equipment (commercial central air-conditioning chillers, water pumps, large appliances) operates reactively on "run-to-failure." When consumable wear components (bearings, dampers, mechanical seals) degrade, friction forces modern inverter-driven motors to draw **15% to 35% excess electrical power ($W$)** to sustain speed—undetected by circuit breakers for months. Eventually, unchecked friction causes catastrophic seizure (motor burnout, compressor seizure), transforming an **RM 25–50 component fix** into an **RM 800–RM 1,800+ replacement** for appliances, or **RM 15,000–RM 30,000+** for commercial HVAC chillers.
+  Air-conditioners, chillers, water pumps and big appliances are usually fixed only **after they break**. Before that, a worn bearing, damper or seal slowly makes the machine shake more, sound different and **work harder, using more electricity**. Nobody notices until the machine stops. By then, a **small part worth tens of ringgit** has turned into a **new motor or compressor worth thousands**, plus days without cooling.
 * **Who is affected?**  
-  1. **Township Communal & Commercial Spaces:** Community **mosques, suraus, kuils (temples), clubhouses, and retail shopping malls** that operate 20 to 50+ commercial AC compressors daily. Breakdown leaves congregations and weekend shoppers in unbearable heat.
-  2. **Township Facility Management (FM) Teams:** Technicians waste hundreds of hours on manual 1-by-1 physical walk-throughs, unable to detect internal mechanical degradation before catastrophic breakdown occurs.
-  3. **Township Residents:** Urban households facing costly appliance replacements, structural vibration noise, and inflated utility bills.
+  1. **Township Communal & Commercial Spaces:** Community **mosques, suraus, kuils (temples), clubhouses and shopping malls** running many AC units every day. A sudden breakdown leaves congregations and shoppers in the heat.
+  2. **Township Facility Management (FM) Teams:** Technicians check machines one by one, by hand, and still cannot see wear happening inside until something fails.
+  3. **Township Residents:** Households facing surprise repair bills, noisy machines and higher electricity bills.
 * **Why is it important to solve this problem now?**  
-  Rising electricity tariffs (TNB Commercial Tariff B @ RM 0.509/kWh) and national ESG circular economy goals mandate an end to preventable waste. Eliminating unmonitored mechanical friction saves gigawatt-hours across township utility grids, while catching faults early along the **P-F Interval** extends machinery operating lifespan by 5 to 10 years, diverting metric tons of heavy scrap metal and appliance e-waste from landfills.
+  Electricity keeps getting more expensive, and townships are aiming for lower emissions and less waste. A machine that is wearing out uses more power and gets thrown away sooner. Catching the problem early means **a cheap repair instead of a full replacement**, lower bills and less scrap going to landfill.
 
 ---
 
 ### 3. Proposed Solution
 
 * **How does your solution address the problem?**  
-  Apex PdM provides low-cost, non-intrusive edge-IoT sensor pods that clip onto rotating machinery housings. It continuously tracks a **Machine Health Index (0%–100%)** and **Remaining Useful Life (RUL)**, detecting mechanical friction weeks in advance (at Point P) before catastrophic failure occurs (at Point F).
-* **What makes it innovative? (4-Modality Synchronous Fusion):**  
-  Traditional vibration alarms trigger frequent false alarms during normal high-speed operation. Apex PdM integrates four synchronized physical dimensions:
-  1. *Kinematics (MPU-6050 @ 50 Hz):* Tri-axial acceleration ($\pm 16\text{g}$) measuring chassis rocking, unbalance, and damper shock.
-  2. *Acoustics (INMP441 @ 16 kHz):* 24-bit digital I2S DMA capturing high-frequency bearing squeal and pump cavitation.
-  3. *Electrical Power (Tapo P110 @ 1 Hz):* Active wattage ($W$), voltage, and current measuring motor load and parasitic friction drag.
-  4. *Operational Context:* Conditions anomaly detection against machine states, eliminating spin-cycle false alarms.
-* **What technology/product is involved?**  
-  * **Dual-Core ESP32 Edge Firmware:** Strict FreeRTOS isolation—Core 1 handles real-time sensor DSP; Core 0 manages Wi-Fi, encrypted local KLAP power queries, and Google Firebase RTDB cloud sync.
-  * **Automated Force-ON Safety Guard:** Watchdog daemon detects accidental power switch-off within 1,000ms and immediately forces power back ON.
-  * **Centralized Township Interface:** Cloud-based facility management dashboard providing automated health triage maps and mobile repair alerts.
+  Apex PdM is a small sensor pod that sits on the outside of a machine. It records **vibration, sound and power together**, learns what *normal* looks like for that machine, and gives an **anomaly score and a simple verdict for every run** (normal / check it). A full health score and remaining-life estimate are our next step, once we have recorded real faults.
+* **What makes it innovative? (4 sensors working together)**  
+  1. *Vibration (MPU-6050 @ 200 Hz):* 3-axis sensor that feels shaking, unbalance and loose or worn parts.
+  2. *Sound (INMP441 @ 16 kHz):* Digital microphone that hears grinding, squealing and rattling.
+  3. *Power (Tapo P110 @ 1 Hz):* Smart plug that measures how hard the motor is working, in watts.
+  4. *Machine State:* Context from SmartThings (wash, rinse, spin); comparing vibration and sound within the same phase is planned.
+* **What technology / product is involved?**  
+  * **Dual-Core ESP32:** One core reads the sensors in real time, the other handles Wi-Fi and cloud upload, so neither slows the other down. Every 5 seconds the pod turns raw signals into **32 signal features**.
+  * **Keeps Logging Through Wi-Fi Drops:** The pod stores about 4 minutes of data and sends it once the connection is back.
+  * **Live Web Dashboard:** Anyone can watch the rig live today. A township map and phone alerts are the next build.
 
 ---
 
 ### 4. Target Market / Beneficiaries
 
-* **Specific Industry or Sector:** Commercial Facility Management (FM), Communal Places of Worship, Retail Real Estate, and Smart Sustainable Townships (e.g., Sime Darby Property's City of Elmina, Bandar Bukit Raja).
+* **Specific Industry or Sector:** Commercial Facility Management (FM), places of worship, retail property and smart sustainable townships (e.g. Sime Darby Property's City of Elmina, Bandar Bukit Raja).
 * **MSME & Communal Segment:**  
-  * **Places of Worship:** Mosques, Suraus, and Kuils (temples) relying on central air-conditioning split units.  
-  * **Commercial Centers & Clubhouses:** Community gyms, function halls, and retail malls (e.g., Elmina Lakeside Mall).  
-  * **Local Maintenance Contractors (MSMEs):** Local service technicians empowered with automated, predictive repair dispatching rather than reactive crisis calls.
-* **Urban/Rural Focus:** High-density master-planned urban townships and commercial property clusters.
+  * **Places of Worship:** Mosques, suraus and kuils (temples) that rely on air-conditioning.  
+  * **Commercial Centres & Clubhouses:** Community gyms, function halls and malls (e.g. Elmina Lakeside Mall).  
+  * **Local Maintenance Contractors (MSMEs):** Technicians who get told which machine needs a look, instead of rushing to emergency calls.
+* **Urban/Rural Focus:** Master-planned urban townships and commercial property clusters.
 
 ---
 
 ### 5. Uniqueness and Innovation
 
-* **Ultra-Low Cost (< RM 50 Production BOM):** Existing industrial predictive maintenance systems cost upwards of RM 2,000–RM 5,000 per sensor, limiting them to oil-and-gas refineries. Apex PdM brings industrial-grade prognostics to everyday township assets.
-* **Solves the False Alarm Paradox:** By conditioning vibration and sound against ground-truth operational states, Apex PdM prevents false emergency alarms during normal high-speed extractions.
-* **Quantifies Parasitic Energy Drag in Ringgit:** Rather than reporting raw acceleration, Apex PdM correlates vibration harmonics with active wattage to compute excess power loss ($W_{\text{excess}}$) and monthly electricity bill inflation.
-* **Zero-Intrusive 5-Minute Retrofit:** Requires zero rewiring or warranty-voiding alterations; mounts with 3M VHB viscoelastic acrylic coupling and smart inline metering.
+* **Low Cost:** Industrial vibration sensors cost thousands of ringgit each, so only big factories use them. We spent **about RM 131 in parts for the sensor node** (about RM 170 for a full pilot kit with smart plug) — cheap enough for every AC unit in a mosque or mall.
+* **Fewer False Alarms by Design:** One sensor alone gets fooled — a normal fast spin looks like a fault. We check vibration, sound and power **together**, and plan to check against what the machine is doing, before raising an alert.
+* **Sees Energy Waste Too:** Because we measure power directly, the system can compare each run's power use against that machine's own normal and show when it starts working harder.
+* **Easy to Fit:** Mounts on the outside and plugs in — no rewiring and nothing opened up.
 
 ---
 
-### 6. Prototype Feasibility, Empirical Evidence & The Expansion Plan
+### 6. Prototype Feasibility, Evidence & Expansion Plan
 
-* **The Accessible Home Testbed (Proven Foundation):**  
-  Because commercial 50 kW rooftop chillers are costly and inaccessible for early student bench testing, we built and validated our prototype on an accessible, highly dynamic residential front-load washing machine. Mechanically, a 1,400 RPM washing machine is one of the most violent rotating electromechanical environments in existence. By proving clean, synchronized dual-core telemetry here, we successfully de-risked the hardest technical hurdle.
-* **Empirical Datasets in Hand:**  
-  * Over **3,980 standardized operational telemetry records** captured across 5 genuine full wash cycles.  
-  * Documented 31-feature machine learning prognostic contract (`pdm_feature_dictionary.json`).
-* **Live Global Web Dashboard:** Fully deployed and verifiable worldwide at [**https://washer-pdm.pages.dev**](https://washer-pdm.pages.dev).
-* **The Bigger Expandable Plan:**  
-  Because rotating electromechanical failure physics ($\text{Vibration} \rightarrow \text{Acoustic Friction} \rightarrow \text{Electrical Drag} \rightarrow \text{Seizure}$) is universal, our roadmap mass-produces these sub-RM 50 pods into clip-on hardware. We will deploy them across **20 to 50 commercial AC compressors in township mosques, kuils, community halls, and shopping malls**, training a specialized compressor ML model and providing facility managers with a centralized asset health dashboard.
+* **Why we tested on a washing machine:**  
+  A front-load washer is one of the toughest machines to monitor. It shakes hard, the load moves around, water sloshes, and the speed keeps changing from slow tumbling to a fast spin. If our pod gets clean, clear data here, a steady-running AC compressor or pump is an easier job.
+* **What we measured** (latest 66-minute cycle):  
+  * Vibration jumped **over 20×** from idle to spin.  
+  * The main vibration frequency climbed smoothly to **19.9 Hz (about 1,200 rpm)** as the drum sped up.  
+  * The washer's sound in the higher bands was **36–90× louder** than the room's background noise, even with a compressor and water pump running nearby.
+* **Data in hand:** **10 real wash sessions archived** and **7,414 rows** of training-ready data, with 32 signal features per 5-second window (firmware-07 window record).
+* **Model validation:** Leave-one-cycle-out test on 8 healthy cycles: 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.
+* **Hardware:** ESP32 dual-core + MPU-6050 (200 Hz) + INMP441 mic (16 kHz) + Tapo P110 smart plug (1 Hz).
+* **Live dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev).
+* **From washer to township:**  
+  Fans, pumps and compressors wear out the same way — worn parts cause more shaking, then more noise, then more power use, then a breakdown. The same pod and software can move onto **AC units and pumps in township mosques, kuils, community halls and malls**.
+* **Next steps:** record 20+ more cycles to measure our false-alarm rate, then pilot on real township equipment.
 
 ---
 
 ### 7. Expected Impact, Scalability & Commercial ROI
 
-* **Commercial Cluster Economics (20 Commercial AC Units):**  
-  * **Electricity Saved:** Eliminating 15% parasitic friction saves **~87,600 kWh annually** (**> RM 44,500/year** under TNB Commercial Tariff B).  
-  * **Capital Payback Period:** **Under 1 month** against a sensor pod deployment cost of ~RM 3,400 (20 pods &times; RM 170 pilot kit).  
-  * **Catastrophic Replacement Avoided:** Saves RM 15,000–RM 30,000 per prevented commercial compressor burnout.
+* **Example (our estimate, to be confirmed in the pilot):**  
+  * One 5 kW commercial AC running 10 hours a day uses about 18,250 kWh a year. If a worn part makes it use just **10% more**, that is ~1,825 kWh — **about RM 900 a year** at ~RM 0.50/kWh.  
+  * A pilot kit costs about **RM 170**, so catching one problem like this **pays for the pod within a few months**.  
+  * Catching a failing part early can also **avoid replacing a whole compressor**, which costs thousands of ringgit.
 * **Township Quality of Life & ESG Impact:**  
-  * **Zero Community Disruption:** Guarantees uninterrupted climate comfort during Friday prayers, temple festivals, and weekend retail crowds.  
-  * **Circular Economy:** Extends equipment operating lifespan by **5 to 10 years**, preventing **25 to 40 metric tons of compressor scrap metal** and **66 metric tons of $\text{CO}_2$ emissions** per commercial cluster annually.
+  * **Less Disruption:** Repairs can be planned ahead, so cooling stays on during Friday prayers, festivals and busy weekends.  
+  * **Less Waste & Lower Emissions:** Fixing one small part instead of replacing a whole unit keeps machines running longer, cuts scrap metal and saves electricity.

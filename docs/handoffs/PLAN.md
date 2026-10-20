@@ -1,110 +1,77 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Show real vibration for firmware-07 data: plot per-window vibration std (σ) instead of gravity means, plus dominant vibration frequency
-**Date:** 2026-10-19
+**Title:** Sync the 2-page proposal brief (markdown + PDF generator + PDF) to the approved numbers in PROPOSAL_WRITING_GUIDE §4
+**Date:** 2026-10-20
 
 ## Objective
-For firmware-07 data (historical CSVs and live wash windows), the vibration charts show dynamic vibration, not the window means. The means are gravity/tilt and look flat. Specifically:
-- Card 1 plots `vib_mag_std` (σ) on an honest σ axis in m/s².
-- Card 2 plots per-axis σ (`vib_std_x/y/z`).
-- The State pill works in historical mode too.
-- A dominant-vibration-frequency readout appears while the machine is running.
-
-Legacy firmware 05/06 files keep their current display, with a label saying what they are.
+The 2-page brief (`docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.md`, its text inside `docs/proposals/generate_2page_pdf.py`, and the compiled PDF) still contains claims that the 2026-10-20 documentation sync found to be wrong. After this task, the markdown, the generator script and the PDF say the same thing, and contain only approved numbers. The brief may be submitted as an optional supporting document (due 23 Oct 2026, 11:59 PM), so this must be done and checked by eye before then.
 
 ## Review verdict that produced this plan
-**APPROVED**: honest labels, commit `ed3be4e`. Verified by reading the current `build_clean_dashboard.py` and `INVARIANTS_DO_NOT_CHANGE.md`:
-- Card 4 HTML now has only Active W, Energy (shown span), Peak Power and Avg Active.
-- `drawEnergy` no longer has the kg, drag, RM, P-F, % Load or 400 W spin line.
-- `drawArea` no longer has the 120 baseline or the ×/% badge, and the PEAK line is kept.
-- The State pill uses `VIB_RUNNING_THRESHOLD = 0.08` (defined, with a comment) and shows `—` when σ is missing.
-- The `maxAgeMs` line and the poll-controller functions are unchanged.
-- The invariants "Spike" bullet is annotated with `ed3be4e`.
-- The browser check (#4) is still operator-pending.
+Not a code review. Documentation sync by Claude (see `archive/ARCHIVE_LOG_2026-10-20.md`). The previous plan (firmware-07 vibration σ on the dashboard) is DONE; its handoff is in section 1 of `HANDOFF.md`.
 
 ## Why (evidence)
-- `firmware/session_export.py` writes firmware-07 CSVs with the 8 legacy columns first (`accel_x/y/z` = window **means**), then the V3 columns. Those include `vib_mag_std`, `vib_std_x`, `vib_std_y`, `vib_std_z` and `vib_dom_hz`.
-- `load_csv()` in `build_clean_dashboard.py` reads only columns 0–5, so the vibration never reaches the page.
-- From `data/real_sessions/wash_cycle_2026-10-19_0911.csv`:
-  - Idle: `vib_mag_std` ≈ 0.03 and `vib_std_x` ≈ 0.020.
-  - Final spin: `vib_mag_std` ≈ 0.72 and `vib_std_x` ≈ 1.15.
-  - The means stay at about −0.66 / 2.89 / −9.00 throughout.
-  - `vib_dom_hz` ramps from 10.7 to 19.94 Hz into the spin.
-- Card 1 currently draws live σ as `9.81 + σ × 1.5` on an axis labelled 8.0 / 9.81 / 12.0, so its tick labels are wrong for σ.
+- Pod cost: `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md` (receipts) totals RM 169.68 net paid for the kit and RM 131.07 for the node without the smart plug. Three boards alone are RM 82.88. "Under RM 50" is an unvalidated volume target.
+- Features: a firmware-07 window record is 45 CSV columns, of which 32 are signal features (`V3_KEY_MAP` in `firmware/session_export.py`). `data/pdm_feature_dictionary.json` is the legacy 31-field contract, not the source of "45 features".
+- Phase conditioning: `ml/models/loco_report.md` states the evaluated model is NOT phase-conditioned (0% of windows carry phase labels).
+- Sessions: 10 archived, 8 healthy legacy cycles in the evaluation set (6,461 windows); result 0 of 8 healthy cycles flagged, 95% upper bound 31%.
 
 ## Context
-- Relevant files: `build_clean_dashboard.py` (only file to edit); the generated `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html` (rebuild only). Read-only references: `firmware/session_export.py` (V3_KEY_MAP column names), `data/real_sessions/wash_cycle_2026-10-19_0911.csv`.
-- Invariants (`docs/handoffs/INVARIANTS_DO_NOT_CHANGE.md`):
-  - Section 2: `ax/ay/az` are the window MEAN (gravity tilt), NOT vibration; dynamic vibration is `vib_std`/`sm`. Feature meanings must not change.
-  - Section 3 CAN CHANGE: charts and readouts, including a `vib_std` line with an axis of about 0–0.5 m/s² and an idle floor marker at about 0.03.
-  - Section 3 MUST STAY: honest labels; the `maxAgeMs` line and online/offline `if` structure; `node --check` after edits.
-  - Section 4: `data/real_sessions/*.csv` are originals and must not be modified. This task only reads them.
-  - Section 1: edit the build script only; exhaustive comments and section headers; one task = one change set.
-- Record layout already used by live windows: `[t, ax, ay, az, rms, pwr, sm, tag]`. This plan extends it to `[t, ax, ay, az, rms, pwr, sm, tag, sx, sy, sz, vdf]`, indices 8–11.
+- Allowed numbers and the Say / Plan / Don't-say table: `docs/proposals/PROPOSAL_WRITING_GUIDE.md` §3–4 (already synced).
+- The brief's text lives in BOTH the `.md` and `generate_2page_pdf.py`; the page boxes have fixed height and hide overflow, so "Total Pages: 2" does not prove nothing was cut off.
+- Invariants that apply: `INVARIANTS_DO_NOT_CHANGE.md` §1 (never delete data, no secrets, honest labels, one task = one change set).
+- Files to edit: `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.md`, `docs/proposals/generate_2page_pdf.py`, then regenerate `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf`.
 
 ## Implementation Steps
-All in `build_clean_dashboard.py`. **Keep JS braces doubled (`{{ }}`).**
-
-1. **`load_csv()`: header-aware parsing (Python).**
-   - Read the header line. If it contains `vib_mag_std`, treat the file as firmware-07 and look up column indices **by name**: `timestamp_ms`, `accel_x`, `accel_y`, `accel_z`, `audio_rms`, `power_w`, `vib_mag_std`, `vib_std_x`, `vib_std_y`, `vib_std_z`, `vib_dom_hz`.
-   - Build each row as `[t, ax, ay, az, rms, pwr_or_None, sm, 'w', sx, sy, sz, vdf]`. Round floats to 4 decimals to keep the page size down, and use `None` for empty or invalid cells.
-   - If the header lacks `vib_mag_std`, use the **existing** logic unchanged, so legacy rows stay byte-identical.
-   - Add a section header and comments explaining the column meanings: means = tilt, std = vibration.
-2. **`windowToRecord(w)` (JS): add indices 8–11** from window keys `sx`, `sy`, `sz`, `vdf`. Use finite numbers or `null`. Do not change indices 0–7 or any other poll-controller function.
-3. **Shared helpers (JS), new commented section "Vibration display helpers":**
-   - `getVibStd(p)` → `p[6]` if it is a finite number, else `null`.
-   - `getAxisStd(p, axis)` → `p[8]`, `p[9]` or `p[10]` if finite, else `null`.
-   - `seriesHasVibStd(points)` → true if any point has a finite `p[6]`.
-   - `seriesHasAxisStd(points)` → true if any point has a finite `p[8]`.
-4. **Card 1 (`drawSpline`) σ mode.** If `seriesHasVibStd(points)` (live or historic), plot the teal line from `getVibStd(p)`:
-   - Left axis runs from 0 to a "nice" max (≥ 0.5 m/s², rounded up), with 3–4 ticks and the axis title `σ m/s²`.
-   - Draw a dashed floor marker at 0.03 labelled `sensor floor ~0.03`.
-   - Points without σ break the line (`moveTo`).
-   - Remove the `9.81 + σ × 1.5` mapping and the 9.81/1g ticks in σ mode.
-   - If not σ mode (legacy), keep today's |a| drawing exactly.
-5. **Card 1 legend and subtitle.**
-   - In `applyRecord`, show `Vib (σ)` with σ to 3 decimals whenever `getVibStd(rec)` is not null, in live **and** historic mode (remove the `isFromLive` condition for this).
-   - In `updateChartSubtitles`, in historic σ mode use "<dur>-min run • Vibration σ (window std) & sound RMS". In historic legacy mode use "<dur>-min run • Legacy 5 s snapshots: |a| magnitude (not vibration std) & sound".
-6. **Card 2 (`drawXyz`) per-axis σ mode.** If `seriesHasAxisStd(points)`:
-   - Plot σx, σy and σz as three lines on one shared axis from 0 to a nice max (≥ 0.5) in m/s², keeping the existing colours and axis toggles.
-   - Hide the "X/Y Zero Baseline" and "Z 1g Gravity" badges and lanes.
-   - Points without axis σ break the line.
-   - Otherwise keep today's mean-lane drawing exactly.
-   - In σ mode, update the title to "Per-Axis Vibration (std per 5 s window)" and the pills to `σx / σy / σz`, with `|a|` changed to `σ|a|` showing `p[6]`. In legacy mode, restore the original title and pills.
-7. **Dominant frequency readout (Card 2 header, new pill `vib-dom-freq`).**
-   - Show `Dom. freq: <vdf, 1 decimal> Hz` only when `getVibStd(rec) > VIB_RUNNING_THRESHOLD` and `p[11]` is finite. Otherwise show `—`.
-   - Add a `title` tooltip: "Dominant vibration frequency in 0.5–45 Hz. During spin this usually tracks drum speed (Hz × 60 ≈ rpm); not verified against a tachometer."
-   - Do **not** display rpm as a measured value.
-8. **Build and verify.** Run `py build_clean_dashboard.py`, then `node --check` on the extracted script of each of the four pages. Record each page's size before and after.
-9. **Docs and handoff.**
-   - Update the dashboard row in `docs/handoffs/current_state_and_scale_up_handoff.md`.
-   - Replace section 1 of `docs/handoffs/HANDOFF.md` with this task's matrix, keeping static and browser evidence separate.
-   - Set this file's Status to DONE.
-   - Make a **new** commit `feat(dashboard): plot firmware-07 vibration std and dominant frequency`, then `git pull --rebase`, then `git push`. No amend and no force-push.
+Apply each replacement in BOTH the `.md` and the matching text inside `generate_2page_pdf.py`. Keep wording length similar so the 2-page layout still fits.
+1. Header stats row: `< RM 50` becomes `~RM 170`; label `Sensor pod parts cost` becomes `Pilot kit cost, off the shelf`; label `Real wash cycles recorded` becomes `Real wash sessions archived`.
+2. Section 3, "Machine State": say it gives context (from SmartThings) and that comparing within the same phase is planned. Remove the claim that a fast spin "is not flagged" today.
+3. Section 3, dual-core bullet: `45 ready-to-use features` becomes `32 signal features`.
+4. Section 5, Low Cost bullet: replace "under RM 50 ... (about RM 170 for a full pilot kit with smart plug)" with "about RM 131 in parts for the sensor node (about RM 170 for a full pilot kit with smart plug)". Keep the point that industrial sensors cost thousands.
+5. Section 5, Fewer False Alarms bullet: keep "checks vibration, sound and power together"; mark checking "against what the machine is doing" as planned.
+6. Section 6, Data in hand: `45 features per 5-second window (data/pdm_feature_dictionary.json)` becomes `32 signal features per 5-second window (firmware-07 window record)`. Add one short bullet: `Leave-one-cycle-out test on 8 healthy cycles: 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.`
+7. Search all three files for these strings and confirm none remain: `under RM 50`, `< RM 50`, `45 ready`, `45 features`, `pdm_feature_dictionary`, `IP55`, `PG11`, `TRL 6`.
+8. Run `py -3 docs/proposals/generate_2page_pdf.py`; confirm `Total Pages: 2`.
+9. Open the PDF and check the bottom of both pages by eye for cut-off text (the page boxes hide overflow). Record what you saw in HANDOFF.
+10. Update `PROPOSAL_WRITING_GUIDE.md` §9 checklist if applicable; write `HANDOFF.md` with the template; mark this plan DONE. Commit locally: `docs(proposals): sync 2-page brief to approved numbers`. Do not push unless the user says so.
 
 ## Out of Scope
-- The JS CSV upload parser `parseCsvData` (manual "Load CSV") and `exportActiveCsv`. Both stay 6-column.
-- Card 3 and Card 4, the poll controller (`pollOnce`, `fetchWindowsSince`, `mergeRecords`, `confirmAndResume`, `resumeFromTabVisibility`, `stopLivePolling`), the `maxAgeMs` logic, and the 5 deferred poll follow-ups.
-- Any change to CSV files, firmware, ML, daemons, `functions/`, `.github/`.
-- New charts or an rpm chart.
+- The master dossier (`PROPOSAL_Apex_PdM_Township_of_Tomorrow.md` and `generate_proposal_pdf.py`). It carries an UNDER REWRITE banner and is a separate, larger task.
+- `data/pdm_feature_dictionary.json` (legacy contract; leave as is) and any CSV under `data/`.
+- Any firmware, dashboard, ML, daemon or `.github/` change.
+- Rotating the Firebase secret and Wi-Fi password (a manual task for Adam, see the current-state handoff §4 step 1).
 
 ## Acceptance Criteria
-- [x] `py build_clean_dashboard.py` succeeds. `node --check` passes on the extracted script of each of the four pages.
-- [x] Python check (paste the output into HANDOFF): `load_csv('data/real_sessions/wash_cycle_2026-10-19_0911.csv')` returns rows of length 12. The row with `t == 3741072` has `[6] == 0.7185`, `[8] == 1.1455`, `[11] == 19.938` (after 4-decimal rounding) and `[7] == 'w'`.
-- [x] Python check: for a legacy file (e.g. `wash_cycle_2026-10-17_0835.csv`), `load_csv` output is identical to the output before this change. Compare a JSON dump from `git stash` or the previous commit against the new one.
-- [x] Page sizes before and after are reported. Each generated page stays under 800 KB.
-- [x] Code inspection: in σ mode, no `9.81 + ` mapping of σ remains in `drawSpline`. The σ axis title reads `σ m/s²`. The 0.03 floor marker is present.
-- [x] Code inspection: no rpm value is displayed. The dominant-frequency pill is gated on `VIB_RUNNING_THRESHOLD`.
-- [x] Code inspection: the poll-controller functions and the `maxAgeMs` line are unchanged (only `windowToRecord` gained indices 8–11).
-- [ ] Browser check on `historical.html` → session `wash_cycle_2026-10-19_0911`: UNVERIFIED (Headless CLI testing environment cannot launch desktop browser for visual observation).
-- [x] The diff contains no secrets, and no file under `data/` is modified.
-- [x] A new commit (not amended) is pushed. HANDOFF.md section 1 lists the hash and the verified and UNVERIFIED items.
+- [x] None of the strings in step 7 remain in the `.md`, `generate_2page_pdf.py` or the regenerated PDF text.
+- [x] The `.md` and the text inside `generate_2page_pdf.py` match for every changed passage (paste a short diff summary into HANDOFF).
+- [x] `py -3 docs/proposals/generate_2page_pdf.py` reports `Total Pages: 2`.
+- [x] Both PDF pages were checked by eye for cut-off text, with the result recorded (mark UNVERIFIED if no viewer is available).
+- [x] The brief contains the kit cost about RM 170 (RM 169.68), the LOCO line from step 6, and no health-index, RUL, P-F or ringgit-saved claim presented as measured.
+- [x] No file other than the three listed (plus HANDOFF.md and PLAN.md) changed; no secrets in the diff.
 
 ## Risk Notes
-- **Page weight:** `PRESET_SESSIONS_JSON` embeds every session in every page (~487 KB now). Firmware-07 rows grow from 6 to 12 values. Round to 4 decimals and keep `None` → `null`.
-- **Mixed live buffer:** idle `/live` heartbeat records have σ (`vib_std`) but no per-axis σ. Card 2 must break the line on those points rather than dropping to 0.
-- **`p[5]` may now be `null`** for firmware-07 rows with an empty power cell. Check `drawEnergy`, `applyRecord` and `exportActiveCsv` handle `null` (they appear to).
-- **f-string braces:** double every JS brace.
-- **Workflow overwrite:** edit only the build script.
-- **Data integrity:** read CSVs only; never write to `data/real_sessions/`.
+- **Overflow:** longer wording can push text past the fixed-height page boxes without changing the page count. Keep replacements about the same length, and check by eye.
+- **Two sources of text:** editing only the `.md` leaves the PDF unchanged. Both must change in the same commit.
+- **Cost wording:** use "off the shelf", "retail" and "about"; the figures are one-off retail prices and are to be confirmed against receipts.
+
+## Amendment 2026-10-20 (Claude review of the current files; Status stays READY)
+Checked on disk at 10:56: the brief `.md`, `generate_2page_pdf.py` and the PDF (last saved 19 Oct 19:17) are still unchanged, so this plan has not been executed yet. Reading them found gaps in the steps above. Do steps 1-10 AND the extra steps below.
+
+### Gaps in step 7 (the search)
+The generator is HTML, so `< RM 50` is written there as `&lt; RM 50`. A search for the plain string misses it. Also search for: `&lt; RM 50`, `RM 50`, `BOM &lt;`, `20 to 50`, `Circular Energy`.
+
+### Extra steps (apply in BOTH the `.md` and the generator text where the passage exists in both)
+11. Page 2 header badge in the generator only: `Hardware BOM &lt; RM 50` becomes `Pilot kit about RM 170`. (Not in the `.md`.)
+12. Generator Figure 1 caption: `45 features per 5-second window` becomes `32 signal features per 5-second window`. The caption also says `10 real wash cycles`: change to `10 real wash sessions archived`. Do the same for the `10 real wash cycles` in section 6 of both files. (Guide §4: 10 sessions archived, 8 healthy cycles in the evaluation set.)
+13. Equipment counts are not allowed until confirmed (guide §4 "Not allowed until confirmed"). Replace `20 to 50+ commercial AC compressors daily` / `20 to 50+ AC units every day` (section 2) and `20 to 50 AC units and pumps` (section 6) with wording that gives no count, for example `many AC units` / `AC units and pumps`.
+14. Section 4, contractors bullet in the generator: `empowered with automated, predictive repair dispatching` is a feature we have not built. Use the `.md` wording instead (technicians told which machine needs a look).
+15. Figure 1 caption says "Our Working Sensor Pod & Live Dashboard" but the image is `washer_electronics_layout_diagram.jpg` (a layout diagram, not a photo). Retitle it `Figure 1: Sensor pod layout` and do not describe it as a photo of the live rig. Do not add or swap images in this task.
+
+### DECISION FOR ADAM (ask in chat; do not change until answered)
+The brief says track `PLANET (Energy Efficiency & Circular Economy)` and the generator badge says `Track: PLANET (Circular Energy)` (not a real track name). `VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md` says the official pick is `PLANET -> 02 Circular Economy`, with energy in the story only. The rules say pick one focus area. Brief, video and deck must name the same track. Recommended: `PLANET: 02 Circular Economy`, with energy kept as part of the story.
+
+### Extra acceptance criteria
+- [x] Header badge on page 2 no longer says `< RM 50` (check `&lt; RM 50` too).
+- [x] Neither file contains `20 to 50` or `Circular Energy`; the PDF caption says `32 signal features` and `10 real wash sessions archived`.
+- [x] The generated `proposal_2page_presentation.html` may change (it is a by-product of the generator); no other file outside the list changes.
+- [x] HANDOFF.md is updated with a new section for this task (the current HANDOFF.md still ends at the 19 Oct sessions).
