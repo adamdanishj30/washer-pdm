@@ -12,6 +12,7 @@ import os
 # - vib_dom_hz (vdf): dominant vibration frequency in 0.5-45 Hz (tracks drum speed during spin).
 # Legacy files (firmware 05/06) lack vib_mag_std; they provide 5s snapshot means and magnitude.
 # Output record layout for firmware 07: [t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]
+# (Note: client-side JavaScript parseCsvData() in the dashboard must match this exact 12-element record layout)
 # Output record layout for legacy: [t, ax, ay, az, rms] or [t, ax, ay, az, rms, pwr]
 def load_csv(path):
     if not os.path.exists(path):
@@ -3406,10 +3407,124 @@ def generate_html(default_view='live'):
       }}
     }}
 
-    // Robust CSV parser
+    // Robust CSV parser supporting both Firmware 07 (V3 window record with vib_mag_std)
+    // and Legacy Firmware 05/06 (snapshot positional format).
+    // The record layout produced here MUST match Python load_csv() exactly:
+    // Firmware 07 (12 elements): [t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]
+    //   Index 0:  timestamp_ms (Math.round(t))
+    //   Index 1:  accel_x (mean tilt, ax)
+    //   Index 2:  accel_y (mean tilt, ay)
+    //   Index 3:  accel_z (mean tilt, az)
+    //   Index 4:  audio_rms (rms)
+    //   Index 5:  power_w (pwr or null)
+    //   Index 6:  vib_mag_std (sm or null) - dynamic vibration std
+    //   Index 7:  'w' (phase marker / schema indicator)
+    //   Index 8:  vib_std_x (sx or null)
+    //   Index 9:  vib_std_y (sy or null)
+    //   Index 10: vib_std_z (sz or null)
+    //   Index 11: vib_dom_hz (vdf or null) - dominant frequency in Hz
+    // Legacy (5 or 6 elements): [t, ax, ay, az, rms] or [t, ax, ay, az, rms, pwr]
     function parseCsvData(text) {{
       const lines = text.trim().split(/\\r?\\n/);
       const records = [];
+      if (!lines.length) return records;
+
+      // Locate first non-empty line as candidate header
+      let headerIdx = -1;
+      let headerLine = '';
+      for (let i = 0; i < lines.length; i++) {{
+        const trimmed = lines[i].trim();
+        if (trimmed) {{
+          headerIdx = i;
+          headerLine = trimmed;
+          break;
+        }}
+      }}
+      if (headerIdx === -1) return records;
+
+      const rawHeaders = headerLine.split(',').map(s => s.replace(/['"]/g, '').trim());
+
+      // =========================================================================
+      // BRANCH 1: Firmware 07 (V3 Schema) - header contains 'vib_mag_std'
+      // =========================================================================
+      if (rawHeaders.indexOf('vib_mag_std') !== -1) {{
+        const colMap = {{}};
+        for (let j = 0; j < rawHeaders.length; j++) {{
+          colMap[rawHeaders[j]] = j;
+        }}
+
+        const idxT = colMap.hasOwnProperty('timestamp_ms') ? colMap['timestamp_ms'] : 0;
+        const idxAx = colMap.hasOwnProperty('accel_x') ? colMap['accel_x'] : 1;
+        const idxAy = colMap.hasOwnProperty('accel_y') ? colMap['accel_y'] : 2;
+        const idxAz = colMap.hasOwnProperty('accel_z') ? colMap['accel_z'] : 3;
+        const idxRms = colMap.hasOwnProperty('audio_rms') ? colMap['audio_rms'] : 4;
+        const idxPwr = colMap.hasOwnProperty('power_w') ? colMap['power_w'] : -1;
+        const idxSm = colMap.hasOwnProperty('vib_mag_std') ? colMap['vib_mag_std'] : -1;
+        const idxSx = colMap.hasOwnProperty('vib_std_x') ? colMap['vib_std_x'] : -1;
+        const idxSy = colMap.hasOwnProperty('vib_std_y') ? colMap['vib_std_y'] : -1;
+        const idxSz = colMap.hasOwnProperty('vib_std_z') ? colMap['vib_std_z'] : -1;
+        const idxVdf = colMap.hasOwnProperty('vib_dom_hz') ? colMap['vib_dom_hz'] : -1;
+
+        function parseFloatVal(val) {{
+          if (val === undefined || val === null) return null;
+          const clean = String(val).replace(/['"]/g, '').trim();
+          if (clean === '') return null;
+          const num = parseFloat(clean);
+          return isNaN(num) ? null : Number(num.toFixed(4));
+        }}
+
+        const maxReqIdx = Math.max(idxT, idxAx, idxAy, idxAz, idxRms);
+
+        for (let i = headerIdx + 1; i < lines.length; i++) {{
+          const line = lines[i].trim();
+          if (!line) continue;
+          const parts = line.split(',');
+          if (parts.length <= maxReqIdx) continue;
+
+          const tStr = parts[idxT].replace(/['"]/g, '').trim();
+          const axStr = parts[idxAx].replace(/['"]/g, '').trim();
+          const ayStr = parts[idxAy].replace(/['"]/g, '').trim();
+          const azStr = parts[idxAz].replace(/['"]/g, '').trim();
+          const rmsStr = parts[idxRms].replace(/['"]/g, '').trim();
+
+          const t = parseFloat(tStr);
+          const ax = parseFloat(axStr);
+          const ay = parseFloat(ayStr);
+          const az = parseFloat(azStr);
+          const rms = parseFloat(rmsStr);
+
+          // Skip a row only if t, ax, ay, az or rms is not a number
+          if (isNaN(t) || isNaN(ax) || isNaN(ay) || isNaN(az) || isNaN(rms)) continue;
+
+          const pwr = (idxPwr >= 0 && idxPwr < parts.length) ? parseFloatVal(parts[idxPwr]) : null;
+          const sm = (idxSm >= 0 && idxSm < parts.length) ? parseFloatVal(parts[idxSm]) : null;
+          const sx = (idxSx >= 0 && idxSx < parts.length) ? parseFloatVal(parts[idxSx]) : null;
+          const sy = (idxSy >= 0 && idxSy < parts.length) ? parseFloatVal(parts[idxSy]) : null;
+          const sz = (idxSz >= 0 && idxSz < parts.length) ? parseFloatVal(parts[idxSz]) : null;
+          const vdf = (idxVdf >= 0 && idxVdf < parts.length) ? parseFloatVal(parts[idxVdf]) : null;
+
+          records.push([
+            Math.round(t),
+            Number(ax.toFixed(4)),
+            Number(ay.toFixed(4)),
+            Number(az.toFixed(4)),
+            Number(rms.toFixed(4)),
+            pwr,
+            sm,
+            'w',
+            sx,
+            sy,
+            sz,
+            vdf
+          ]);
+        }}
+        records.sort((a, b) => a[0] - b[0]);
+        return records;
+      }}
+
+      // =========================================================================
+      // BRANCH 2: Legacy Firmware 05/06 (strictly unchanged logic)
+      // =========================================================================
       for (let i = 0; i < lines.length; i++) {{
         const line = lines[i].trim();
         if (!line) continue;
@@ -3446,7 +3561,7 @@ def generate_html(default_view='live'):
         const text = evt.target.result;
         const records = parseCsvData(text);
         if (records.length < 2) {{
-          alert(`Could not parse valid records from "${{file.name}}". Ensure CSV has timestamp, ax, ay, az, rms columns.`);
+          alert(`Could not parse valid records from "${{file.name}}". Ensure CSV has valid columns (firmware-07 files are read by header with vib_mag_std, legacy files use first 5-6 columns).`);
           return;
         }}
 
