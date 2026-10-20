@@ -5,7 +5,7 @@
 **Status:** COMPLETE
 
 ## Commits
-- `788f575` fix(dashboard): read firmware-07 columns in Load CSV parser
+- `e8fe12a` fix(dashboard): read firmware-07 columns in Load CSV parser
 - **Branch:** main
 
 ## What Changed
