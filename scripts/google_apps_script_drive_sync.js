@@ -1,14 +1,24 @@
 /**
  * =========================================================================
- * Washer PdM: Cloud-to-Drive Autonomous Telemetry Sync (Google Apps Script)
+ * [LEGACY / DEPRECATED] Washer PdM: Cloud-to-Drive Sync (Google Apps Script)
  * =========================================================================
- * Runs 100% inside Google Cloud (No computer or laptop needed!).
+ * WARNING: SUPERSEDED FOR FIRMWARE 07 BY firmware/auto_drive_sync_daemon.py.
  * 
- * Monitored in real-time every 1 minute:
+ * This Apps Script is a legacy cloud archiver from Firmware 05/06:
+ * - It writes 5-column legacy CSVs (timestamp_ms, accel_x, accel_y, accel_z, audio_rms).
+ * - For Firmware 07, it drops dynamic vibration (vib_mag_std), dominant frequency (vib_dom_hz),
+ *   electrical power (power_w), and all 40 other signal features.
+ * - Its 25-second offline timeout predates the Firmware 07 idle heartbeat (60 s).
+ * - DO NOT deploy or re-run installTrigger() for Firmware 07 operations. Use the PC daemon
+ *   firmware/auto_drive_sync_daemon.py which writes full 45-column V3 window records.
+ * - Credentials must strictly come from Script Properties (no hardcoded fallback secrets).
+ * =========================================================================
+ * 
+ * Monitored in real-time every 1 minute (Legacy Firmware 05/06 only):
  * As soon as the ESP32 finishes transmitting and is detected as OFFLINE
  * (after 10 to 60 seconds of inactivity), this script automatically:
  *   1. Fetches all recorded batches for the wash session from Firebase RTDB.
- *   2. Converts the sensor telemetry into a standardized CSV dataset:
+ *   2. Converts the sensor telemetry into a standardized legacy CSV dataset:
  *      (timestamp_ms, accel_x, accel_y, accel_z, audio_rms).
  *   3. Saves the CSV file directly into your Google Drive folder:
  *      'PdM SideProject/data/wash_cycle_YYYY-MM-DD_HHMM.csv'.
@@ -16,20 +26,21 @@
  *   5. Marks the session archived so it never duplicates.
  * 
  * -------------------------------------------------------------------------
- * QUICK SETUP (Takes ~2 minutes):
+ * QUICK SETUP (Legacy Reference Only):
  * 1. Open https://script.google.com/ in your browser.
  * 2. Click "+ New project".
  * 3. Delete any default code, paste this entire file, and click Save (Ctrl+S).
- * 4. In the function dropdown at the top, select "installTrigger" and click "Run".
- * 5. Grant permissions when prompted by Google.
- * 6. DONE! Google Apps Script will now monitor Firebase 24/7 in the cloud.
+ * 4. Configure Script Properties: Go to Project Settings -> Script Properties,
+ *    and add FIREBASE_AUTH (your Firebase Database secret) with NO value hardcoded in code.
+ * 5. In the function dropdown at the top, select "installTrigger" and click "Run".
+ * 6. Grant permissions when prompted by Google.
  * =========================================================================
  */
 
-// Credentials: reads from Script Properties if configured, with local defaults
+// Credentials: reads strictly from Script Properties (no hardcoded fallback secret)
 const SCRIPT_PROPS = PropertiesService.getScriptProperties();
 const FIREBASE_HOST = SCRIPT_PROPS.getProperty("FIREBASE_HOST") || "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app";
-const FIREBASE_AUTH = SCRIPT_PROPS.getProperty("FIREBASE_AUTH") || "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V";
+const FIREBASE_AUTH = SCRIPT_PROPS.getProperty("FIREBASE_AUTH");
 const DRIVE_FOLDER_NAME = "PdM SideProject"; // Target Google Drive folder
 const SEND_EMAIL_NOTIFICATION = true;       // Set to false if you don't want emails
 
@@ -195,19 +206,25 @@ function archiveSessionToDrive(sessionId) {
   // Mark archived in ScriptProperties and Firebase
   props.setProperty(archivedKey, "true");
   const archiveDate = new Date();
-  try {
-    UrlFetchApp.fetch(`${FIREBASE_HOST}/archived_sessions/${sessionId}.json?auth=${FIREBASE_AUTH}`, {
-      method: "put",
-      contentType: "application/json",
-      payload: JSON.stringify({
-        archived_at: archiveDate.toISOString(),
-        filename: fileName,
-        points: rows.length,
-        drive_url: file.getUrl()
-      }),
-      muteHttpExceptions: true
-    });
-  } catch (e) {}
+  if (!FIREBASE_AUTH) {
+    Logger.log("FIREBASE_AUTH Script Property not set; archive marker not written to Firebase.");
+  } else {
+    try {
+      UrlFetchApp.fetch(`${FIREBASE_HOST}/archived_sessions/${sessionId}.json?auth=${FIREBASE_AUTH}`, {
+        method: "put",
+        contentType: "application/json",
+        payload: JSON.stringify({
+          archived_at: archiveDate.toISOString(),
+          filename: fileName,
+          points: rows.length,
+          drive_url: file.getUrl()
+        }),
+        muteHttpExceptions: true
+      });
+    } catch (e) {
+      Logger.log("Firebase archive marker update error: " + e);
+    }
+  }
   
   // Optional Email Notification
   if (SEND_EMAIL_NOTIFICATION) {
