@@ -1,61 +1,61 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Make the dashboard's "Load CSV" parser read firmware-07 files (σ view), and rebuild so the 20 Oct session is built in
+**Title:** Remove hardcoded fallback credentials from the GitHub Actions workflow, and find any other copies in tracked files
 **Date:** 2026-10-20
 
 ## Objective
-Today a firmware-07 CSV opened with the **📁 Load CSV** button is shown in legacy mode (flat Ax/Ay/Az lanes, "Dom. freq: –", "State: –", subtitle "Legacy 5 s snapshots"), while the same kind of file built into the page (🧺) shows the σ view. After this task, a firmware-07 CSV loaded with Load CSV renders exactly like a built-in one, legacy CSVs behave exactly as before, and session `wash_cycle_2026-10-20_0744` is built into the pages.
+`.github/workflows/cloud_pdm_sync.yml` still carries hardcoded fallback values for `FIREBASE_AUTH`, `SMARTTHINGS_PAT` and `SMARTTHINGS_DEVICE_ID` (the `secrets.X || '<literal>'` pattern). The repo link is a required hackathon submission item (due 23 Oct), so after this task no tracked file contains those literals and the workflow reads credentials only from GitHub secrets. Adam rotates the real credentials himself (see "Manual steps for Adam"); rotation is what makes the copies in git history useless.
 
-## Queue note
-The credentials task was moved, unchanged and not started, to `docs/handoffs/PLAN_QUEUED_remove_ci_fallback_credentials.md`. It becomes PLAN.md after this task is reviewed. Do not start it now.
+## Review verdict that produced this plan
+APPROVED (2026-10-20 12:10): commit `e8fe12a` (Load CSV parser reads firmware-07 columns). Claude diffed `build_clean_dashboard.py` (changes limited to the new header branch, comments and alert text; legacy loop, polling and `maxAgeMs` untouched) and re-ran parity independently on 5 real files: both firmware-07 files match Python `load_csv` with 0 mismatches and aligned nulls; all 3 legacy files give identical old/new output. Browser check still UNVERIFIED (Adam to do it).
 
-## Why (evidence, found by Claude on 2026-10-20)
-- `build_clean_dashboard.py`, JS `parseCsvData(text)` (around line 3410): reads columns by position only (`parts[0..5]` = t, ax, ay, az, rms, power) and returns 5- or 6-element records. It never reads `vib_mag_std`, `vib_std_x/y/z` or `vib_dom_hz`, so `seriesHasVibStd()` is false and the page falls back to legacy mode.
-- The Python `load_csv(path)` (line 16) already detects firmware-07 by `'vib_mag_std' in headers` and builds 12-element records `[t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]`. The 19 Oct σ task (commit `03495d3`) updated only this Python path.
-- Not a data or firmware problem: `wash_cycle_2026-10-19_0911.csv` and `wash_cycle_2026-10-20_0744.csv` have the identical 45-column header, 80,384 audio samples and ~1,013 accel samples per window, 11.96 windows/min, same sound scale, same gravity orientation.
+Earlier: APPROVED commit `c6d37fe` (2-page brief: LOCO data label, two claims softened). Claude read the `.md` and `generate_2page_pdf.py`: the new LOCO wording is identical in both, `by Design` and `worldwide` are gone, the PDF (11:44:45) was rebuilt after the script (11:44:29), and the `Open UNVERIFIED items (carried forward)` section is present. Visual check of the PDF is taken from the handoff (Claude cannot open PDFs here). Claude could not run `git show` on the commit; file contents were checked instead.
+
+## Why (evidence)
+- `INVARIANTS_DO_NOT_CHANGE.md` §1 rule 2 and §5: no hardcoded fallback credentials anywhere; the workflow fallbacks "are to be removed, never copied".
+- `current_state_and_scale_up_handoff.md` §4 step 1: rotate the Firebase secret and Wi-Fi password.
+- `VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md` Part 6: rotate secrets and check repo history before sharing the code link.
 
 ## Context
-- Invariants: `INVARIANTS_DO_NOT_CHANGE.md` §3. This is a CAN CHANGE (display-only) item. Edit `build_clean_dashboard.py` only; rebuild all four pages.
-- MUST STAY: the `maxAgeMs` line and its `if/else` structure, polling cadence, `/api/live`, Firebase quota rules, honest labels (no rpm shown as measured).
-- Code style: exhaustive inline comments and clear section headers (Adam is a beginner).
+- File to edit: `.github/workflows/cloud_pdm_sync.yml` only.
+- `FIREBASE_HOST` is the public database URL, not a secret; its fallback may stay.
+- SmartThings PATs expire after 24 h, so that fallback is already dead, but it is still removed.
+- **Never print, paste or log any credential value** in chat, HANDOFF, commit messages or test output. Report file paths and counts only.
 
 ## Implementation Steps
-1. In `parseCsvData(text)`, read the first non-empty line as a header. If it contains `vib_mag_std`, build a column-name → index map and parse each row into the same 12-element record the Python `load_csv` makes: `[t, ax, ay, az, rms, pwr, sm, 'w', sx, sy, sz, vdf]`, using columns `timestamp_ms, accel_x, accel_y, accel_z, audio_rms, power_w, vib_mag_std, vib_std_x, vib_std_y, vib_std_z, vib_dom_hz`. Empty or non-numeric optional values become `null` (same as Python `None`). Skip a row only if t, ax, ay, az or rms is not a number. Strip quotes as the current code does. Sort by t.
-2. If the header does not contain `vib_mag_std` (legacy firmware 05/06, or no header), run the **existing** legacy logic unchanged. Do not alter its output in any way.
-3. Comment the new branch: what each index means, and that it must match Python `load_csv` (and say so next to `load_csv` too).
-4. Update the Load CSV alert text so it no longer implies only 5 columns are supported (e.g. mention firmware-07 files are read by header). Wording only.
-5. Run `py build_clean_dashboard.py` so all four pages are regenerated and `wash_cycle_2026-10-20_0744` is built in as a 🧺 session.
-6. Extract the inline `<script>` from each of the four pages and run `node --check` on each.
-7. Parity test with Node (write it as a new file, e.g. `firmware/tests/test_csv_parser_parity.js` or a temporary script; say which in HANDOFF): extract `parseCsvData` from the built `historical.html`, run it on `data/real_sessions/wash_cycle_2026-10-20_0744.csv` and `wash_cycle_2026-10-19_0911.csv`, and compare with Python `load_csv` output for the same files: same row count, every record length 12, index 7 is `'w'`, every numeric field equal within 1e-4 (Python rounds to 4 decimals), nulls in the same places.
-8. Legacy parity: run the OLD `parseCsvData` (from `git show HEAD:build_clean_dashboard.py`) and the NEW one on `data/real_sessions/wash_cycle_2026-10-17_0835.csv` and `wash_cycle_2026-10-12_1019.csv`; the outputs must be identical (JSON string compare).
-9. Browser check (if a browser is available to you; else mark UNVERIFIED): open `historical.html`, use **Load CSV** on `wash_cycle_2026-10-20_0744.csv`, and confirm: Card 1 subtitle says "Vibration σ (window std) & sound RMS", Card 2 title "Per-Axis Vibration (std per 5 s window)", dominant-frequency pill shows a Hz value during spin, State pill shows Running/Idle. Then select the built-in 🧺 20 Oct session and confirm it looks the same.
-10. Report page sizes before and after (all four must stay under 800 KB).
-11. Write HANDOFF.md with the template. Keep the `Open UNVERIFIED items (carried forward)` section from the last handoff, and add the item below under "Data notes".
-12. Commit only `build_clean_dashboard.py` and the four pages (plus the test file if kept): `fix(dashboard): read firmware-07 columns in Load CSV parser`. Then `pull --rebase` and `push` (Cloudflare deploys from GitHub). Report the hash. If `git status` shows other changes (e.g. under `data/`), do not commit them; list them in HANDOFF.
-
-## Data notes (for HANDOFF, no action)
-- Both firmware-07 sessions have `phase = none` / `phase_source = fallback` on every row: no SmartThings phase labels were saved. Claude will plan the SmartThings check separately.
-- `load_class` is `MEDIUM` on every row of both files, so it does not describe the real load.
+1. Before editing, copy the three literal fallback values from the workflow into local shell variables only (do not echo them). Keep them for steps 4 and 5.
+2. In the workflow `env:` block, change `FIREBASE_AUTH`, `SMARTTHINGS_PAT` and `SMARTTHINGS_DEVICE_ID` to read `${{ secrets.NAME }}` with no `||` fallback. Leave `FIREBASE_HOST` and `SMARTTHINGS_REFRESH_TOKEN` as they are.
+3. Add a step before "Execute Autonomous Cloud Sync" that fails the job with a clear message (e.g. `FIREBASE_AUTH secret is not set`) if `FIREBASE_AUTH` is empty, so a missing secret does not look like a silent sync failure. Add comments explaining each step (Adam's code-style rule).
+4. Search every git-tracked file in the working tree (`git grep -l -F`, once per value) for the three literals. Report the matching file paths only. Do NOT edit any match outside the workflow; list them under Blocked / Questions for Claude to plan. `archive/` is included in this search (path list only; do not read the files).
+5. For each literal, run `git log -S` with `--oneline` and report only the NUMBER of commits that contain it. This tells Adam how deep the history copies go.
+6. Confirm `.gitignore` still ignores `.env`, `secrets.h`, `**/build/`, `*.bin`, `*.bak_unscaled`.
+7. Validate the YAML: `py -c "import yaml,sys; yaml.safe_load(open('.github/workflows/cloud_pdm_sync.yml'))"` (install `pyyaml` if missing).
+8. Write HANDOFF.md with the template, keeping the `Open UNVERIFIED items (carried forward)` section from the previous handoff and adding: "Workflow run with real GitHub secrets (needs Adam to set them, then a manual `workflow_dispatch`)".
+9. Mark this plan DONE. Commit locally: `fix(ci): remove hardcoded fallback credentials from cloud sync workflow`. **Do NOT push.** Pushing before Adam sets the GitHub secrets makes the 30-min cron fail.
 
 ## Out of Scope
-- Live polling, `windowToRecord`, `maxAgeMs`, any firmware, ML, daemon, `.github/` or proposal file.
-- Any file under `data/` (read only).
-- The SmartThings phase-label problem.
-- The credentials task (queued).
+- Rewriting git history (BFG / filter-repo). Rotation makes old values useless; history rewriting is a separate decision for Adam.
+- Any file other than the workflow (matches found in step 4 are reported, not fixed).
+- Firmware, dashboard, ML, data, proposal files.
+- Rotating credentials (manual, below).
+- The workflow commits `index.html dashboard.html cloud_dashboard.html` but not `historical.html`; note it, do not change it.
+
+## Manual steps for Adam (before Antigravity pushes)
+1. Firebase console → Project settings → Service accounts → Database secrets: add a new secret, then delete the old one. Put the new one in `.env` (`FIREBASE_AUTH`) and in GitHub → repo Settings → Secrets and variables → Actions as `FIREBASE_AUTH`. Re-flash firmware 07 with the new secret via `flash_firmware.py` (not during a wash) and confirm `/api/live` updates.
+2. SmartThings: revoke the old PAT at account.smartthings.com/tokens; set `SMARTTHINGS_DEVICE_ID` (and `SMARTTHINGS_REFRESH_TOKEN` if used) as GitHub secrets.
+3. Change the Wi-Fi password, update `.env`, re-flash.
+4. Add `OTA_PASS` to `.env`.
+5. Tell Antigravity to push, then run the workflow once by hand (Actions tab → Run workflow) and check it passes.
 
 ## Acceptance Criteria
-- [x] `py build_clean_dashboard.py` succeeds; `node --check` passes on all four pages.
-- [x] Firmware-07 parity (step 7) passes for both files: same row counts, 12-element records, values within 1e-4, nulls aligned.
-- [x] Legacy parity (step 8) passes: old and new parser output identical for both legacy files.
-- [x] `wash_cycle_2026-10-20_0744` appears as a built-in 🧺 session in `historical.html`.
-- [x] Browser check (step 9) done or marked UNVERIFIED.
-- [x] Code inspection: `maxAgeMs` line and structure, polling functions, `windowToRecord` unchanged; no rpm value displayed.
-- [x] Page sizes reported, all under 800 KB.
-- [x] Only the build script, the four pages (and the optional test file) committed; no secrets in the diff; pushed; hash reported.
+- [x] The workflow contains no `||` fallback for `FIREBASE_AUTH`, `SMARTTHINGS_PAT` or `SMARTTHINGS_DEVICE_ID`, and contains none of the three literal values.
+- [x] A guard step fails the job with a clear message when `FIREBASE_AUTH` is empty.
+- [x] YAML validates (step 7).
+- [x] HANDOFF lists every other tracked file containing any of the literals (paths only), and the `git log -S` commit count per value (numbers only).
+- [x] No credential value appears in HANDOFF, PLAN, the commit message or the diff.
+- [x] Only the workflow, PLAN.md and HANDOFF.md changed. Commit is local, not pushed.
 
 ## Risk Notes
-- **Legacy breakage:** the legacy branch must be byte-identical in behaviour; step 8 proves it.
-- **Header row:** the old parser skipped the header by accident (`parseFloat('timestamp_ms')` is NaN). The new branch must not count the header as a data row.
-- **Page size:** building in one more firmware-07 session adds roughly 60–80 KB per page.
-- **Concurrent bot commits:** the GitHub workflow commits pages every 30 min; use `pull --rebase` and rebuild if the rebase touches the pages.
+- **Leaking while fixing:** printing a value in a test log or handoff recreates the leak. Paths and counts only.
+- **Broken cron:** removing the fallback before the GitHub secret exists makes every 30-min run fail. Hence no push until Adam confirms.

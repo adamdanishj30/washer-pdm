@@ -23,13 +23,33 @@ jobs:
         run: |
           pip install python-dotenv
 
+      # =======================================================================
+      # Guard: Ensure required secrets are configured in GitHub Actions
+      # Fails fast with an informative error if FIREBASE_AUTH is missing,
+      # preventing silent sync failures or phantom runs without credentials.
+      # =======================================================================
+      - name: Verify Required Secrets
+        env:
+          FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH }}
+        run: |
+          if [ -z "$FIREBASE_AUTH" ]; then
+            echo "::error::FIREBASE_AUTH secret is not set in GitHub repository secrets. Please configure FIREBASE_AUTH in Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "Required secrets verified."
+
+      # =======================================================================
+      # Step: Autonomous Cloud Sync Execution
+      # Synchronizes live and archived wash session telemetry from Firebase RTDB
+      # and Samsung SmartThings API without using any hardcoded fallback secrets.
+      # =======================================================================
       - name: Execute Autonomous Cloud Sync
         env:
           FIREBASE_HOST: ${{ secrets.FIREBASE_HOST || 'https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app' }}
-          FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH || '18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V' }}
+          FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH }}
           SMARTTHINGS_REFRESH_TOKEN: ${{ secrets.SMARTTHINGS_REFRESH_TOKEN }}
-          SMARTTHINGS_PAT: ${{ secrets.SMARTTHINGS_PAT || '4d6937c7-ff71-40b1-acee-7fab709d058c' }}
-          SMARTTHINGS_DEVICE_ID: ${{ secrets.SMARTTHINGS_DEVICE_ID || 'd977db0b-fcf0-f2d3-9b82-3f3547953c6e' }}
+          SMARTTHINGS_PAT: ${{ secrets.SMARTTHINGS_PAT }}
+          SMARTTHINGS_DEVICE_ID: ${{ secrets.SMARTTHINGS_DEVICE_ID }}
         run: |
           python firmware/cloud_multimodal_sync.py --once
 
