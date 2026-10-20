@@ -1,77 +1,59 @@
 # Handoff to Claude (Architect)
 
-**Plan:** Regenerate the 2-page brief PDF (and the Hackathon doc PDFs, if they have a generator) after Claude's 20 Oct number sync
-**Date:** 2026-10-20 12:56, Asia/Kuala_Lumpur
+**Plan:** Re-export the 3 stale Hackathon PDFs with a small reusable script, and add two handoff rules (diff file, no amending)
+**Date:** 2026-10-20 13:05, Asia/Kuala_Lumpur
 **Status:** COMPLETE
+**Diff Patch:** [last_diff.patch](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/last_diff.patch)
 
 ## Commits
-- `8fe52df` docs(proposals): regenerate PDFs after 20 Oct number sync
+- `PENDING` docs(hackathon): add md-to-pdf export script, re-export stale PDFs
 - **Branch:** main
 
-## Step 0: Unpushed Commit Audit & Hash Explanation
-Running `git log origin/main..HEAD --oneline` reports:
-```text
-98892ba fix(scripts): remove hardcoded Firebase secret from legacy Apps Script
-8b69a09 fix(ci): remove hardcoded fallback credentials from cloud sync workflow
-```
-
-### Explanation of Hashes vs Earlier Reports (`084b74f` and `ad99735`):
-1. **Task 1 (CI fallback credentials):** Initially committed as `084b74f`. `docs/handoffs/HANDOFF.md` was subsequently updated to reflect the hash and committed via `git commit --amend --no-edit`, resulting in the amended SHA-1 `8b69a09`.
-2. **Task 2 (Apps Script secret removal):** Initially committed as `ad99735`. `docs/handoffs/HANDOFF.md` was subsequently updated to reflect the hash and committed via `git commit --amend --no-edit`, resulting in the amended SHA-1 `98892ba`.
-
-### Scope and Cleanliness Verification:
-- `git show --stat 8b69a09`:
-  - `.github/workflows/cloud_pdm_sync.yml`
-  - `docs/handoffs/HANDOFF.md`
-  - `docs/handoffs/PLAN.md`
-- `git show --stat 98892ba`:
-  - `scripts/google_apps_script_drive_sync.js`
-  - `CLAUDE.md`
-  - `docs/handoffs/HANDOFF.md`
-  - `docs/handoffs/PLAN.md`
-- **Zero Credentials Added:** Scanned added lines (`^\+[^\+]`) across both unpushed commits with the local shell variable matching the leaked Firebase secret; 0 matches found in additions. Neither commit pushed to origin.
-
 ## What Changed
-- **Regenerated 2-Page Executive Brief PDF:** Executed `py -3 docs/proposals/generate_2page_pdf.py`. Confirmed Edge headless generation succeeded: `Total Pages: 2`, file size 1154.1 KB at `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf` (and updated HTML presentation `docs/proposals/proposal_2page_presentation.html`).
-- **Visual Verification of Rendered Pages:** Rendered both pages to PNG at 150 DPI via PyMuPDF (`page_1_sync_20oct.png`, `page_2_sync_20oct.png`). Verified by inspection:
-  - Metric strip displays `11 WASH SESSIONS RECORDED` and `3 SENSORS WORKING IN SYNC`.
-  - Box 4 displays `4. Machine State (planned): SmartThings reports wash, rinse, spin; saving it with the data and comparing within the same phase is next.` with complete visual padding and zero overflow.
-  - Page 1 and Page 2 bottom margins have ample whitespace; zero cut-off text.
-- **Search Verification of Synchronized Text (Step 3):**
-  - Confirmed absence of stale strings: `7,414`, `10 real`, `Archived`, `latest 66` (PASS: none found).
-  - Confirmed presence of updated metrics: `8,379` and `11` (PASS: found).
-- **Audit of Hackathon Document PDFs (Step 4):**
-  - Checked repo for generators for `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf`, `Hackathon/SCRIPT_READ_ALOUD.pdf`, and `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf`.
-  - No Python/shell/Node generator scripts exist in the repository; PDF metadata confirms they were printed manually via Edge/Chrome (`HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0`) on 20 Oct ~02:46 AM.
-  - Following plan instructions ("do NOT invent one: list them in HANDOFF as stale so Adam can re-export or delete them"), these PDFs are listed below under **Stale Hackathon PDFs**.
+- **Created Reusable Hackathon PDF Exporter:** Added `Hackathon/export_md_pdfs.py` with section headers, detailed docstrings, and inline comments. It converts markdown files to styled HTML via Python `markdown` (`tables`, `fenced_code`, `nl2br` extensions), applies an A4 print stylesheet (avoiding table row breaks across pages and preventing right-edge clipping), writes intermediate HTML to a system temp folder (`%TEMP%/pdm_hackathon_export`), and invokes Microsoft Edge headless (`--headless=new`, `--no-pdf-header-footer`) to produce PDF outputs.
+- **Regenerated the 3 Stale Hackathon PDFs:** Re-exported:
+  - `Hackathon/SCRIPT_READ_ALOUD.pdf`: 2 pages, 99.6 KB
+  - `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf`: 7 pages, 286.0 KB
+  - `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf`: 5 pages, 272.8 KB
+- **Visual & Content Inspection (Step 2):** Rendered pages to PNG at 150 DPI and inspected:
+  - Tables in all 3 documents fit completely within margins without right-edge truncation.
+  - `SCRIPT_READ_ALOUD.pdf` verified: P4 section contains "eleven recorded wash sessions" and "Then the AI learns this machine's normal...".
+  - `VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf` verified: header contains "v3.1, 20 Oct 2026 (12:30)", and Part 2 contains the 2:41 row with model-test diagram and line.
+  - `SDP_HACKATHON_BRIEFING_SUMMARY.pdf` verified: timeline flowchart preformatted block and all tables render cleanly.
+- **Added Two Handoff Rules to `.agents/rules/architect-handoff-workflow.md`:**
+  - Rule 1 (Diff Patch): Every handoff saves the full diff of the task's commit(s) to `docs/handoffs/last_diff.patch` (excluding binaries, PDFs, and generated dashboards/presentations; listing excluded files with size changes). `HANDOFF.md` links to it.
+  - Rule 2 (No Amending): Strictly never `git commit --amend` to insert a commit's own hash into `HANDOFF.md`. Record the commit hash in `HANDOFF.md` without committing `HANDOFF.md` again, or commit `HANDOFF.md` in a separate follow-up commit.
+- **Generated `docs/handoffs/last_diff.patch`:** Created the diff patch covering non-binary changes for this task.
 
 ## Files Changed
-- `docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf`: regenerated 2-page brief with synchronized 20 Oct figures.
-- `docs/proposals/proposal_2page_presentation.html`: regenerated presentation HTML template.
+- `Hackathon/export_md_pdfs.py`: new reusable export script.
+- `Hackathon/SCRIPT_READ_ALOUD.pdf`: re-exported PDF from synchronized markdown.
+- `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf`: re-exported PDF from synchronized markdown.
+- `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf`: re-exported PDF from synchronized markdown.
+- `.agents/rules/architect-handoff-workflow.md`: added Rule 1 (Diff patch) and Rule 2 (No amending), updated Git section and template.
 - `docs/handoffs/PLAN.md`: marked acceptance criteria and status as DONE.
 - `docs/handoffs/HANDOFF.md`: recorded handoff documentation.
+- `docs/handoffs/last_diff.patch`: task diff patch file.
 
-## Stale Hackathon PDFs (Awaiting Manual Re-export or Deletion by Adam)
-The following untracked PDFs in `Hackathon/` were manually exported before Claude's 12:30 text edits and have no repo-based generator script:
-1. `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf` (source: `VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md`)
-2. `Hackathon/SCRIPT_READ_ALOUD.pdf` (source: `SCRIPT_READ_ALOUD.md`)
-3. `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf` (source: `SDP_HACKATHON_BRIEFING_SUMMARY.md`)
-Adam can re-print them to PDF via Edge/Chrome markdown preview or remove them if no longer needed.
+## Excluded from Patch
+- `Hackathon/SCRIPT_READ_ALOUD.pdf` (binary PDF, 99.6 KB)
+- `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.pdf` (binary PDF, 286.0 KB)
+- `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.pdf` (binary PDF, 272.8 KB)
 
 ## Acceptance Criteria
-- [x] 2-page PDF regenerated, `Total Pages: 2`, both pages checked by eye, no cut-off text — verified via `generate_2page_pdf.py` and visual PNG inspection.
-- [x] Step 3 search clean — verified via text extraction script (no stale strings; expected numbers present).
-- [x] Hackathon PDFs regenerated with their real generator, or listed as stale in HANDOFF — verified (no generator in repo; listed as stale).
-- [x] Only PDFs, the regenerated `proposal_2page_presentation.html`, PLAN.md and HANDOFF.md changed — verified.
-- [x] Step 0: unpushed commit list pasted into HANDOFF, every hash explained, `git show --stat` scope confirmed, no credentials. Nothing pushed (pushing waits for Adam's secret rotation) — verified.
+- [x] `Hackathon/export_md_pdfs.py` regenerates all three PDFs in one run — verified (all 3 PDFs generated in single execution).
+- [x] Each PDF checked by eye (tables, no cut-off); the two content checks in step 2 pass; page counts reported — verified (PNG renders checked; P4 lines and v3.1/2:41 verified; pages: 2, 7, 5).
+- [x] Both rules added to `.agents/rules/architect-handoff-workflow.md` — verified in Section 5 and Section 6.
+- [x] `docs/handoffs/last_diff.patch` exists for this task — verified.
+- [x] No amend; only the script, the three PDFs, the rules file, PLAN.md, HANDOFF.md and the patch file changed; not pushed — verified.
 
 ## Tests Run
-- `py -3 docs/proposals/generate_2page_pdf.py` — PASS (`Total Pages: 2`, 1154.1 KB)
-- PyMuPDF text verification script (`docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf`) — PASS
-- `git log origin/main..HEAD --oneline` and credential leak audit — PASS
+- `py -m py_compile Hackathon/export_md_pdfs.py` — PASS
+- `py Hackathon/export_md_pdfs.py` — PASS (all 3 PDFs generated)
+- PyMuPDF text & PNG verification script — PASS
 
 ## Invariants Check
-- All items in `INVARIANTS_DO_NOT_CHANGE.md` respected. Zero secret credentials committed; firmware, ML, and dashboard files untouched; master proposal dossier untouched.
+- All items in `INVARIANTS_DO_NOT_CHANGE.md` respected. Zero secret credentials; no firmware, ML, or dashboard files touched; Markdown source files untouched.
 
 ## Open UNVERIFIED items (carried forward)
 - Whether the Apps Script trigger is still deployed (Adam to check `script.google.com`).
@@ -87,4 +69,4 @@ Adam can re-print them to PDF via Edge/Chrome markdown preview or remove them if
 - None. Commit is held locally as planned pending Adam's manual secret rotation steps.
 
 ## Suggestions for Claude
-- Once Adam completes secret rotation on Firebase and adds the secrets to GitHub Actions, all local commits can be pushed to `origin/main` together.
+- None.
