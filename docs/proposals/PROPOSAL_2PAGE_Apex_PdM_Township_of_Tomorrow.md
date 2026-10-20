@@ -59,7 +59,7 @@
 ### 5. Uniqueness and Innovation
 
 * **Low Cost:** Industrial vibration sensors cost thousands of ringgit each, so only big factories use them. We spent **about RM 131 in parts for the sensor node** (about RM 170 for a full pilot kit with smart plug) — cheap enough for every AC unit in a mosque or mall.
-* **Fewer False Alarms by Design:** One sensor alone gets fooled — a normal fast spin looks like a fault. We check vibration, sound and power **together**, and plan to check against what the machine is doing, before raising an alert.
+* **Built to Reduce False Alarms:** One sensor alone gets fooled — a normal fast spin looks like a fault. We check vibration, sound and power **together**, and plan to check against what the machine is doing, before raising an alert.
 * **Sees Energy Waste Too:** Because we measure power directly, the system can compare each run's power use against that machine's own normal and show when it starts working harder.
 * **Easy to Fit:** Mounts on the outside and plugs in — no rewiring and nothing opened up.
 
@@ -74,7 +74,7 @@
   * The main vibration frequency climbed smoothly to **19.9 Hz (about 1,200 rpm)** as the drum sped up.  
   * The washer's sound in the higher bands was **36–90× louder** than the room's background noise, even with a compressor and water pump running nearby.
 * **Data in hand:** **10 real wash sessions archived** and **7,414 rows** of training-ready data, with 32 signal features per 5-second window (firmware-07 window record).
-* **Model validation:** Leave-one-cycle-out test on 8 healthy cycles: 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.
+* **Model validation:** Leave-one-cycle-out test on 8 healthy cycles (earlier snapshot-format data, before the 32-feature windows): 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.
 * **Hardware:** ESP32 dual-core + MPU-6050 (200 Hz) + INMP441 mic (16 kHz) + Tapo P110 smart plug (1 Hz).
 * **Live dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev).
 * **From washer to township:**  

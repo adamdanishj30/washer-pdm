@@ -393,7 +393,7 @@ def main():
       <div class="section-title">5. Uniqueness and Innovation</div>
       <ul>
         <li><strong>Low Cost:</strong> Industrial vibration sensors cost thousands of ringgit each, so only big factories use them. We spent <strong>about RM 131 in parts for the sensor node</strong> (about RM 170 for a full pilot kit with smart plug) &mdash; cheap enough for every AC unit in a mosque or mall.</li>
-        <li><strong>Fewer False Alarms by Design:</strong> One sensor alone gets fooled &mdash; a normal fast spin looks like a fault. We check vibration, sound and power <strong>together</strong>, and plan to check against what the machine is doing, before raising an alert.</li>
+        <li><strong>Built to Reduce False Alarms:</strong> One sensor alone gets fooled &mdash; a normal fast spin looks like a fault. We check vibration, sound and power <strong>together</strong>, and plan to check against what the machine is doing, before raising an alert.</li>
         <li><strong>Sees Energy Waste Too:</strong> Because we measure power directly, the system can compare each run's power use against that machine's own normal and show when it starts working harder.</li>
         <li><strong>Easy to Fit:</strong> Mounts on the outside and plugs in &mdash; no rewiring and nothing opened up.</li>
       </ul>
@@ -411,8 +411,8 @@ def main():
           <strong>Figure 1: Sensor pod layout</strong><br>
           &bull; <strong>Hardware:</strong> ESP32 dual-core + MPU-6050 (200 Hz) + INMP441 mic (16 kHz) + Tapo P110 smart plug (1 Hz).<br>
           &bull; <strong>Data in Hand:</strong> <strong>10 real wash sessions archived</strong> and <strong>7,414 rows</strong> of training-ready data, 32 signal features per 5-second window (firmware-07 window record).<br>
-          &bull; <strong>Model Validation:</strong> Leave-one-cycle-out test on 8 healthy cycles: 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.<br>
-          &bull; <strong>Live Global Dashboard:</strong> Operational worldwide at <a href="https://washer-pdm.pages.dev" style="color:#0284c7; text-decoration:none; font-weight:700;">https://washer-pdm.pages.dev</a>.
+          &bull; <strong>Model Validation:</strong> Leave-one-cycle-out test on 8 healthy cycles (earlier snapshot-format data, before the 32-feature windows): 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.<br>
+          &bull; <strong>Live Dashboard:</strong> open to anyone at <a href="https://washer-pdm.pages.dev" style="color:#0284c7; text-decoration:none; font-weight:700;">https://washer-pdm.pages.dev</a>.
         </div>
       </div>
 
