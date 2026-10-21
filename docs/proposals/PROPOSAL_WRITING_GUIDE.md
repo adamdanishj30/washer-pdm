@@ -1,7 +1,7 @@
 # Apex PdM: Proposal Writing Guide
 
 **Read this before writing or editing any proposal, brief, pitch deck or Q&A answer.**
-Last updated: 2026-10-21 (track set to Energy Efficiency, citable sources, ML wording). Owner: Adam.
+Last updated: 2026-10-21 (facts updated to 21 Oct: 13 sessions, 4 fw-07 cycles, inferred wash types, no load guess). Owner: Adam.
 
 This guide covers what our proposal must say, in what order, in what tone, and which numbers we are allowed to use. It applies to people and to AI agents (Claude, Antigravity/Gemini).
 
@@ -58,14 +58,14 @@ Use this order for the master proposal and the pitch deck. For the official 2-pa
 | ✅ Say confidently (we have proof) | 🟡 Say as the plan (not done yet) | ❌ Don't say |
 |---|---|---|
 | We built a working rig that streams live data | Health score / remaining-life prediction ("once we record real faults") | "Zero false alarms", "100% accurate" |
-| 11 wash sessions recorded, 8,379 data rows | False-alarm rate on the new firmware ("measuring over the next 20+ cycles") | "TRL 6" (we are TRL 4–5) |
+| 13 wash sessions recorded, 9,114 data rows | False-alarm rate on the new firmware ("measuring over the next 20+ cycles") | "TRL 6" (we are TRL 4–5) |
 | Vibration up 20×+ from idle to spin | Ringgit energy savings ("our estimate; the pilot will confirm") | "Predicts exactly when it will break" |
-| Drum frequency climbs to 19.9 Hz (~1,200 rpm), the same in both new-firmware washes | Phase badge on the website (until it's built); machine state (wash/rinse/spin) saved with the data | "Dust-proof" (IP55 = dust-*protected*) |
-| Washer sound 36–90× louder than room noise in high bands | Township map, phone alerts, resident app | "Triples savings" or any multiplier we didn't measure |
-| Live dashboard you can open now | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
-| Shows electricity use live | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
-| Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
-| | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
+| Drum frequency climbs to ~20 Hz (~1,200 rpm), confirmed across all 4 new-firmware washes | Phase badge on the website (wash / rinse / spin; planned once machine state is saved with the data, distinct from the wash-type badge) | "Dust-proof" (IP55 = dust-*protected*) |
+| The website labels each wash type, inferred from power | Township map, phone alerts, resident app | "Triples savings" or any multiplier we didn't measure |
+| Washer sound 36–90× louder than room noise in high bands | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
+| Live dashboard you can open now | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
+| Shows electricity use live | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
+| Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
 
 ---
 
@@ -75,12 +75,13 @@ Use only these. If you need a new number, add it here first **with its source**.
 
 | Fact | Value | Source |
 |---|---|---|
-| Wash sessions recorded | 11 (as of 20 Oct): 8 healthy older-firmware cycles form the evaluation set; 2 complete firmware-07 cycles (19 Oct 09:11, 20 Oct 07:44); 1 short older-firmware session (19 Oct 00:22, 167 rows, not evaluated) | `data/real_sessions/`, `ml/models/loco_report.md` |
-| Firmware-07 cycles | 2 complete (786 and 965 windows). The model switches to the firmware-07 schema at 3+ cycles; not trained on them yet | same |
-| Machine state (phase labels) | None saved yet: every row of both firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | the two firmware-07 CSVs |
-| Programme / load per cycle | Not recorded (19 and 20 Oct runs differ: 20 Oct used the heater, peak 2,290 W, 0.55 kWh; 19 Oct none, peak 420 W, 0.11 kWh). `load_class` is a constant `MEDIUM`, not a measurement | same |
+| Wash sessions recorded | 13 (as of 21 Oct): 8 healthy older-firmware cycles form the evaluation set; 4 complete firmware-07 cycles (19 Oct 09:11, 20 Oct 07:44, 21 Oct 05:14, 21 Oct 06:31); 1 short older-firmware session (19 Oct 00:22, 167 rows, not evaluated) | `data/real_sessions/`, `ml/models/loco_report.md` |
+| Firmware-07 cycles | 4 complete (786, 965, 387, 348 windows; 2,486 total). The evaluated model in `ml/models/loco_report.md` is evaluated on the 8 legacy cycles and has not been retrained on firmware-07 data yet | `data/real_sessions/`, `ml/models/loco_report.md` |
+| Machine state (phase labels) | None saved yet: every row across all 4 firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | `data/real_sessions/` (the four firmware-07 CSVs) |
+| Wash type | Classes inferred from power: Long cold (4 cycles: 16 Oct 08:57, 17 Oct 07:18, 18 Oct 05:16, 19 Oct 09:11), Long hot (1 cycle: 20 Oct 07:44), Quick (2 cycles: 21 Oct 05:14, 21 Oct 06:31), No power data (6 unmetered cycles). Rule: always say "inferred from power"; programme names are not logged | `ml/models/cycle_signature_report.md` |
+| Load weight | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
 | Evaluation result (nested leave-one-cycle-out) | 0 of 8 healthy cycles falsely flagged (95% upper bound 31%); simulated +100% sound caught in 7 of 8 cycles; added vibration not detected. **Always say it was run on the 8 earlier snapshot-format (5 s snapshot) cycles, not on the 32-feature firmware-07 windows** | `ml/models/loco_report.md` |
-| Training-ready rows | 8,379 (rebuilt 20 Oct 11:28; was 7,414 before the 20 Oct wash) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
+| Training-ready rows | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
 | Window record | 45-column row every 5.024 s, of which 32 are signal features (audio 15, vibration 13, power 4) | `firmware/session_export.py` (`V3_KEY_MAP`). Not the feature dictionary: that is the legacy 31-field contract |
 | Vibration sensor | MPU-6050, 200 Hz, ±16 g | `INVARIANTS_DO_NOT_CHANGE.md` §2 |
 | Microphone | INMP441, 16 kHz | same |
@@ -88,7 +89,8 @@ Use only these. If you need a new number, add it here first **with its source**.
 | Controller | ESP32 dual-core (one core sensors, one core Wi-Fi/cloud) | firmware 07 |
 | Offline buffer | ~4 min of data kept during Wi-Fi drops | INVARIANTS §2 (outbox 48 windows) |
 | Vibration jump idle → spin | over 20× (σ 0.03 → 0.72 m/s²) | `wash_cycle_2026-10-19_0911.csv` |
-| Drum frequency in final spin | 19.9 Hz ≈ 1,200 rpm, in both firmware-07 cycles (19 and 20 Oct) | `vib_dom_hz` in both files |
+| Drum frequency in final spin | ≈ 20 Hz (19.9–20.0 Hz ≈ 1,200 rpm), confirmed across all 4 firmware-07 cycles (19.9 Hz on 19 and 20 Oct; 20.0 Hz p90 on 21 Oct 05:14 and 06:31) | `vib_dom_hz` in the four firmware-07 CSVs, `ml/models/cycle_signature_report.md` §3 |
+| Local fail-safe (firmware 07) | HTTP on the home network serving the latest feature window (`/window.json`), the last 2.56 s of raw 200 Hz vibration (`/accel.csv`), and a short audio clip (`/clip.wav`) that never goes to the cloud; reachability [UNVERIFIED] | `firmware/07_feature_streamer/07_feature_streamer.ino`, `INVARIANTS_DO_NOT_CHANGE.md` §2 |
 | Washer sound vs room noise (spin, 250 Hz–4 kHz bands) | 36–90× louder | same file (audio bands vs washer-off rows) |
 | Washer rated max spin | 1,400 rpm | Samsung WW10TP44DSX spec |
 | Enclosure and mount | ABS project box 158×90×60 mm (sold as dustproof/waterproof), 3M VHB tape mount. Drilled ports mean no IP claim: say "splash-resistant, untested" | `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md`, `docs/hardware_guides/hardware_bom_and_setup_guide.md` |
@@ -108,7 +110,7 @@ Use only these. If you need a new number, add it here first **with its source**.
 **Estimate example (always labelled as an estimate):**
 One 5 kW commercial AC × 10 h/day ≈ 18,250 kWh/yr. A worn part adding 10% ≈ 1,825 kWh ≈ **about RM 900/yr** (estimate) at ~RM 0.50/kWh. A ~RM 170 pod catching one such problem pays back within a few months.
 
-**Not allowed (corrected 2026-10-20):** "under RM 50 in parts" (unvalidated volume target only), "magnetic mount" (mount is VHB tape), "45 features" (use "45-column record, 32 signal features"), "phase-conditioned model works", "IP55/IP65 pod".
+**Not allowed (corrected 2026-10-21):** "under RM 50 in parts" (unvalidated volume target only), "magnetic mount" (mount is VHB tape), "45 features" (use "45-column record, 32 signal features"), "phase-conditioned model works", "IP55/IP65 pod", "UDP broadcast" and "50 Hz vibration" (firmware-05 era; firmware 07 has no UDP and samples at 200 Hz).
 
 **Not allowed until confirmed:** equipment counts for Masjid Elmina / Elmina Lakeside Mall (old drafts said "8 chillers", "11 compressors", which are unverified), CO₂ tonnes, scrap tonnes, "15–35% excess power", "5–10 years longer life".
 
