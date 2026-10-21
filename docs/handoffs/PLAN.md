@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Dashboard page budget: move the embedded session data into one shared, cached `preset_sessions.js`
 **Date:** 2026-10-21
 
