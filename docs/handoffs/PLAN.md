@@ -1,42 +1,48 @@
 # Plan for Antigravity
 
-**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Fix misleading health-index descriptions in the feature dictionary (follow-up to load_class)
+**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Title:** Writing guide: track is PLANET · 03 Energy Efficiency, new citable sources, "machine learning" wording
 **Date:** 2026-10-21
 
 ## Step 0
-Commit this PLAN.md first: `docs: plan dictionary honesty fix`.
+Commit this PLAN.md first: `docs: plan writing guide track update`.
 
 ## Review verdict that produced this plan
-CHANGES NEEDED on `020e93e` (load_class retirement). Previous plan archived by you as `PLAN_DONE_2026-10-21_load_class.md`.
+APPROVED: `14b43bf`, `7a9ad79` (dictionary honesty fix). You archived the plan as `PLAN_DONE_2026-10-21_dictionary_honesty.md`.
 
-What passed (checked by Claude): PLAN.md committed first (`bb8aca3`); `session_export.py` writes `load_class = "unknown"` and no longer calls the heuristic; `compute_weight_and_class()` has the warning docstring; `data/session_context.csv` has 13 rows with empty `load_kg,load_source`; tests cover manual load surviving backfill; report has a Load (kg) column; no `data/real_sessions/` change; no secrets; patch UTF-8.
+Checked by Claude: all five legacy fields read "LEGACY CONTRACT FIELD. Not measured and not a model output…" in both `data/pdm_feature_dictionary.json` and `firmware/capture_pdm_dataset.py`; no "Measured / Nyquist / CUSUM" left in the JSON; the capture script's other changes are only the embedded schema made to match the JSON (no maths changed); HANDOFF follows the full template with the carried-forward UNVERIFIED list. Good.
 
-What failed:
-1. **`data/pdm_feature_dictionary.json` now claims the health indices are measured.** The commit changed `bearing_health_index`, `damper_health_index` and `machine_health_index` descriptions to "Measured primarily via 16 kHz INMP441…", "Measured via low-frequency MPU-6050…", "Smoothed via EWMA/CUSUM at the cycle level". This was not in the plan and breaks the honest-labels rule (INVARIANTS §3, CLAUDE.md: "its health-index and parasitic-drag fields are not model outputs"). It is also factually wrong: "50 Hz MPU-6050, Nyquist 25 Hz" (firmware 07 samples at 200 Hz) and "CUSUM" (tried and rejected, see `ml/calibration.py`).
-2. **HANDOFF did not follow the template:** missing "Excluded from Patch", "Acceptance Criteria" checklist, "Invariants Check", "Blocked / Questions"; dropped the carried-forward `Open UNVERIFIED items`; patch is 48.7 KB with no `git diff --stat` at the top (workflow rule 6).
+Your "50 Hz MPU" finding (proposal `.md`, `generate_proposal_pdf.py`, `proposal_presentation.html`) is noted. Those are submission files that Adam is batching in `Hackathon/NEEDS_CHANGING.md`; do NOT edit them in this task.
 
-Notes (no action): `firmware/session_export.py` and `firmware/tests/test_session_export.py` show as new files in git, so earlier working code was committed for the first time. That is fine; say so in HANDOFF when it happens. The dictionary was also re-indented (arrays split over lines); acceptable.
+## Objective
+Adam chose one hackathon track on 21 Oct: **PLANET · 03 Energy Efficiency**, with circular economy only as a supporting benefit. The Drive copies in `Hackathon/` were already updated. This task brings the repo's writing guide in line so future drafts by people or agents follow it.
+
+## Context
+- Docs only. File: `docs/proposals/PROPOSAL_WRITING_GUIDE.md` (source of truth for allowed numbers, per CLAUDE.md Document Map).
+- Project rule for pitch wording: say "machine learning" (or "an unsupervised machine-learning model"), never a bare "AI" for our model.
 
 ## Implementation Steps
-1. In `data/pdm_feature_dictionary.json`, set the description of `bearing_health_index`, `damper_health_index`, `machine_health_index`, `parasitic_drag_w` and `parasitic_drag_pct` to: "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)." Keep `type` and `unit`. Keep the load_class / estimated_load_kg wording you added.
-2. Make the embedded schema in `firmware/capture_pdm_dataset.py` `save_feature_dictionary()` produce exactly the same descriptions (it rewrites the JSON every run, so the two must match). Do not change any maths in that script.
-3. Search the rest of the repo outside `archive/` (`docs/`, `ml/`, `firmware/`, `build_clean_dashboard.py`) for "Nyquist limit (25 Hz)" or "50 Hz MPU": report any hits in HANDOFF under "Suggestions for Claude"; do not edit them in this task.
-4. Run `py firmware/capture_pdm_dataset.py --help` (or import the module and call `save_feature_dictionary()` into a temp dir) to show the generated JSON equals the committed file. Do not run a live capture.
-5. HANDOFF using the full template from `.agents/rules/architect-handoff-workflow.md` §7, including `Open UNVERIFIED items (carried forward)` from the 21 Oct 16:38 handoff (Apps Script trigger; workflow run with GitHub secrets; real-wash session start/END/archive; active-wash polling; session-change reset; historical.html visual check; DevTools network checks; `/window.json` and `WHO_AM_I` 0x75 quirk) plus "real weighed load entry". `last_diff.patch` per rule 6 with `--stat` on top if over 40 KB. Commit `fix(data): dictionary health fields are legacy, not measured`. Pull --rebase, push.
+1. Add a short section near the top (after §1, renumber if needed) **"Track"**: "Our one track is PLANET · 03 Energy Efficiency. Circular economy (longer machine life, fewer replacements) is a supporting benefit only; do not present it as our track." Search the whole guide (and any other file under `docs/` outside `docs/proposals/PROPOSAL_*`, `generate_*`, `*presentation.html`) for "Circular Economy" / "02" as our track and fix only in the guide; list other hits in HANDOFF.
+2. In §4 "Approved Facts and Numbers", add the citable sources:
+   - Saidur 2009, *Energy Policy* 37(10):4104–4113, doi:10.1016/j.enpol.2009.04.052: air-conditioning ≈ 57% of energy in Malaysian office buildings.
+   - Melgaard et al. 2022, *Energies* 15(12):4366, doi:10.3390/en15124366: wear-related faults raise building energy use; US faults ≈ 103–500 TWh/yr (citing Roth et al. 2004).
+   - US DOE FEMP O&M Best Practices Guide §2.4: 5–20% energy savings from proper O&M (a range from the literature, not our measurement).
+   - Keep "about RM 900/yr" labelled as an estimate wherever it appears.
+3. Replace bare "AI" that refers to our model with "machine learning" / "ML model" in the guide (§1 story, §2 table rows 3 and 7 incl. the heading "AI Model (Plan)" → "Machine-Learning Model (Plan)", §5 heading and text, §6 diagram, §7 table, §9, §10). Leave line 6 ("AI agents (Claude, Antigravity/Gemini)") as is. Add a Tone rule: "Say 'machine learning', never bare 'AI', for our model."
+4. HANDOFF with the full template (keep the carried-forward UNVERIFIED list). `last_diff.patch` per rule 6. Commit `docs: writing guide track (Energy Efficiency), sources, ML wording`. Pull --rebase, push.
 
 ## Out of Scope
-Everything else; no code logic changes.
+Proposal `.md`/PDF/HTML, `generate_*.py`, `Hackathon/` files, video files, code.
 
 ## Acceptance Criteria
-- [x] PLAN.md committed first.
-- [x] `grep -n "Measured\|Nyquist\|CUSUM" data/pdm_feature_dictionary.json` → no hits.
-- [x] The five legacy fields carry the LEGACY CONTRACT FIELD wording in both the JSON and `capture_pdm_dataset.py`; generated JSON equals the committed file.
-- [x] HANDOFF follows the full template, with the carried-forward UNVERIFIED list.
-- [x] `py -m py_compile firmware/capture_pdm_dataset.py`; `py firmware/tests/test_session_export.py` passes; no secrets; pushed.
+- [ ] PLAN.md committed first.
+- [ ] Guide has a Track section naming PLANET · 03 Energy Efficiency; circular economy only as supporting benefit.
+- [ ] The three sources appear in §4 with the exact citations above; RM 900/yr still labelled an estimate.
+- [ ] `grep -n "\bAI\b" docs/proposals/PROPOSAL_WRITING_GUIDE.md` shows only the "AI agents" line (or other non-model uses, each listed in HANDOFF).
+- [ ] Only the guide (plus PLAN/HANDOFF/patch) changed; pushed; hash reported.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
 2. **ML: programme-aware evaluation** once each signature class has ≥ 3 firmware-07 cycles. No per-cycle normalisation.
 3. **Dashboard page budget** (787.7 KB of 800 KB) before any new dashboard feature.
-4. **Docs: track is now PLANET · 03 Energy Efficiency (Adam, 21 Oct).** Update `docs/proposals/PROPOSAL_WRITING_GUIDE.md` (and any repo doc naming "02 Circular Economy" as our track) to say the one track is Energy Efficiency, with circular economy as a supporting benefit only. Add the two new citable sources used in the proposal: Saidur 2009, *Energy Policy* 37(10):4104–4113, doi:10.1016/j.enpol.2009.04.052 (air-conditioning ≈ 57% of energy in Malaysian office buildings), and Melgaard et al. 2022, *Energies* 15(12):4366, doi:10.3390/en15124366 (wear-related faults raise building energy use; US faults ≈ 103–500 TWh/yr, citing Roth et al. 2004). Note that the 5–20% O&M energy-savings range is in US DOE FEMP O&M guide §2.4. The RM 900/yr figure stays labelled as an estimate. Docs only. The Drive copies in `Hackathon/` were already updated by Claude on 21 Oct.
+4. **Retire or clearly mark `firmware/capture_pdm_dataset.py`** (still computes a load guess and "parasitic drag"; production archiving no longer uses it). Antigravity suggestion, 21 Oct.
