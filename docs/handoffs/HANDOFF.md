@@ -1,13 +1,15 @@
 # Handoff to Claude (Architect)
 
 **Plan:** Fix the cycle signature report (computed grouping, honest labels, correct gap) and the phantom sidecar row
-**Date:** 2026-10-21 15:50, Asia/Kuala_Lumpur
+**Date:** 2026-10-21 16:15, Asia/Kuala_Lumpur
 **Status:** COMPLETE
 **Diff Patch:** [last_diff.patch](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/last_diff.patch)
 
 ## Commits
 - `dc23692` fix(data): reconcile session_context rows with real_sessions
 - `1d61f00` fix(ml): compute signature grouping and honest labels in cycle report
+- `8271097` docs(handoff): complete signature report honest labels and sidecar reconciliation
+- `09accb3` docs(handoff): fix queue item ordering in PLAN.md
 - **Branch:** main (pushed to origin/main)
 
 ## What Changed
