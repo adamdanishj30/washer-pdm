@@ -259,42 +259,183 @@ def save_feature_dictionary():
         "description": "Unified 31-feature prognostic dataset combining kinematics, acoustics, electrical power, and ground-truth machine states.",
         "pdm_framework": "P-F Interval Prognostics & Remaining Useful Life (RUL) Modeling",
         "features": {
-            "timestamp_ms": {"type": "integer", "unit": "ms", "desc": "Unix epoch millisecond timestamp"},
-            "iso_time": {"type": "string", "desc": "UTC ISO 8601 formatted datetime"},
-            "phase": {"type": "categorical", "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin, finish)"},
-            "machine_state": {"type": "categorical", "desc": "Machine running state (stop, run, pause)"},
-            "progress_pct": {"type": "integer", "unit": "%", "desc": "Current cycle completion progress (0% - 100%)"},
-            "remaining_time_min": {"type": "integer", "unit": "min", "desc": "Estimated remaining cycle time in minutes"},
-            "target_rpm": {"type": "integer", "unit": "RPM", "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"},
-            "water_temperature": {"type": "categorical", "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"},
-            "rinse_cycles": {"type": "integer", "unit": "count", "desc": "Configured wash rinse cycles (0 to 5)"},
-            "accel_x": {"type": "float", "unit": "m/s^2", "desc": "Transverse lateral drum acceleration"},
-            "accel_y": {"type": "float", "unit": "m/s^2", "desc": "Vertical acceleration (direct damper shock indicator)"},
-            "accel_z": {"type": "float", "unit": "m/s^2", "desc": "Axial fore/aft acceleration (spider arm stability)"},
-            "vibe_magnitude": {"type": "float", "unit": "m/s^2", "desc": "Euclidean resultant 3-axis vibration magnitude"},
-            "audio_rms": {"type": "float", "unit": "RMS", "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction)"},
-            "power_w": {"type": "float", "unit": "W", "desc": "Tapo P110 active electrical motor & heater power"},
-            "voltage_v": {"type": "float", "unit": "V", "desc": "Tapo P110 mains electrical supply voltage"},
-            "current_ma": {"type": "float", "unit": "mA", "desc": "Tapo P110 electrical load current"},
-            "today_energy_wh": {"type": "float", "unit": "Wh", "desc": "Cumulative electrical energy consumed today"},
-            "month_energy_kwh": {"type": "float", "unit": "kWh", "desc": "Cumulative electrical energy consumed this month"},
-            "is_on": {"type": "boolean", "desc": "Smart plug power relay state (true/false)"},
-            "detergent_remaining": {"type": "categorical", "desc": "Auto-dispenser detergent reservoir level (unknown, normal, low)"},
-            "softener_remaining": {"type": "categorical", "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"},
-            "cumulative_water_l": {"type": "float", "unit": "L", "desc": "Cumulative water consumption report in Liters"},
-            "kids_lock": {"type": "categorical", "desc": "Child safety lock status (locked, unlocked)"},
-            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"},
-            "load_class": {"type": "categorical", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"},
-            "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
-            "parasitic_drag_pct": {"type": "float", "unit": "%", "desc": "Percentage excess energy waste caused by friction"},
-            "bearing_health_index": {"type": "float", "unit": "%", "desc": "Continuous tub bearing health (100 = new, <40 = fail)"},
-            "damper_health_index": {"type": "float", "unit": "%", "desc": "Continuous suspension damper health"},
-            "machine_health_index": {"type": "float", "unit": "%", "desc": "Composite overall Machine Health Index (0-100%)"}
+                "timestamp_ms": {
+                        "type": "integer",
+                        "unit": "ms",
+                        "desc": "Unix epoch millisecond timestamp"
+                },
+                "iso_time": {
+                        "type": "string",
+                        "desc": "UTC ISO 8601 formatted datetime"
+                },
+                "phase": {
+                        "type": "categorical",
+                        "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin, finish)"
+                },
+                "machine_state": {
+                        "type": "categorical",
+                        "desc": "Machine running state (stop, run, pause)"
+                },
+                "progress_pct": {
+                        "type": "integer",
+                        "unit": "%",
+                        "desc": "Current cycle completion progress (0% - 100%)"
+                },
+                "remaining_time_min": {
+                        "type": "integer",
+                        "unit": "min",
+                        "desc": "Estimated remaining cycle time in minutes"
+                },
+                "target_rpm": {
+                        "type": "integer",
+                        "unit": "RPM",
+                        "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"
+                },
+                "water_temperature": {
+                        "type": "categorical",
+                        "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"
+                },
+                "rinse_cycles": {
+                        "type": "integer",
+                        "unit": "count",
+                        "desc": "Configured wash rinse cycles (0 to 5)"
+                },
+                "accel_x": {
+                        "type": "float",
+                        "unit": "m/s^2",
+                        "desc": "Transverse lateral drum acceleration"
+                },
+                "accel_y": {
+                        "type": "float",
+                        "unit": "m/s^2",
+                        "desc": "Vertical acceleration (direct damper shock indicator)"
+                },
+                "accel_z": {
+                        "type": "float",
+                        "unit": "m/s^2",
+                        "desc": "Axial fore/aft acceleration (spider arm stability)"
+                },
+                "vibe_magnitude": {
+                        "type": "float",
+                        "unit": "m/s^2",
+                        "desc": "Euclidean resultant 3-axis vibration magnitude"
+                },
+                "audio_rms": {
+                        "type": "float",
+                        "unit": "Canonical RMS",
+                        "canonical_range": [
+                                0.0,
+                                1200.0
+                        ],
+                        "baseline_by_phase": {
+                                "none_or_stop": [
+                                        10.0,
+                                        150.0
+                                ],
+                                "wash": [
+                                        150.0,
+                                        350.0
+                                ],
+                                "rinse": [
+                                        180.0,
+                                        450.0
+                                ],
+                                "spin": [
+                                        600.0,
+                                        1100.0
+                                ]
+                        },
+                        "firmware_formula": "INMP441 I2S DMA: (sample >> 8), sqrt(mean(s^2)) / 1000.0 (Divisor: 256,000)",
+                        "ml_standardization": "Phase-conditioned Z-score or log1p scaling to eliminate spin false alarms",
+                        "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction & cavitation indicator)"
+                },
+                "power_w": {
+                        "type": "float",
+                        "unit": "W",
+                        "desc": "Tapo P110 active electrical motor & heater power"
+                },
+                "voltage_v": {
+                        "type": "float",
+                        "unit": "V",
+                        "desc": "Tapo P110 mains electrical supply voltage"
+                },
+                "current_ma": {
+                        "type": "float",
+                        "unit": "mA",
+                        "desc": "Tapo P110 electrical load current"
+                },
+                "today_energy_wh": {
+                        "type": "float",
+                        "unit": "Wh",
+                        "desc": "Cumulative electrical energy consumed today"
+                },
+                "month_energy_kwh": {
+                        "type": "float",
+                        "unit": "kWh",
+                        "desc": "Cumulative electrical energy consumed this month"
+                },
+                "is_on": {
+                        "type": "boolean",
+                        "desc": "Smart plug power relay state (true/false)"
+                },
+                "detergent_remaining": {
+                        "type": "categorical",
+                        "desc": "Auto-dispenser detergent reservoir level (unknown, normal, low)"
+                },
+                "softener_remaining": {
+                        "type": "categorical",
+                        "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"
+                },
+                "cumulative_water_l": {
+                        "type": "float",
+                        "unit": "L",
+                        "desc": "Cumulative water consumption report in Liters"
+                },
+                "kids_lock": {
+                        "type": "categorical",
+                        "desc": "Child safety lock status (locked, unlocked)"
+                },
+                "estimated_load_kg": {
+                        "type": "float",
+                        "unit": "kg",
+                        "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"
+                },
+                "load_class": {
+                        "type": "categorical",
+                        "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"
+                },
+                "parasitic_drag_w": {
+                        "type": "float",
+                        "unit": "W",
+                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+                },
+                "parasitic_drag_pct": {
+                        "type": "float",
+                        "unit": "%",
+                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+                },
+                "bearing_health_index": {
+                        "type": "float",
+                        "unit": "%",
+                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+                },
+                "damper_health_index": {
+                        "type": "float",
+                        "unit": "%",
+                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+                },
+                "machine_health_index": {
+                        "type": "float",
+                        "unit": "%",
+                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+                }
         }
-    }
+}
     with open(dict_file, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2)
-    print(f"[DATA DICTIONARY] Saved schema contract to: {dict_file.relative_to(BASE_DIR)}")
+        f.write("\n")
+    shown = dict_file.relative_to(BASE_DIR) if dict_file.is_relative_to(BASE_DIR) else dict_file
+    print(f"[DATA DICTIONARY] Saved schema contract to: {shown}")
 
 def append_to_prediction_csv(row: dict):
     """Appends unified multimodal sample to data/pdm_multimodal_prediction_dataset.csv."""

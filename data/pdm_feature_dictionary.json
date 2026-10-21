@@ -151,27 +151,27 @@
     "parasitic_drag_w": {
       "type": "float",
       "unit": "W",
-      "desc": "Mechanical friction energy waste above baseline"
+      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
     },
     "parasitic_drag_pct": {
       "type": "float",
       "unit": "%",
-      "desc": "Percentage excess energy waste caused by friction"
+      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
     },
     "bearing_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Indicative tub bearing health indicator (100 = nominal baseline, <40 = elevated risk). Measured primarily via 16 kHz INMP441 acoustic friction/harmonics, as 50 Hz MPU-6050 Nyquist limit (25 Hz) cannot resolve high-frequency bearing defect orders (BPFO/BPFI > 50 Hz)."
+      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
     },
     "damper_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Indicative suspension damper health indicator (100 = nominal, <40 = high sway). Measured via low-frequency MPU-6050 vertical shock acceleration (ay) and dynamic rocking kinematics."
+      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
     },
     "machine_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Composite Machine Health Index relative to pristine baseline distribution (0-100%). Smoothed via EWMA/CUSUM at the cycle level to represent persistent mechanical states rather than transient spikes."
+      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
     }
   }
 }
