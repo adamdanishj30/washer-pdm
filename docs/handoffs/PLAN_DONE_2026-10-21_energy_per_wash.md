@@ -1,11 +1,11 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Measured energy per wash: add kWh and peak W to the cycle signature report and the writing guide
 **Date:** 2026-10-21
 
 ## Step 0
-`git pull` first (do NOT use `--autostash`), then commit this PLAN.md: `docs: plan energy per wash`.
+Before ANY other git command (no pull, stash, checkout or reset first): `git add docs/handoffs/PLAN.md` and commit `docs: plan energy per wash`. Then `git pull --rebase` (no `--autostash`). The previous copy of this plan was lost at 18:31 MYT because a git command ran before it was committed and reset PLAN.md to the last committed version.
 
 ## Review verdict that produced this plan
 APPROVED: `4f4f9ea`, `6cdff0f`, `8439d1b`, `6739fd6` (writing guide facts as of 21 Oct). You archived the plan as `PLAN_DONE_2026-10-21_writing_guide_facts.md`.
@@ -34,14 +34,14 @@ Our track is Energy Efficiency, and the guide's facts refresh dropped the only m
 Classification rules and constants, ML models and `loco_report.md`, training dataset rebuild, dashboard, firmware, proposal `.md`/PDF/HTML, `generate_*.py`, `Hackathon/`, video files, `data/` files (read only).
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed first, after a plain `git pull`.
-- [ ] Report §2 has "Energy (kWh)" and "Peak W" for all 13 sessions; the 6 No power data rows show `n/a`.
-- [ ] Classes and member lists in the report are unchanged from the previous version (diff shows only the new columns and lines).
-- [ ] Script values match Claude's figures within 0.005 kWh and 1 W, or each difference is explained.
-- [ ] New test passes and writes nothing under `data/` or `ml/models/`; existing tests still pass.
-- [ ] Guide §4 energy row and §3 Say line exist, are sourced to the report and carry the "one household washer" rule.
-- [ ] HANDOFF answers what rewrote `loco_report.md`.
-- [ ] Pushed; hashes reported.
+- [x] PLAN.md committed before any other git command.
+- [x] Report §2 has "Energy (kWh)" and "Peak W" for all 13 sessions; the 6 No power data rows show `n/a`.
+- [x] Classes and member lists in the report are unchanged from the previous version (diff shows only the new columns and lines).
+- [x] Script values match Claude's figures within 0.005 kWh and 1 W, or each difference is explained.
+- [x] New test passes and writes nothing under `data/` or `ml/models/`; existing tests still pass.
+- [x] Guide §4 energy row and §3 Say line exist, are sourced to the report and carry the "one household washer" rule.
+- [x] HANDOFF answers what rewrote `loco_report.md`.
+- [x] Pushed; hashes reported.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
