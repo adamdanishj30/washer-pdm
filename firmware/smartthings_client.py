@@ -24,26 +24,89 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
-FIREBASE_AUTH = os.getenv("FIREBASE_AUTH") or os.getenv("FIREBASE_SECRET")
 SMARTTHINGS_PAT = os.getenv("SMARTTHINGS_PAT")
 SMARTTHINGS_DEVICE_ID = os.getenv("SMARTTHINGS_DEVICE_ID")
 SMARTTHINGS_CLIENT_ID = "d18cf96e-c626-4433-bf51-ddbb10c5d1ed"
 SMARTTHINGS_REFRESH_URL = "https://auth-global.api.smartthings.com/oauth/token"
 SMARTTHINGS_API_URL = "https://api.smartthings.com/v1"
+# Store token cache strictly outside Google Drive sync folder to protect secrets
+TOKEN_CACHE_FILE = Path(os.path.expandvars(r"%LOCALAPPDATA%\PdM_Washer\smartthings_token_cache.json"))
 
 _last_st_call = 0.0
 _cached_st_data = None
+_auth_warning_logged = False
 
-def get_valid_smartthings_token() -> str:
+
+def _refresh_oauth_token(refresh_token: str) -> tuple[str | None, str | None, int]:
+    """Attempt OAuth2 refresh against SmartThings endpoint. Returns (access_token, refresh_token, expires_in)."""
+    try:
+        body = urllib.parse.urlencode({
+            "grant_type": "refresh_token",
+            "client_id": SMARTTHINGS_CLIENT_ID,
+            "refresh_token": refresh_token
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            SMARTTHINGS_REFRESH_URL,
+            data=body,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("access_token"), data.get("refresh_token") or refresh_token, data.get("expires_in", 86400)
+    except Exception as e:
+        return None, None, 0
+
+
+def get_valid_smartthings_token() -> str | None:
     """
     Retrieves or automatically refreshes the SmartThings OAuth2 access token.
-    Prioritizes persistent CLI credentials with automated token exchange.
+    1. Checks local persistent token cache (.smartthings_token_cache.json)
+    2. Checks CLI credentials (%LOCALAPPDATA%/@smartthings/cli/Data/credentials.json)
+    3. Checks environment variable SMARTTHINGS_REFRESH_TOKEN (and caches rotated tokens)
+    4. Fallbacks to SMARTTHINGS_PAT or SMARTTHINGS_ACCESS_TOKEN
     """
+    import datetime as dt_mod
+
+    # 1. Local persistent token cache (survives token rotation across daemon runs)
+    if TOKEN_CACHE_FILE.is_file():
+        try:
+            with open(TOKEN_CACHE_FILE, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+            acc = cached.get("accessToken")
+            ref = cached.get("refreshToken")
+            exp_str = cached.get("expires")
+            
+            needs_refresh = False
+            if exp_str:
+                try:
+                    exp_dt = datetime.fromisoformat(exp_str.replace("Z", "+00:00"))
+                    now_dt = datetime.now(exp_dt.tzinfo)
+                    if (exp_dt - now_dt).total_seconds() < 300:
+                        needs_refresh = True
+                except Exception:
+                    needs_refresh = True
+            
+            if not needs_refresh and acc:
+                return acc
+            
+            if ref:
+                new_acc, new_ref, exp_in = _refresh_oauth_token(ref)
+                if new_acc:
+                    cached["accessToken"] = new_acc
+                    cached["refreshToken"] = new_ref
+                    cached["expires"] = (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
+                    TOKEN_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+                    with open(TOKEN_CACHE_FILE, "w", encoding="utf-8") as out_f:
+                        json.dump(cached, out_f, indent=2)
+                    return new_acc
+        except Exception as e:
+            print(f"[AUTH CACHE NOTICE] Token cache notice: {e}")
+
+    # 2. SmartThings CLI credentials file
     cred_path = Path(os.path.expandvars(r"%LOCALAPPDATA%\@smartthings\cli\Data\credentials.json"))
-    
-    # 1. Try reading and refreshing CLI credentials file
     if cred_path.is_file():
         try:
             with open(cred_path, "r", encoding="utf-8") as f:
@@ -66,61 +129,39 @@ def get_valid_smartthings_token() -> str:
             if not needs_refresh and acc:
                 return acc
             
-            # Refresh using refresh token
             if ref:
-                body = urllib.parse.urlencode({
-                    "grant_type": "refresh_token",
-                    "client_id": SMARTTHINGS_CLIENT_ID,
-                    "refresh_token": ref
-                }).encode("utf-8")
-                req = urllib.request.Request(
-                    SMARTTHINGS_REFRESH_URL,
-                    data=body,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"}
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    new_acc = data.get("access_token")
-                    new_ref = data.get("refresh_token") or ref
-                    expires_in = data.get("expires_in", 86400)
-                    
-                    if new_acc:
-                        prof["accessToken"] = new_acc
-                        if new_ref:
-                            prof["refreshToken"] = new_ref
-                        import datetime as dt_mod
-                        prof["expires"] = (dt_mod.datetime.now(dt_mod.timezone.utc) + dt_mod.timedelta(seconds=expires_in)).isoformat().replace("+00:00", "Z")
-                        creds["default:api.smartthings.com"] = prof
-                        with open(cred_path, "w", encoding="utf-8") as out_f:
-                            json.dump(creds, out_f, indent=4)
-                        return new_acc
+                new_acc, new_ref, exp_in = _refresh_oauth_token(ref)
+                if new_acc:
+                    prof["accessToken"] = new_acc
+                    prof["refreshToken"] = new_ref
+                    prof["expires"] = (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
+                    creds["default:api.smartthings.com"] = prof
+                    with open(cred_path, "w", encoding="utf-8") as out_f:
+                        json.dump(creds, out_f, indent=4)
+                    return new_acc
         except Exception as e:
             print(f"[AUTH CLI NOTICE] CLI token refresh notice: {e}")
 
-    # 2. Check environment variable refresh token
+    # 3. Environment variable refresh token (cache new rotation pair locally so it doesn't break)
     env_ref = os.getenv("SMARTTHINGS_REFRESH_TOKEN")
     if env_ref:
-        try:
-            body = urllib.parse.urlencode({
-                "grant_type": "refresh_token",
-                "client_id": SMARTTHINGS_CLIENT_ID,
-                "refresh_token": env_ref
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                SMARTTHINGS_REFRESH_URL,
-                data=body,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                new_acc = data.get("access_token")
-                if new_acc:
-                    return new_acc
-        except Exception as e:
-            print(f"[AUTH ENV NOTICE] Env token refresh notice: {e}")
+        new_acc, new_ref, exp_in = _refresh_oauth_token(env_ref)
+        if new_acc:
+            try:
+                cache_data = {
+                    "accessToken": new_acc,
+                    "refreshToken": new_ref,
+                    "expires": (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
+                }
+                TOKEN_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+                with open(TOKEN_CACHE_FILE, "w", encoding="utf-8") as out_f:
+                    json.dump(cache_data, out_f, indent=2)
+            except Exception:
+                pass
+            return new_acc
 
-    # 3. Fallback to access token or PAT
-    return os.getenv("SMARTTHINGS_ACCESS_TOKEN") or SMARTTHINGS_PAT
+    # 4. Fallback: prioritize fresh SMARTTHINGS_PAT over static SMARTTHINGS_ACCESS_TOKEN
+    return SMARTTHINGS_PAT or os.getenv("SMARTTHINGS_ACCESS_TOKEN")
 
 def _safe_get(d, *keys, default=None):
     curr = d
@@ -196,6 +237,15 @@ def query_smartthings() -> dict:
                 "cumulative_water_l": round(cum_water / 1000.0, 1) if cum_water else 0.0,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
+    except urllib.error.HTTPError as e:
+        global _auth_warning_logged
+        if e.code == 401:
+            if not _auth_warning_logged:
+                print("[SMARTTHINGS AUTH 401] Token unauthorized/expired. (Samsung PATs expire in 24h per Dec 2024 policy). Falling back to power/vibration heuristics.")
+                _auth_warning_logged = True
+        else:
+            print(f"[SMARTTHINGS CLIENT HTTP {e.code}] {e}")
+        return {}
     except Exception as e:
         print(f"[SMARTTHINGS CLIENT ERR] {e}")
         return {}
@@ -216,114 +266,142 @@ def get_smartthings_status(min_interval_s: float = 30.0) -> dict:
         _cached_st_data = data
     return _cached_st_data or {}
 
+# -----------------------------------------------------------------------------
+# Phase timeline storage
+#   * Local copy: data/.phase_timelines/<session_id>.jsonl (one checkpoint per
+#     line). The archiver reads this first, so it does NOT have to download
+#     the timeline back from Firebase (saves Spark-plan download quota).
+#   * Firebase copy: /session_phases/<session_id>/<ts> (for other machines
+#     and the live dashboards), written with print=silent.
+# -----------------------------------------------------------------------------
+PHASE_DIR = BASE_DIR / "data" / ".phase_timelines"
+
+
+def _local_timeline_path(session_id: str) -> Path:
+    safe = "".join(c for c in session_id if c.isalnum() or c in "-_")
+    return PHASE_DIR / f"{safe}.jsonl"
+
+
 def push_phase_to_firebase(st_data: dict, session_id: str = None) -> bool:
     """
-    Mirrors live phase to Firebase /live_phase.json
-    and if session_id is active, appends checkpoint to /session_phases/{session_id}/{now_ms}.json
+    Mirrors live phase to Firebase /live_phase.json and, if a session is
+    active, appends a checkpoint to /session_phases/{session_id}/{now_ms}
+    AND to the local timeline file.
     """
     if not st_data:
         return False
-        
+    from firmware.firebase_rest import get_client   # local import avoids a cycle
+    fb = get_client()
     now_ms = int(time.time() * 1000)
-    
-    # 1. Update /live_phase.json
+
+    # 1. Live phase (single small node, overwritten)
     try:
-        url = f"{FIREBASE_HOST}/live_phase.json?auth={FIREBASE_AUTH}"
-        data = json.dumps(st_data).encode("utf-8")
-        req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=4):
-            pass
+        fb.put("live_phase", st_data)
     except Exception as e:
         print(f"[FIREBASE PUT live_phase ERR] {e}")
 
-    # 2. Record checkpoint to session timeline
-    if session_id:
-        try:
-            checkpoint = {
-                "ts": now_ms,
-                "phase": st_data.get("job_state", "none"),
-                "machine_state": st_data.get("machine_state", "stop"),
-                "progress_pct": st_data.get("progress_pct", 0),
-                "remaining_mins": st_data.get("remaining_mins", 0),
-                "target_rpm": st_data.get("target_rpm", 0)
-            }
-            url = f"{FIREBASE_HOST}/session_phases/{session_id}/{now_ms}.json?auth={FIREBASE_AUTH}"
-            data = json.dumps(checkpoint).encode("utf-8")
-            req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=4):
-                pass
-            return True
-        except Exception as e:
-            print(f"[FIREBASE PUT session_phase ERR] {e}")
+    if not session_id:
+        return True
 
+    checkpoint = {
+        "ts": now_ms,
+        "phase": st_data.get("job_state", "none"),
+        "machine_state": st_data.get("machine_state", "stop"),
+        "progress_pct": st_data.get("progress_pct", 0),
+        "remaining_mins": st_data.get("remaining_mins", 0),
+        "target_rpm": st_data.get("target_rpm", 0),
+        "cycle": st_data.get("cycle", "unknown"),
+        "water_temp": st_data.get("water_temp", ""),
+    }
+    # 2. Local timeline (authoritative for archiving on this PC)
+    try:
+        PHASE_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_local_timeline_path(session_id), "a", encoding="utf-8") as f:
+            f.write(json.dumps(checkpoint) + "\n")
+    except OSError as e:
+        print(f"[PHASE LOCAL WRITE ERR] {e}")
+    # 3. Firebase copy
+    try:
+        fb.put(f"session_phases/{session_id}/{now_ms}", checkpoint)
+    except Exception as e:
+        print(f"[FIREBASE PUT session_phase ERR] {e}")
     return True
 
+
 def fetch_session_phase_timeline(session_id: str) -> list:
-    """Retrieves recorded phase checkpoints for a given session from Firebase."""
+    """Phase checkpoints for a session: local file first, Firebase as fallback."""
     if not session_id:
         return []
-    try:
-        url = f"{FIREBASE_HOST}/session_phases/{session_id}.json?auth={FIREBASE_AUTH}"
-        req = urllib.request.Request(url, headers={"User-Agent": "PdM-SmartThings-Client"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            if not data or not isinstance(data, dict):
-                return []
-            
-            # Sort by timestamp
+    timeline = []
+    local = _local_timeline_path(session_id)
+    if local.is_file():
+        try:
+            for line in local.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    timeline.append(json.loads(line))
+        except (OSError, ValueError):
             timeline = []
+    if not timeline:
+        try:
+            from firmware.firebase_rest import get_client
+            data = get_client().get(f"session_phases/{session_id}")
+        except Exception:
+            data = None
+        if isinstance(data, dict):
             for k, v in data.items():
                 if isinstance(v, dict):
-                    ts = v.get("ts") or (int(k) if str(k).isdigit() else 0)
-                    timeline.append({
-                        "ts": ts,
-                        "phase": v.get("phase", "none"),
-                        "machine_state": v.get("machine_state", "run"),
-                        "progress_pct": v.get("progress_pct", 0),
-                        "target_rpm": v.get("target_rpm", 0)
-                    })
-            timeline.sort(key=lambda x: x["ts"])
-            return timeline
-    except Exception:
-        return []
+                    v = dict(v)
+                    v["ts"] = v.get("ts") or (int(k) if str(k).isdigit() else 0)
+                    timeline.append(v)
+    # Build normalized output dictionary for each timeline checkpoint.
+    # We preserve all existing keys ('ts', 'phase', 'machine_state', 'progress_pct', 'target_rpm')
+    # and additively include 'cycle' (programme) and 'water_temp' to support session context tracking.
+    out = [
+        {
+            "ts": c.get("ts", 0),
+            "phase": c.get("phase", "none"),
+            "machine_state": c.get("machine_state", "run"),
+            "progress_pct": c.get("progress_pct", 0),
+            "target_rpm": c.get("target_rpm", 0),
+            "cycle": c.get("cycle", "unknown"),
+            "water_temp": c.get("water_temp", ""),
+        }
+        for c in timeline
+    ]
+    out.sort(key=lambda x: x["ts"])
+    return out
 
-def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int, total_duration_ms: int = None, last_phase: str = "wash") -> str:
+
+def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int, total_duration_ms: int = None, last_phase: str = "none") -> str:
     """
-    Intelligent physics-informed fallback when SmartThings API timeline is unrecorded.
-    Uses mechanical kinematics, acoustic pressure, active electrical draw, and cycle progress.
+    Fallback phase tracker when SmartThings API timeline is unrecorded or not updating.
+    Strictly avoids acoustic noise or arbitrary heuristic guessing to preserve ML ground truth integrity.
+
+    Rules:
+    1. Standby / Finished Check:
+       If machine power is in standby (power_w <= 3.5W, or <= 6.0W with LCD on and stationary drum):
+       - If preceded by an active cycle ('wash', 'rinse', 'spin', 'drain', 'weightSensing', 'finish'), mark 'finish'.
+       - Otherwise, keep at 'none'.
+    2. SmartThings not updating during an active cycle block:
+       - Keep the before phase (last_phase) carried forward to the current block (LOCF).
+    3. If SmartThings was not updating and no before phase exists:
+       - Keep at 'none' (never invent synthetic phase labels using acoustics or heuristics).
     """
     vibe_diff = abs(vibe_mag - 9.81)
 
-    # 1. Active heating wash element (1800-2000W)
-    if power_w > 1500.0:
-        return "wash"
+    # 1. Standby / Cycle Finished Check
+    # Idle standby is ~1.0W - 1.3W (or <= 3.5W with dimming, up to 6.0W with LCD on) with stationary drum
+    if (power_w <= 3.5 and (vibe_diff < 0.5 or vibe_mag < 10.3)) or \
+       (power_w <= 6.0 and vibe_diff < 0.25 and last_phase in ("wash", "rinse", "spin", "drain", "weightSensing", "finish")):
+        if last_phase in ("wash", "rinse", "spin", "drain", "weightSensing", "finish"):
+            return "finish"
+        return "none"
 
-    # 2. Spin cycle (high speed extraction: high vibration, acoustic roar > 350 RMS, or motor power > 300W)
-    if vibe_mag > 10.8 or audio_rms > 350.0 or power_w > 300.0:
-        return "spin"
-
-    # 3. Drain pump (electric pump active 25-65W with stationary drum)
-    if 25.0 <= power_w <= 65.0 and audio_rms < 150.0 and vibe_diff < 0.25:
-        return "drain"
-
-    # 4. Weight sensing (initial dry tumble inertia sensing in the first 2 minutes)
-    if t_ms < 120000:
-        return "weightSensing"
-
-    # 5. Normal tumbling / agitation (detectable by power OR acoustic audio RMS OR drum oscillation)
-    if power_w > 45.0 or audio_rms > 35.0 or vibe_diff > 0.15:
-        if total_duration_ms and total_duration_ms > 0:
-            return "wash" if t_ms < (total_duration_ms * 0.60) else "rinse"
-        elif t_ms < 2400000:  # First 40 mins
-            return "wash"
-        else:
-            return "rinse"
-
-    # 6. Momentary tumble pause between drum reversals (3-5s soak pause)
-    # If inside an active session, carry forward the ongoing phase instead of spurious 'none'
-    if last_phase and last_phase not in ("none", "finish", "stop"):
+    # 2. SmartThings not updating during active block: keep before phase carried forward (LOCF)
+    if last_phase and last_phase not in ("none", "finish", "stop", "offline", "unknown"):
         return last_phase
 
+    # 3. If SmartThings is not updating and no before phase exists, keep at 'none'
     return "none"
 
 def compute_weight_and_class(rows: list, st_info: dict = None) -> tuple:
