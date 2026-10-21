@@ -52,8 +52,8 @@ If two files disagree: `INVARIANTS_DO_NOT_CHANGE.md` wins, then the source of tr
 - **Score a Cycle:** `py ml/predict_pdm.py --file data/real_sessions/<cycle>.csv`
 - **Tests:** `py ml/tests/test_dsp_parity.py`, `py ml/tests/test_pipeline_synthetic.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`
 - **Run Live Tapo Streamer (firmware 05 only; 07 reads Tapo itself):** `py -3.12 firmware/tapo_firebase_streamer.py` (default 5 s)
-- **Capture Multimodal Prediction Snapshot:** `py -3.12 firmware/capture_pdm_dataset.py --snapshot`
-- **Continuous Multimodal Dataset Recording:** `py -3.12 firmware/capture_pdm_dataset.py --record --interval 2 --duration 300`
+- **Capture Multimodal Prediction Snapshot (legacy, not the production path):** `py -3.12 firmware/capture_pdm_dataset.py --snapshot`
+- **Continuous Multimodal Dataset Recording (legacy, not the production path):** `py -3.12 firmware/capture_pdm_dataset.py --record --interval 2 --duration 300`
 - **Run Cloud Multimodal Sync (Once):** `py -3.12 firmware/cloud_multimodal_sync.py --once`
 - **Run Continuous Cloud Sync Daemon:** `py -3.12 firmware/cloud_multimodal_sync.py --interval 30` (wrapper around the archive daemon; min 30 s)
 - **Download Firebase Sessions (incremental):** `py firmware/cloud_downloader.py` (`--force` re-downloads everything: costly)
@@ -73,7 +73,7 @@ PdM SideProject/
 │   │   ├── tapo_protocol.h & cipher.h # Local KLAP encryption implementation
 │   │   ├── secrets.h / secrets.h.example # Network & hardware credentials
 │   │   └── flash_firmware.py        # Automated flasher & compiler
-│   ├── capture_pdm_dataset.py       # Synchronous 3-API capture engine (SmartThings + Tapo + ESP32)
+│   ├── capture_pdm_dataset.py       # Synchronous 3-API capture engine (legacy, not the production path)
 │   ├── tapo_firebase_streamer.py    # Real-time LAN Tapo P110 to Firebase bridge (with Force-ON Guard)
 │   ├── cloud_multimodal_sync.py     # Autonomous Cloud-to-Cloud Bridge (Firebase + SmartThings)
 │   ├── auto_drive_sync_daemon.py    # Offline auto-archiver to data/

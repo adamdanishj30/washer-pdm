@@ -1,4 +1,8 @@
 """
+LEGACY (not used by production archiving since firmware 07).
+Its load guess and 'parasitic drag' are uncalibrated heuristics, not measurements.
+Production path: `firmware/auto_drive_sync_daemon.py` + `firmware/session_export.py`.
+
 Multimodal Predictive Maintenance (PdM) Data Capture Engine
 Predictive Maintenance SideProject - Samsung WW10TP44DSX Washing Machine
 
@@ -566,6 +570,7 @@ async def continuous_recorder(interval: float, duration: float):
     print(f"[RECORDER COMPLETED] Captured {count} multimodal frames into data/pdm_multimodal_prediction_dataset.csv\n")
 
 def main():
+    print("[WARNING] capture_pdm_dataset.py is LEGACY (not used by production archiving since firmware 07). Production path: firmware/auto_drive_sync_daemon.py + firmware/session_export.py")
     parser = argparse.ArgumentParser(description="Multimodal Predictive Maintenance Data Capture Engine")
     parser.add_argument("--snapshot", action="store_true", default=True, help="Capture one-shot snapshot")
     parser.add_argument("--record", action="store_true", help="Continuously record frames")
