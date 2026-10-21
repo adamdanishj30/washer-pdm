@@ -1,0 +1,438 @@
+{
+  "generated": "2026-10-18T22:17:46",
+  "schema": "legacy",
+  "data_notes": [
+    "8 healthy cycles, 6,461 windows of 5 s; effective sample size for cycle-level claims is 8, not 6,461 (consecutive windows are strongly correlated).",
+    "SmartThings phase labels present on 0% of windows -> the model is NOT phase-conditioned (one pooled model for the whole cycle).",
+    "Power unusable in 5/8 cycles (wash_cycle_2026-10-11_1019, wash_cycle_2026-10-12_1019, wash_cycle_2026-10-15_1020, wash_cycle_2026-10-15_morning, wash_cycle_2026-10-17_0835) -> power features excluded.",
+    "Accelerometer gravity vector moved by up to 0.76 m/s^2 between cycles (sensor re-mounted/tilted) -> only orientation-independent vibration features are used.",
+    "Legacy data = one instantaneous accel sample + one 8 ms audio RMS per 5 s. Impulsive (bearing) and spectral features cannot be computed; collect firmware-07 cycles."
+  ],
+  "results": [
+    {
+      "model": "mahalanobis",
+      "schema": "legacy",
+      "uses_power": false,
+      "n_cycles": 8,
+      "false_alarm_cycles": 0,
+      "false_alarm_rate_upper95": 0.312,
+      "healthy_window_red_pct": 0.3,
+      "healthy_window_amber_pct": 4.88,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-11_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.265,
+          "h": 1.7383331948110037
+        },
+        {
+          "session": "wash_cycle_2026-10-12_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.578,
+          "h": 1.659105766830707
+        },
+        {
+          "session": "wash_cycle_2026-10-15_1020",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.897,
+          "h": 1.7702759456667327
+        },
+        {
+          "session": "wash_cycle_2026-10-15_morning",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.563,
+          "h": 1.723832460698249
+        },
+        {
+          "session": "wash_cycle_2026-10-16_0857",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.989,
+          "h": 1.9109881889447156
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0718",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.046,
+          "h": 1.796716346091369
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0835",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.529,
+          "h": 1.7281561463533688
+        },
+        {
+          "session": "wash_cycle_2026-10-18_0516",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.509,
+          "h": 1.583531427381887
+        }
+      ],
+      "faults": {
+        "acoustic_rise": {
+          "unit": "x RMS",
+          "meaning": "sustained broadband noise increase (+10% .. +100% sound pressure)",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 26.5,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 12.6,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.25,
+              "detect_rate": 0.25,
+              "median_delay_min": 21.0,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.875,
+              "detect_rate": 0.875,
+              "median_delay_min": 15.7,
+              "post_onset_red_pct": 0.7
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "vibration_rise": {
+          "unit": "m/s2 RMS",
+          "meaning": "added random cabinet vibration (looser suspension / imbalance)",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.6
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.6
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 2.9
+    },
+    {
+      "model": "iforest",
+      "schema": "legacy",
+      "uses_power": false,
+      "n_cycles": 8,
+      "false_alarm_cycles": 0,
+      "false_alarm_rate_upper95": 0.312,
+      "healthy_window_red_pct": 0.49,
+      "healthy_window_amber_pct": 4.59,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-11_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.671,
+          "h": 1.6420339267583786
+        },
+        {
+          "session": "wash_cycle_2026-10-12_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.931,
+          "h": 1.5586723926204185
+        },
+        {
+          "session": "wash_cycle_2026-10-15_1020",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.048,
+          "h": 1.6288056708987488
+        },
+        {
+          "session": "wash_cycle_2026-10-15_morning",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.941,
+          "h": 1.6082370890130615
+        },
+        {
+          "session": "wash_cycle_2026-10-16_0857",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.357,
+          "h": 1.750416702258609
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0718",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.348,
+          "h": 1.6874703811239111
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0835",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.377,
+          "h": 1.5636635830200318
+        },
+        {
+          "session": "wash_cycle_2026-10-18_0516",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.356,
+          "h": 1.7248047029673204
+        }
+      ],
+      "faults": {
+        "acoustic_rise": {
+          "unit": "x RMS",
+          "meaning": "sustained broadband noise increase (+10% .. +100% sound pressure)",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 26.5,
+              "post_onset_red_pct": 1.1
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 12.6,
+              "post_onset_red_pct": 1.2
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.25,
+              "detect_rate": 0.25,
+              "median_delay_min": 21.0,
+              "post_onset_red_pct": 1.3
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.875,
+              "detect_rate": 0.875,
+              "median_delay_min": 15.7,
+              "post_onset_red_pct": 1.5
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "vibration_rise": {
+          "unit": "m/s2 RMS",
+          "meaning": "added random cabinet vibration (looser suspension / imbalance)",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 1.0
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.9
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.9
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.9
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 25.1
+    },
+    {
+      "model": "ocsvm",
+      "schema": "legacy",
+      "uses_power": false,
+      "n_cycles": 8,
+      "false_alarm_cycles": 1,
+      "false_alarm_rate_upper95": 0.471,
+      "healthy_window_red_pct": 0.35,
+      "healthy_window_amber_pct": 3.77,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-11_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.295,
+          "h": 1.5755587014349692
+        },
+        {
+          "session": "wash_cycle_2026-10-12_1019",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.398,
+          "h": 1.5660407154452365
+        },
+        {
+          "session": "wash_cycle_2026-10-15_1020",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.568,
+          "h": 1.5867597388158223
+        },
+        {
+          "session": "wash_cycle_2026-10-15_morning",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.501,
+          "h": 1.5491354697263455
+        },
+        {
+          "session": "wash_cycle_2026-10-16_0857",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.529,
+          "h": 1.7692778861003022
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0718",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.887,
+          "h": 1.6634559127284203
+        },
+        {
+          "session": "wash_cycle_2026-10-17_0835",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.589,
+          "h": 1.6529436368746
+        },
+        {
+          "session": "wash_cycle_2026-10-18_0516",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "overall"
+          ],
+          "healthy_max_persistence": 1.267,
+          "h": 1.2524597563609121
+        }
+      ],
+      "faults": {
+        "acoustic_rise": {
+          "unit": "x RMS",
+          "meaning": "sustained broadband noise increase (+10% .. +100% sound pressure)",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 6.3,
+              "post_onset_red_pct": 0.7
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 5.1,
+              "post_onset_red_pct": 0.7
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.25,
+              "detect_rate": 0.25,
+              "median_delay_min": 19.7,
+              "post_onset_red_pct": 1.0
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.875,
+              "detect_rate": 0.875,
+              "median_delay_min": 15.7,
+              "post_onset_red_pct": 7.0
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "vibration_rise": {
+          "unit": "m/s2 RMS",
+          "meaning": "added random cabinet vibration (looser suspension / imbalance)",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.125,
+              "detect_rate": 0.125,
+              "median_delay_min": 27.5,
+              "post_onset_red_pct": 0.7
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.7
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.7
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.0,
+              "detect_rate": 0.0,
+              "median_delay_min": null,
+              "post_onset_red_pct": 0.7
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 3.8
+    }
+  ]
+}

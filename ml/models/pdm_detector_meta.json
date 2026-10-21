@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "trained_at": "2026-10-20T11:29:53",
+  "model": "mahalanobis",
+  "schema": "windowed",
+  "features": [
+    "audio_log_rms",
+    "audio_crest",
+    "audio_log_kurtosis",
+    "audio_log_hp_rms",
+    "audio_log_hp_kurtosis",
+    "audio_burst_ratio",
+    "audio_centroid_khz",
+    "audio_shape_0_250",
+    "audio_shape_250_500",
+    "audio_shape_500_1k",
+    "audio_shape_1k_2k",
+    "audio_shape_2k_4k",
+    "audio_shape_4k_8k",
+    "vib_log_std_xy",
+    "vib_log_std_z",
+    "vib_log_mag_std",
+    "vib_dom_hz",
+    "vib_log_dom_rms",
+    "vib_log_band_0_5",
+    "vib_log_band_5_15",
+    "vib_log_band_15_30",
+    "vib_log_band_30_60",
+    "power_log",
+    "power_log_std"
+  ],
+  "uses_power": true,
+  "phase_conditioned": true,
+  "sub_models": [
+    "__pooled__",
+    "rinse",
+    "spin",
+    "wash"
+  ],
+  "persistence_threshold_h": {
+    "overall": 0.956,
+    "acoustic": 0.774,
+    "vibration": 0.783,
+    "power": 1.353
+  },
+  "healthy_oof_max_persistence": [
+    0.049,
+    0.224,
+    0.706,
+    0.288,
+    0.069,
+    0.004
+  ],
+  "train_sessions": [
+    "wash_cycle_2026-11-01_0800",
+    "wash_cycle_2026-11-02_0800",
+    "wash_cycle_2026-11-03_0800",
+    "wash_cycle_2026-11-04_0800",
+    "wash_cycle_2026-11-05_0800",
+    "wash_cycle_2026-11-06_0800"
+  ],
+  "data_notes": [
+    "6 healthy cycles, 4,536 windows of 5 s; effective sample size for cycle-level claims is 6, not 4,536 (consecutive windows are strongly correlated).",
+    "SmartThings phase labels present on 100% of windows -> per-phase sub-models are used."
+  ],
+  "evaluation": [
+    {
+      "model": "mahalanobis",
+      "false_alarm_cycles": 0,
+      "n_cycles": 6,
+      "false_alarm_rate_upper95": 0.393
+    }
+  ]
+}

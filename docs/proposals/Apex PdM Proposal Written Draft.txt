@@ -1,0 +1,25 @@
+Apex PdM
+Explain that we are doing an actual working prototype, a rig dust-proof data collector, capable of sending data to the internet, and available to monitor using website. recommendation, add types of monitoring, consumer friendly interface, where they can see what phase its currently on, and electricity used.
+
+shows real picture of the rig 
+
+list out things we use, sensors, esp32, ip55waterproof box, pg11 and so on
+
+explain that with the data, we plan to create an ai model, using machine learning, unsupervised. mainly to predict when there will be anomaly vibration, and using what kind of featured fusion.
+
+and then, because we basically have proven taht it is possible to collect data using the rig, explain that we also planning on testing on other things like ac compressor and water heater, basically appliances with high vibration, making this possible. 
+
+Our early testing on washer was because of lack of resource and that a washer is far more accessable and to prove that it is possible to do so, though our point is to show that its possible to collect data, and train ai model. 
+
+but why we are using this? how can it help consumers? by predicting when a heavy machinery would bust, it reduces the chance to higher cost maintenance, possibly on changing parts. electrical units often will pull more energy as its parts are damaged, so being able to monitor this helps trifold the chances of lowering the cost spent. 
+
+shift to the township vision. tell the problem, that big town, with mosque, mall, and temples, have multiple ac compressor, and it would be possible to to mass produce the rig and use it is a medium to monitor all units of ac compressor using a designed interface. 
+
+with the scale of a town, it significantly reduces the energy usage and potentially the cost of heavy maintenance for constant monitoring, and high cost parts.
+
+if the ai is capable of detecting the anomaly vibration
+
+
+
+
+
