@@ -1,58 +1,64 @@
 # Plan for Antigravity
 
 **Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Fix the cycle signature report (computed grouping, honest labels, correct gap) and the phantom sidecar row
+**Title:** Dashboard: wash-type badge, cycle summary line, shaded heater/spin blocks, and run-level badges
 **Date:** 2026-10-21
 
 ## Review verdict that produced this plan
-CHANGES NEEDED on `e5725da`, `29ec51e`, `4b668b6` (session context sidecar + signature report). Previous plan archived as `PLAN_DONE_2026-10-21_session_context.md`.
+APPROVED: `dc23692`, `1d61f00` (signature report fix + sidecar reconcile). Previous plan archived as `PLAN_DONE_2026-10-21_signature_fix.md`.
 
-What passed: the SmartThings 403 probe is reported correctly with no tokens or IDs; `fetch_session_phase_timeline()` change is additive and correct; the daemon hook is wrapped in try/except and only runs for schema 3; `manual` rows are protected; no `data/real_sessions/` file was modified; no secret values in the diff; per-cycle numbers in report §2–§4 (active minutes, heater minutes, block counts, spin p90, idle floor, boot at start) match Claude's independent check.
+Checked against the files on Drive: grouping is computed from named constants (`classify_signature()`), with an assertion per member; no invented programme names; classes and spin-block counts match Claude's independent numbers (Long cold 16/17 0718/18/19 Oct, Long hot 20 Oct, Quick 21 Oct ×2, No power data ×6); Max Gap 5.02 s from `timestamp_ms`; `data/session_context.csv` has 13 rows; the phantom row's cause (daemon test writing to the real sidecar) is found and fixed; no secrets; patch is UTF-8.
 
-What failed (verified by Claude against the files on Drive):
-1. **Grouping in the report is hard-coded, not computed** (`ml/cycle_signature_report.py` lines ~304–306 and ~374–377 are literal strings). It is also wrong: Group A ("3 spin blocks") lists `wash_cycle_2026-10-17_0835.csv`, which has no power data (max 5 W, its own row says 0 blocks), and the report's own table shows 5 and 4 blocks for 16 Oct and 18 Oct.
-2. **Invented programme names.** "Daily Wash (Cold)", "Daily Wash (Warm / 40°C)", "Quick Wash / Express 15'" are not measured; every row's programme is `unknown`. This breaks the honest-labels rule (INVARIANTS §3 / §1.3).
-3. **Max Gap column is wrong.** It reads 7.75–8.78 s because it diffs `epoch_ms`, which jitters (firmware `epochMs()` adds `millis() % 1000` to an RTC second). `timestamp_ms` (device `millis()`) shows every window exactly 5.024 s apart, max 5.024 s.
-4. **Phantom sidecar row.** `data/session_context.csv` has 14 rows, including `wash_cycle_2026-10-20_0815.csv`, which does not exist in `data/real_sessions/` (13 CSVs). HANDOFF says 13. Acceptance criterion "exactly one row per file" is not met.
-5. **Minor:** the 16 Oct row has `spin_level = 1200` but `context_source = unknown`.
+Minor notes, no rework needed (fold into this task where it touches the same file, else leave):
+- Report §1 says "zero clipping across all sessions"; clipping is only measured on firmware-07 sessions. Reword to "across all firmware-07 sessions" (in `ml/cycle_signature_report.py`, step 7 below).
+- `firmware/tests/test_daemon_offline.py` sets `sc.DEFAULT_CONTEXT_FILE` without restoring it. Wrap in try/finally (step 7 below).
+- Nice corroboration: the 16 Oct SmartThings spin setting of 1200 rpm matches the ~20 Hz measured spin peak.
+- Epoch jitter is 2.7–3.8 s, larger than expected; stays queued with the firmware task.
 
-Note (no action): commit `29ec51e` also committed earlier, previously uncommitted Drive versions of `auto_drive_sync_daemon.py` (v2 quota-aware) and `smartthings_client.py` (token refresh). Claude checked: the task's own changes are only the hook (~11 lines) and the timeline keys; the rest was already the working code on Drive. No secrets. Fine to keep; say so in HANDOFF.
-
-Also note: Antigravity's DONE edit of PLAN.md overwrote Claude's 21 Oct update to queue item 2 (dashboard programme badge, requested by Adam). It is restored in the Queue below.
+## Objective
+Adam asked (2026-10-21) for the website to show what kind of wash each archived cycle was, so viewers understand why peak counts and lengths differ. After this task, when a built-in (🧺) session is selected on any page: a wash-type badge shows the programme (if known) or the inferred signature class, a one-line summary gives active minutes / heater minutes / spin blocks, heater and spin blocks are shaded on the charts, and the Dom. freq and σ badges are clearly either "at cursor" values or full-run summaries, never an unlabelled first window.
 
 ## Context
-- Invariants §1 (honest reporting, no scope creep), §4 (`data/real_sessions/*.csv` read-only; do not touch ML pipeline, features, thresholds or LOCO).
-- Code style: exhaustive inline comments and section headers.
+- `build_clean_dashboard.py` only (INVARIANTS §3 CAN CHANGE, display-only). Rebuild all four pages. MUST STAY: `maxAgeMs` line and its `if/else` structure, polling cadence, `/api/live`, Firebase quota rules, honest labels (no rpm or "health %" shown as measured; inferred classes must say inferred).
+- One source of truth for the rules: import `count_spin_blocks`, `classify_signature` and the constants from `ml/cycle_signature_report.py` at build time. Do NOT re-implement the thresholds in Python or JS.
+- Programme/temp come from `data/session_context.csv` only when `context_source` is `smartthings_live`, `smartthings_history` or `manual` and `programme != unknown`.
+- Page size: pages are ~770 KB and the limit is 800 KB. Embed only a few numbers per session (no per-window arrays).
+- Code style: exhaustive inline comments, clear section headers.
 
 ## Implementation Steps
-1. **Compute the grouping** in `ml/cycle_signature_report.py`; delete all hard-coded session names, minutes and programme names from the summary and grouping sections. Rules (put them as named constants at the top so the dashboard task can reuse the same values):
-   - `HEATER_W = 1000`; heater minutes = windows with power > 1,000 W × window length.
-   - **Spin block** = ≥ 20 consecutive windows with 200 W < power ≤ 1,000 W (the heater is NOT a spin block; keep the existing "high-power blocks" table in §4 as is, but add a separate "Spin blocks" count column to §2).
-   - Signature class: no usable power (max power < 50 W) → `No power data`; heater > 2 min and spin blocks ≥ 2 → `Long hot (inferred)`; no heater and spin blocks ≥ 3 → `Long cold (inferred)`; no heater and spin blocks = 1 and active < 35 min → `Quick (inferred)`; anything else → `Unclassified`.
-   - Every group member must satisfy its group's rule (assert it in code).
-2. **Honest programme column.** The "Programme" column shows the sidecar `programme` only when `context_source` is `smartthings_live`, `smartthings_history` or `manual`; otherwise `unknown`. Signature class goes in its own column labelled "Signature (inferred from power)". Remove the words "Daily Wash", "40°C", "Express 15'", "Warm" and any °C value unless it comes from the sidecar. The executive summary is generated from the computed groups (counts and member dates), not typed text.
-3. **Fix Max Gap:** compute from `timestamp_ms` differences. Add a separate column "Epoch jitter max (s)" = max |Δepoch_ms − Δtimestamp_ms| / 1000, so the firmware clock jitter is visible but not mistaken for data loss.
-4. **Phantom row:** find where `wash_cycle_2026-10-20_0815.csv` came from (a temp/test path writing to the real sidecar, a file that existed during backfill and was moved, or a git-tracked file missing on Drive) and report it in HANDOFF. Then make `--backfill` reconcile: rows whose `session_file` is not in `data/real_sessions/` are removed **unless** `context_source = manual` (keep those and print a warning). Add a unit test for that. Make sure the tests only ever write to a temp directory.
-5. **Minor:** if programme is unknown but `water_temp` or `spin_level` came from the live timeline, set `context_source = smartthings_live` and `note = "partial: no programme"`.
-6. Re-run `py firmware/session_context.py --backfill` (twice, identical), `py ml/cycle_signature_report.py`, and the tests below. Write HANDOFF with the template (keep the `Open UNVERIFIED items` section). Commit `fix(ml): compute signature grouping and honest labels in cycle report` and `fix(data): reconcile session_context rows with real_sessions`. Pull --rebase, push. Write `last_diff.patch` per workflow rule 6.
+1. **Build-time summary (Python).** In `discover_all_sessions()`, for each real session add a `summary` dict to `sessions[s_key]`: `signature` (class string), `programme` (or null), `water_temp` (or null), `active_min`, `heater_min`, `spin_blocks`, `blocks` = list of `{type: "heater"|"spin", i0, i1}` row-index spans, and `run_medians` = medians over running windows (`vib_mag_std > 0.08`) of `vib_dom_hz`, `vib_std_x/y/z`, `vib_mag_std` (null for legacy files). Use the shared functions from `ml/cycle_signature_report.py` (refactor there only if a helper must return spans; keep its report output byte-identical apart from the step-7 wording).
+2. **Wash-type badge.** Next to the archive title (`titleTimeline`), show a pill: programme name + water temp when known (label "SmartThings" or "manual"), else the signature class with the text "inferred from power"; `No power data` and `Unclassified` shown as such. Testing sessions (🧪), Load-CSV files and live mode show no badge (Load CSV: "not classified"). Add a short tooltip explaining the rule (heater > 1 kW, spin = ≥ 20 windows at 200–1,000 W).
+3. **Summary line.** Under the title (replace or extend `subTimeline`): e.g. "64 min active · no heater · 3 spin blocks" (heater shown as "12 min heater" when > 0). Keep the recorded duration visible but say the last ~10 min is the idle tail when the session ended by idle timeout (recorded − active ≥ 8 min).
+4. **Shaded blocks.** In full-run view, shade heater spans (amber) and spin spans (teal/blue) on the power chart and the Card 1 vibration chart, with a small legend. Use the row-index spans from step 1. Window view (40-point) shades only the visible part. Live mode: no shading.
+5. **Badges at cursor vs run.** For historic sessions: keep the existing cursor readouts but label them "at cursor" (e.g. "Dom. freq (at cursor)"). Add run-level readouts from `run_medians`: "Run median: Dom. freq X Hz · σx/σy/σz …". Do not show rpm. Live mode unchanged.
+6. **Rebuild & checks.** `py build_clean_dashboard.py`; extract the script from all four pages and `node --check` each; report page sizes before/after (all < 800 KB).
+7. **Small fixes from review:** reword the clipping sentence in `ml/cycle_signature_report.py` and regenerate the report; wrap the `DEFAULT_CONTEXT_FILE` override in `firmware/tests/test_daemon_offline.py` with try/finally.
+8. **Browser check** (if available, else UNVERIFIED): `historical.html`, select 19 Oct 0911 → "Long cold (inferred from power)", "64 min active · no heater · 3 spin blocks", 3 spin shadings; 20 Oct 0744 → "Long hot", 1 heater + 3 spin shadings; 21 Oct 0514 → "Quick", 1 spin shading; 11 Oct → "No power data", no shading. Screenshot each into `docs/handoffs/screens/` (new folder) and list them in HANDOFF.
+9. HANDOFF with the template (keep `Open UNVERIFIED items`), `last_diff.patch` per workflow rule 6 (generated pages excluded, sizes listed). Commits: `feat(dashboard): wash-type badge, cycle summary and block shading`, `fix: review notes (report wording, test isolation)`. Pull --rebase, push (Cloudflare deploys from GitHub).
 
 ## Out of Scope
-- Dashboard, firmware, ML pipeline/features/thresholds/LOCO, `data/real_sessions/*.csv`.
-- The firmware `epochMs()` jitter (queued, below).
-- Retrying the SmartThings history endpoint.
+- Live polling, `windowToRecord`, `maxAgeMs`, firmware, ML pipeline/features/thresholds/LOCO, `data/real_sessions/*.csv`, `.github/`.
+- Classifying Load-CSV files in JS (would duplicate the rules).
+- The load_class change (queued).
 
 ## Acceptance Criteria
-- [x] `grep -n "Daily Wash\|40°C\|Express 15\|wash_cycle_2026" ml/cycle_signature_report.py` finds no hard-coded session names or programme names in the summary/grouping code.
-- [x] Spin block counts: 3 for 16 Oct 0857, 17 Oct 0718, 18 Oct 0516, 19 Oct 0911 and 20 Oct 0744; 1 for both 21 Oct cycles. Heater 11.9 min only on 20 Oct 0744.
-- [x] Signature classes: `Long cold (inferred)` = 16 Oct 0857, 17 Oct 0718, 18 Oct 0516, 19 Oct 0911; `Long hot (inferred)` = 20 Oct 0744; `Quick (inferred)` = 21 Oct 0514, 21 Oct 0631; `No power data` = 11 Oct, 12 Oct, 15 Oct ×2, 17 Oct 0835, 19 Oct 0022.
-- [x] Programme column is `unknown` for all 13 rows (no manual or SmartThings data yet).
-- [x] Max Gap = 5.02 s for all four firmware-07 cycles; epoch jitter column present.
-- [x] `data/session_context.csv` has exactly 13 rows, one per CSV in `data/real_sessions/`; HANDOFF explains where the `2026-10-20_0815` row came from.
-- [x] Backfill twice → identical file; new reconcile test and existing tests pass: `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py`; `py -m py_compile` on changed files.
-- [x] No file under `data/real_sessions/` modified; no secrets in the diff.
+- [x] Badge text per session matches `ml/models/cycle_signature_report.md` §2 for all 13 real sessions (list them in HANDOFF); every inferred badge contains "inferred".
+- [x] Summary line values equal the report's Active Min, Heater Min and Spin Blocks.
+- [x] Shaded spans: 3 spin for 16/17 0718/18/19 Oct; 1 heater + 3 spin for 20 Oct; 1 spin for each 21 Oct; none for No-power sessions.
+- [x] Cursor badges are labelled "at cursor"; run medians shown for firmware-07 sessions; no rpm anywhere.
+- [x] Thresholds are imported from `ml/cycle_signature_report.py` (grep shows no duplicated 1000/200/20 thresholds in the build script).
+- [x] `node --check` passes on all four pages; all pages < 800 KB (sizes reported).
+- [x] `maxAgeMs` line/structure, polling functions and `windowToRecord` unchanged (say how verified).
+- [x] Report regenerated with the clipping wording fix; `py firmware/tests/test_daemon_offline.py`, `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py` pass.
+- [x] Browser check done with screenshots, or marked UNVERIFIED.
+- [x] Only the build script, the four pages, the report script/report, the test file and screenshots committed; no secrets; pushed; hashes reported.
+
+## Risk Notes
+- **Page size** is the tightest constraint (~30 KB headroom). If over, drop `run_medians` for legacy sessions first, then shorten tooltip text.
+- **Import path:** the build script runs from the repo root; importing `ml.cycle_signature_report` must not trigger report generation on import (guard with `if __name__ == "__main__"`, check it is already so).
+- **Concurrent bot commits:** the workflow rebuilds pages every 30 min; `pull --rebase` and rebuild if the rebase touches pages.
 
 ## Queue (Claude will plan these next; do not start)
-1. **Dashboard: programme badge and run-level badges (Adam asked for this on 2026-10-21, so viewers understand why peaks differ between cycles).** Display-only, `build_clean_dashboard.py` (INVARIANTS §3 CAN CHANGE). (a) Each archived session gets a programme badge: the SmartThings/manual programme from `data/session_context.csv` when known, otherwise the inferred signature class from `ml/cycle_signature_report.py` rules (Quick / Long cold / Long hot / Unclassified), marked "inferred from power". (b) A one-line signature under the title: active minutes (excluding the 10-min idle tail), heater minutes, number of spin blocks. (c) Shade heater and spin blocks on the power and vibration charts with a small legend. (d) Show Dom. freq and σx/σy/σz as running-window medians for the full run (or label them "at cursor"), so a boot window is not read as the cycle's value. Same thresholds as the report.
-2. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot, i.e. the rig rebooted right as the washer was switched on. Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE). In the same firmware task, consider fixing `epochMs()` jitter (RTC second + `millis() % 1000` are not aligned). Needs a flash, so Adam confirms first.
-3. **ML: programme-aware evaluation.** Once each signature class has ≥ 3 firmware-07 cycles, add LOCO results per class and test SmartThings-phase conditioning. Per-cycle normalisation is not allowed (it would leak the held-out cycle's statistics and erase slow faults).
-4. **Data: retire the `load_class` heuristic (Adam asked 2026-10-21 why every cycle is MEDIUM).** `compute_weight_and_class()` in `firmware/smartthings_client.py` averages power between 60–350 W in the first 30 rows; on firmware 07 those rows are fill/soak at ~5–30 W, so nothing qualifies and it falls back to SmartThings water level, else a hard-coded 5 kg → MEDIUM. The kg formula `(W − 70) / 15` was never calibrated. The ML does not use it. Plan: keep the CSV column (schema must stay) but write `unknown` for new sessions, add `load_kg` and `load_source` (manual / smartthings) to `data/session_context.csv`, and label the old values as heuristic in the dictionary. Only re-introduce an estimate after calibrating against weighed loads.
+1. **Data: retire the `load_class` heuristic (Adam asked 2026-10-21 why every cycle is MEDIUM).** `compute_weight_and_class()` averages power between 60–350 W in the first 30 rows; on firmware 07 those rows are fill/soak at ~5–30 W, so nothing qualifies and it falls back to SmartThings water level, else a hard-coded 5 kg → MEDIUM. The kg formula `(W − 70) / 15` was never calibrated; the ML does not use it. Plan: keep the CSV column (schema must stay) but write `unknown` for new sessions, add `load_kg` and `load_source` (manual / smartthings) to `data/session_context.csv`, label old values as heuristic in the data dictionary; re-introduce an estimate only after calibrating against weighed loads.
+2. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot (rig reboots as the washer switches on). Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE); in the same task consider fixing `epochMs()` jitter (2.7–3.8 s). Needs a flash, so Adam confirms first.
+3. **ML: programme-aware evaluation.** Once each signature class has ≥ 3 firmware-07 cycles, add LOCO results per class and test SmartThings-phase conditioning. Per-cycle normalisation is not allowed (leaks held-out statistics, erases slow faults).

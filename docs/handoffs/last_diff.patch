@@ -1,947 +1,662 @@
-# Diff Stat:
- data/session_context.csv               |   3 +-
- firmware/auto_drive_sync_daemon.py     |   5 +-
- firmware/session_context.py            |  25 +++
- firmware/tests/test_daemon_offline.py  | 116 ++++++++++++
- firmware/tests/test_session_context.py |  66 ++++++-
- ml/cycle_signature_report.py           | 315 ++++++++++++++++++++++++---------
- ml/models/cycle_signature_report.md    |  74 ++++----
- 7 files changed, 476 insertions(+), 128 deletions(-)
-
-
-diff --git a/data/session_context.csv b/data/session_context.csv
-index a2b479e..2815946 100644
---- a/data/session_context.csv
-+++ b/data/session_context.csv
-@@ -3,11 +3,10 @@ wash_cycle_2026-10-11_1019.csv,1791685145021,1791687300308,unknown,,,unknown,
- wash_cycle_2026-10-12_1019.csv,1791771549751,1791777720259,unknown,,,unknown,
- wash_cycle_2026-10-15_morning.csv,1792022405723,1792028580259,unknown,,,unknown,
- wash_cycle_2026-10-15_1020.csv,1792030810025,1792032204872,unknown,,,unknown,
--wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,unknown,
-+wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,smartthings_live,partial: no programme
- wash_cycle_2026-10-17_0718.csv,1792192690725,1792197231489,unknown,,,unknown,
- wash_cycle_2026-10-17_0835.csv,1792197311032,1792201529674,unknown,,,unknown,
- wash_cycle_2026-10-18_0516.csv,1792271770304,1792276055018,unknown,,,unknown,
--wash_cycle_2026-10-20_0815.csv,1792300005024,1792300904320,unknown,,,unknown,
- wash_cycle_2026-10-19_0022.csv,1792340526198,1792341381249,unknown,,,unknown,
- wash_cycle_2026-10-19_0911.csv,1792372280304,1792376224132,unknown,,,unknown,
- wash_cycle_2026-10-20_0744.csv,1792453423282,1792458266417,unknown,,,unknown,
-diff --git a/firmware/auto_drive_sync_daemon.py b/firmware/auto_drive_sync_daemon.py
-index 52c512d..0b8d7c2 100644
---- a/firmware/auto_drive_sync_daemon.py
-+++ b/firmware/auto_drive_sync_daemon.py
-@@ -138,8 +138,9 @@ def archive_session(sid: str, history: Dict[str, Any], prune: bool = False,
-     if history[sid].get("schema") == 3:
-         try:
-             from firmware.session_context import resolve_context_for_session, upsert_session_context
--            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path)
--            upsert_session_context(ctx)
-+            target_context = DATA_DIR / "session_context.csv"
-+            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path, context_file=target_context)
-+            upsert_session_context(ctx, context_file=target_context)
-             print(f"  [CONTEXT] recorded session context: {ctx.get('programme', 'unknown')} ({ctx.get('context_source', 'unknown')})")
-         except Exception as ctx_err:
-             print(f"  [WARN] could not record session context: {ctx_err}")
-diff --git a/firmware/session_context.py b/firmware/session_context.py
-index 34b3b22..89e887f 100644
---- a/firmware/session_context.py
-+++ b/firmware/session_context.py
-@@ -323,6 +323,12 @@ def resolve_context_for_session(
-         except Exception as e:
-             note = f"timeline query error: {e}"
- 
-+    # Minor rule: If programme is unknown but water_temp or spin_level was retrieved
-+    # from the live timeline, attribute context_source to smartthings_live with note.
-+    if programme == "unknown" and (water_temp or spin_level):
-+        source = "smartthings_live"
-+        note = "partial: no programme"
-+
-     # Calculate start and end epoch
-     path_to_check = csv_path or (REAL_SESSIONS_DIR / session_file)
-     start_ms, end_ms = extract_session_time_bounds(path_to_check)
-@@ -360,6 +366,25 @@ def backfill_all_sessions(
- 
-     # Collect only .csv files, explicitly ignoring desktop.ini or temporary files
-     csv_files = sorted([f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() == ".csv"])
-+    valid_files = {f.name for f in csv_files}
-+
-+    # Reconcile sidecar against existing files:
-+    # Any row in session_context.csv whose session_file does not exist on disk is removed,
-+    # UNLESS context_source == 'manual' (which is preserved with a warning).
-+    existing_rows = load_session_context(target_context)
-+    if existing_rows:
-+        reconciled_rows = []
-+        for r in existing_rows:
-+            sf = r.get("session_file")
-+            if sf in valid_files:
-+                reconciled_rows.append(r)
-+            else:
-+                if r.get("context_source") == "manual":
-+                    print(f"  [SESSION CONTEXT] Warning: manual record for {sf} retained but file is missing from {target_dir.name}")
-+                    reconciled_rows.append(r)
-+                else:
-+                    print(f"  [SESSION CONTEXT] Reconciling: removing phantom session {sf}")
-+        save_session_context(reconciled_rows, target_context)
- 
-     print(f"[SESSION CONTEXT] Backfilling context for {len(csv_files)} sessions from {target_dir.name}...")
-     processed = 0
-diff --git a/firmware/tests/test_daemon_offline.py b/firmware/tests/test_daemon_offline.py
-new file mode 100644
-index 0000000..7378c8f
---- /dev/null
-+++ b/firmware/tests/test_daemon_offline.py
-@@ -0,0 +1,116 @@
-+"""
-+test_daemon_offline.py - simulates Firebase in memory and checks that the
-+archive daemon (a) never downloads already-archived or still-running
-+sessions, (b) archives finished v3 sessions once, (c) never overwrites
-+existing CSVs.   Run:  py firmware/tests/test_daemon_offline.py
-+"""
-+# =============================================================================
-+# SECTION 1: Fake Firebase
-+# =============================================================================
+diff --git a/build_clean_dashboard.py b/build_clean_dashboard.py
+index eec2a1d..0380971 100644
+--- a/build_clean_dashboard.py
++++ b/build_clean_dashboard.py
+@@ -1,5 +1,20 @@
+ import json
+ import os
 +import sys
-+import tempfile
-+from pathlib import Path
++import numpy as np
 +
-+ROOT = Path(__file__).resolve().parents[2]
-+sys.path.insert(0, str(ROOT))
-+
-+
-+class FakeFB:
-+    def __init__(self, db):
-+        self.db, self.gets = db, []
-+
-+    def _node(self, path):
-+        cur = self.db
-+        for p in path.strip("/").split("/"):
-+            if not isinstance(cur, dict) or p not in cur:
-+                return None
-+            cur = cur[p]
-+        return cur
-+
-+    def get(self, path, shallow=False, **_):
-+        self.gets.append(path + ("?shallow" if shallow else ""))
-+        n = self._node(path)
-+        return {k: True for k in n} if (shallow and isinstance(n, dict)) else n
-+
-+    def patch(self, path, value):
-+        cur = self.db
-+        for p in path.strip("/").split("/"):
-+            cur = cur.setdefault(p, {})
-+        cur.update(value)
-+
-+    def put(self, path, value):
-+        pass
-+
-+    def delete(self, path):
-+        parts = path.strip("/").split("/")
-+        self._node("/".join(parts[:-1])).pop(parts[-1], None)
-+
-+    def record_usage(self):
-+        pass
-+
-+
-+# =============================================================================
-+# SECTION 2: Test
-+# =============================================================================
-+def main() -> int:
-+    import firmware.auto_drive_sync_daemon as d
-+    import firmware.session_export as se
-+    import firmware.smartthings_client as stc
-+    from firmware.tests.test_session_export import v3_window
-+
-+    with tempfile.TemporaryDirectory() as td:
-+        td = Path(td)
-+        # redirect every output location into the temp dir
-+        se.REAL_DIR, se.TEST_DIR = td / "real", td / "test"
-+        d.SYNC_HISTORY_FILE = td / "hist.json"
-+        d.DATA_DIR = td
-+        stc.PHASE_DIR = td / "phases"
-+        import firmware.session_context as sc
-+        sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
-+        sc.REAL_SESSIONS_DIR = td / "real"
-+        d.get_smartthings_status = lambda **_: {}
-+        d.rebuild_derived = lambda: None
-+
-+        e0 = 1_792_300_000_000
-+        db = {
-+            "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
-+            "sessions": {
-+                "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
-+                "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
-+                "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
-+                "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
-+            },
-+            "session_meta": {
-+                "wash_2026-10-20_081500": {"start": 1, "end": 2},
-+                "wash_2026-10-21_090000": {"start": 3},            # still running
-+                "wash_2026-10-19_070000": {"start": 1, "end": 2},
-+            },
-+        }
-+        fake = FakeFB(db)
-+        d.get_client = lambda: fake
-+        hist = {"wash_old_legacy": {"completed": True}}
-+        # pre-existing CSV for the 19 Oct session must NOT be overwritten
-+        (se.REAL_DIR).mkdir(parents=True)
-+        existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
-+        existing.write_text("keep me\n")
-+
-+        n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
-+        downloads = [g for g in fake.gets if g.startswith("sessions/")]
-+        assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
-+        assert n == 1, n
-+        assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
-+        assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
-+        assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
-+        assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
-+        assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
-+
-+        fake.gets.clear()
-+        n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
-+        assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
-+        assert n2 == 0
-+        print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
-+    return 0
-+
-+
-+if __name__ == "__main__":
-+    sys.exit(main())
-diff --git a/firmware/tests/test_session_context.py b/firmware/tests/test_session_context.py
-index fa54c6e..0d4fb1a 100644
---- a/firmware/tests/test_session_context.py
-+++ b/firmware/tests/test_session_context.py
-@@ -150,8 +150,8 @@ class TestSessionContext(unittest.TestCase):
-             w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248, 1013])
-             w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "LIGHT", 1792532644998, 1014])
++# Import shared physics-based cycle signature thresholds and classification rules
++# (Ensures zero threshold duplication between ML reporting and dashboard display)
++sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
++from ml.cycle_signature_report import (
++    HEATER_W,
++    SPIN_MIN_W,
++    MAX_POWER_NO_DATA_W,
++    classify_signature,
++    count_spin_blocks,
++    find_signature_blocks,
++    load_session_context_map,
++)
  
--        # 2. Create mock legacy session CSV
--        legacy_file = self.sessions_dir / "wash_cycle_2026-10-16_0857.csv"
-+        # 2. Create mock legacy session CSV (use a filename with no Firebase phase data)
-+        legacy_file = self.sessions_dir / "wash_cycle_2026-10-11_1019.csv"
-         with open(legacy_file, "w", encoding="utf-8", newline="") as f:
-             w = csv.writer(f)
-             w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class"])
-@@ -194,5 +194,67 @@ class TestSessionContext(unittest.TestCase):
-         self.assertEqual(content1, content2, "Backfill must be strictly idempotent")
+ # =============================================================================
+ # CSV Ingestion & Pre-computed Session Discovery
+@@ -99,6 +114,7 @@ def discover_all_sessions():
+     options = []
+     
+     # 1. Real Wash Sessions (from data/real_sessions)
++    context_map = load_session_context_map()
+     real_options = []
+     if os.path.exists(real_dir):
+         files = sorted(os.listdir(real_dir), reverse=True)
+@@ -111,6 +127,68 @@ def discover_all_sessions():
+                 s_key = 'preset_real_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
+                 pts_cnt = len(rows)
+                 duration_m = round((rows[-1][0] - rows[0][0]) / 60000.0) if pts_cnt > 1 else 0
++
++                # Compute physical summary dict for wash-type badge, summary line, and block shading
++                powers = [r[5] if (len(r) > 5 and r[5] is not None) else 0.0 for r in rows]
++                timestamps_ms = [r[0] for r in rows]
++                is_fw07 = len(rows[0]) >= 12
++                dt_seconds = 5.024 if is_fw07 else 5.0
++                max_power = max(powers) if powers else 0.0
++                has_valid_power = max_power >= MAX_POWER_NO_DATA_W
++
++                if not has_valid_power:
++                    active_min = 0
++                    heater_min = 0.0
++                    spin_blocks = 0
++                    blocks = []
++                else:
++                    active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
++                    if active_indices:
++                        t_start = timestamps_ms[active_indices[0]]
++                        t_end = timestamps_ms[active_indices[-1]]
++                        dt_ms = dt_seconds * 1000.0
++                        span_min = (t_end - t_start + dt_ms) / 60000.0 if t_end >= t_start else (len(active_indices) * dt_seconds / 60.0)
++                        active_min = int(round(span_min))
++                    else:
++                        active_min = 0
++
++                    heater_count = sum(1 for p in powers if p > HEATER_W)
++                    heater_min = round((heater_count * dt_seconds) / 60.0, 1)
++                    spin_blocks = count_spin_blocks(powers)
++                    blocks = find_signature_blocks(powers)
++
++                sig_class = classify_signature(max_power, heater_min, spin_blocks, float(active_min))
++                ctx = context_map.get(fname, {})
++                ctx_source = ctx.get('context_source', '').strip()
++                ctx_prog = ctx.get('programme', '').strip()
++                ctx_temp = ctx.get('water_temp', '').strip()
++
++                prog_val = ctx_prog if (ctx_source in ('smartthings_live', 'smartthings_history', 'manual') and ctx_prog and ctx_prog.lower() != 'unknown') else None
++                temp_val = ctx_temp if (prog_val and ctx_temp and ctx_temp.lower() != 'unknown') else None
++
++                run_medians = None
++                if is_fw07:
++                    running = [r for r in rows if r[6] is not None and r[6] > 0.08]
++                    if running:
++                        run_medians = {
++                            'vib_dom_hz': round(float(np.median([r[11] for r in running if r[11] is not None])), 1),
++                            'vib_std_x': round(float(np.median([r[8] for r in running if r[8] is not None])), 3),
++                            'vib_std_y': round(float(np.median([r[9] for r in running if r[9] is not None])), 3),
++                            'vib_std_z': round(float(np.median([r[10] for r in running if r[10] is not None])), 3),
++                            'vib_mag_std': round(float(np.median([r[6] for r in running if r[6] is not None])), 3),
++                        }
++
++                summary = {
++                    'signature': sig_class,
++                    'programme': prog_val,
++                    'water_temp': temp_val,
++                    'context_source': ctx_source if prog_val else None,
++                    'active_min': active_min,
++                    'heater_min': heater_min,
++                    'spin_blocks': spin_blocks,
++                    'blocks': blocks,
++                    'run_medians': run_medians
++                }
+                 
+                 if '2026-10-17_0835' in fname:
+                     disp = f"🧺 17 Oct 2026, 08:35 AM ({duration_m}m Full Wash, {pts_cnt} pts)"
+@@ -133,7 +211,8 @@ def discover_all_sessions():
+                     'name': fname.replace('.csv', ''),
+                     'displayName': disp,
+                     'data': rows,
+-                    'category': 'real'
++                    'category': 'real',
++                    'summary': summary
+                 }
+                 real_options.append(f'<option value="{s_key}">{disp}</option>')
+                 
+@@ -603,6 +682,47 @@ def generate_html(default_view='live'):
+       pointer-events: auto;
+     }}
+ 
++    /* Wash Type Badge */
++    .badge-wash-type {{
++      display: inline-flex;
++      align-items: center;
++      gap: 5px;
++      padding: 3px 9px;
++      border-radius: 9999px;
++      font-size: 11px;
++      font-weight: 600;
++      font-family: 'JetBrains Mono', monospace;
++      letter-spacing: 0.2px;
++      cursor: help;
++      transition: all 0.2s ease;
++      white-space: nowrap;
++    }}
++    .badge-wash-type.hot {{
++      background: rgba(251, 146, 60, 0.14);
++      border: 1px solid rgba(251, 146, 60, 0.45);
++      color: var(--coral-accent);
++    }}
++    .badge-wash-type.cold {{
++      background: rgba(0, 240, 210, 0.14);
++      border: 1px solid rgba(0, 240, 210, 0.45);
++      color: var(--teal-accent);
++    }}
++    .badge-wash-type.quick {{
++      background: rgba(96, 165, 250, 0.14);
++      border: 1px solid rgba(96, 165, 250, 0.45);
++      color: #60a5fa;
++    }}
++    .badge-wash-type.unmetered {{
++      background: rgba(255, 255, 255, 0.05);
++      border: 1px solid rgba(255, 255, 255, 0.18);
++      color: var(--text-dim);
++    }}
++    .badge-wash-type.programme {{
++      background: rgba(168, 85, 247, 0.14);
++      border: 1px solid rgba(168, 85, 247, 0.45);
++      color: #c084fc;
++    }}
++
+     canvas {{
+       width: 100%;
+       height: 100%;
+@@ -980,6 +1100,10 @@ def generate_html(default_view='live'):
+             <button class="span-btn active" id="btn-spline-full" onclick="setChartSpan('spline', 'full')">Full Run</button>
+             <button class="span-btn" id="btn-spline-win" onclick="setChartSpan('spline', 'win')">40s Window</button>
+           </div>
++          <span id="legend-spline-blocks" class="legend-item-dot" style="display: none; margin-right: 4px;">
++            <span style="display:inline-flex; align-items:center; gap:3px; margin-right:6px;"><span style="width:8px; height:8px; background:rgba(251,146,60,0.45); border:1px solid #fb923c; border-radius:2px;"></span><span style="font-size:10px; color:#fb923c;">Heater</span></span>
++            <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; background:rgba(0,240,210,0.35); border:1px solid #00f0d2; border-radius:2px;"></span><span style="font-size:10px; color:#00f0d2;">Spin</span></span>
++          </span>
+           <span class="legend-item-dot">
+             <span class="dot-indicator" style="background: var(--teal-accent);"></span> <span id="lbl-spline-vibe-title">|a|</span>: <strong id="spline-cur-vibe" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">9.54</strong> m/s&sup2;
+           </span>
+@@ -1005,8 +1129,8 @@ def generate_html(default_view='live'):
+             <button class="span-btn active" id="btn-xyz-full" onclick="setChartSpan('xyz', 'full')">Full Run</button>
+             <button class="span-btn" id="btn-xyz-win" onclick="setChartSpan('xyz', 'win')">40s Window</button>
+           </div>
+-          <span class="axis-toggle-clean" id="pill-dom-freq" style="color: #60a5fa;" title="Dominant vibration frequency in 0.5–45 Hz. During spin this usually tracks drum speed (Hz &times; 60 &approx; rpm); not verified against a tachometer.">
+-            Dom. freq: <strong id="vib-dom-freq" style="margin-left: 3px;">—</strong>
++          <span class="axis-toggle-clean" id="pill-dom-freq" style="color: #60a5fa;" title="Dominant vibration frequency in 0.5–45 Hz. Peak frequency during mechanical spin extraction.">
++            <span id="lbl-pill-dom-freq">Dom. freq:</span> <strong id="vib-dom-freq" style="margin-left: 3px;">—</strong>
+           </span>
+           <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
+             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
+@@ -1025,6 +1149,15 @@ def generate_html(default_view='live'):
+           </span>
+         </div>
+       </div>
++      <!-- Run medians row for historic sessions -->
++      <div id="card2-run-medians" style="display: none; padding: 4px 10px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; flex-wrap: wrap; gap: 8px; align-items: center;">
++        <span style="color: var(--text-muted); font-weight: 600;">Run median (active):</span>
++        <span>Dom. freq <strong id="run-med-dom" style="color: #60a5fa;">—</strong></span>
++        <span>&bull;</span>
++        <span>&sigma;x/&sigma;y/&sigma;z <strong id="run-med-sigma" style="color: var(--teal-accent);">—</strong></span>
++        <span>&bull;</span>
++        <span>&sigma;|a| <strong id="run-med-mag" style="color: #fff;">—</strong></span>
++      </div>
+       <div class="canvas-container-box box-xyz">
+         <canvas id="xyz-canvas"></canvas>
+       </div>
+@@ -1034,7 +1167,10 @@ def generate_html(default_view='live'):
+     <div class="card">
+       <div class="card-header-row">
+         <div>
+-          <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
++          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
++            <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
++            <span id="badge-wash-type" class="badge-wash-type" style="display: none;"></span>
++          </div>
+           <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
+         </div>
+         <div class="timeline-stats-container">
+@@ -1092,6 +1228,10 @@ def generate_html(default_view='live'):
+           <span class="card-sub-txt" id="sub-energy">TP-Link Tapo P110 (1 Hz) &bull; Active power and energy over the shown span</span>
+         </div>
+         <div class="vibe-badges-container">
++          <span id="legend-energy-blocks" class="axis-toggle-clean" style="display: none;">
++            <span style="display:inline-flex; align-items:center; gap:3px; margin-right:6px;"><span style="width:8px; height:8px; background:rgba(251,146,60,0.45); border:1px solid #fb923c; border-radius:2px;"></span><span style="font-size:10px; color:#fb923c;">Heater</span></span>
++            <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; background:rgba(0,240,210,0.35); border:1px solid #00f0d2; border-radius:2px;"></span><span style="font-size:10px; color:#00f0d2;">Spin</span></span>
++          </span>
+           <span class="axis-toggle-clean" style="color: #facc15;">
+             <span style="width: 6px; height: 6px; border-radius: 50%; background: #facc15;"></span>
+             Active: <strong id="energy-head-watts">0.0</strong> W
+@@ -1210,23 +1350,126 @@ def generate_html(default_view='live'):
+ 
+     function updateCard2Labels(isAxisSigma) {{
+       const titleXyz = document.getElementById('title-xyz');
++      const lblPillDom = document.getElementById('lbl-pill-dom-freq');
+       const lblPillX = document.getElementById('lbl-pill-x');
+       const lblPillY = document.getElementById('lbl-pill-y');
+       const lblPillZ = document.getElementById('lbl-pill-z');
+       const lblPillMag = document.getElementById('lbl-pill-mag');
+ 
++      const isHistoric = (currentMode === 'historic');
++
++      if (lblPillDom) {{
++        lblPillDom.innerText = isHistoric ? 'Dom. freq (at cursor):' : 'Dom. freq:';
++      }}
++
+       if (isAxisSigma) {{
+         if (titleXyz) titleXyz.innerText = 'Per-Axis Vibration (std per 5 s window)';
+-        if (lblPillX) lblPillX.innerText = '\u03c3x:';
+-        if (lblPillY) lblPillY.innerText = '\u03c3y:';
+-        if (lblPillZ) lblPillZ.innerText = '\u03c3z:';
+-        if (lblPillMag) lblPillMag.innerText = '\u03c3|a|:';
++        if (lblPillX) lblPillX.innerText = isHistoric ? '\u03c3x (at cursor):' : '\u03c3x:';
++        if (lblPillY) lblPillY.innerText = isHistoric ? '\u03c3y (at cursor):' : '\u03c3y:';
++        if (lblPillZ) lblPillZ.innerText = isHistoric ? '\u03c3z (at cursor):' : '\u03c3z:';
++        if (lblPillMag) lblPillMag.innerText = isHistoric ? '\u03c3|a| (at cursor):' : '\u03c3|a|:';
+       }} else {{
+         if (titleXyz) titleXyz.innerText = 'Tri-Axial Vibration (Ax, Ay, Az)';
+-        if (lblPillX) lblPillX.innerText = 'Ax:';
+-        if (lblPillY) lblPillY.innerText = 'Ay:';
+-        if (lblPillZ) lblPillZ.innerText = 'Az:';
+-        if (lblPillMag) lblPillMag.innerText = '|a|:';
++        if (lblPillX) lblPillX.innerText = isHistoric ? 'Ax (at cursor):' : 'Ax:';
++        if (lblPillY) lblPillY.innerText = isHistoric ? 'Ay (at cursor):' : 'Ay:';
++        if (lblPillZ) lblPillZ.innerText = isHistoric ? 'Az (at cursor):' : 'Az:';
++        if (lblPillMag) lblPillMag.innerText = isHistoric ? '|a| (at cursor):' : '|a|:';
++      }}
++    }}
++
++    function updateWashTypeBadgeAndSummary(session) {{
++      const badgeEl = document.getElementById('badge-wash-type');
++      const legSpline = document.getElementById('legend-spline-blocks');
++      const legEnergy = document.getElementById('legend-energy-blocks');
++      const card2Medians = document.getElementById('card2-run-medians');
++
++      if (currentMode === 'live' || !session || session.category === 'test') {{
++        if (badgeEl) badgeEl.style.display = 'none';
++        if (legSpline) legSpline.style.display = 'none';
++        if (legEnergy) legEnergy.style.display = 'none';
++        if (card2Medians) card2Medians.style.display = 'none';
++        return;
++      }}
++
++      const sum = session.summary;
++      if (!sum) {{
++        if (badgeEl) {{
++          badgeEl.style.display = 'inline-flex';
++          badgeEl.className = 'badge-wash-type unmetered';
++          badgeEl.innerText = (session.category === 'custom') ? 'not classified' : 'Unclassified';
++          badgeEl.title = (session.category === 'custom') ? 'Custom uploaded CSV file (not classified).' : 'Built-in wash without physical summary.';
++        }}
++        if (legSpline) legSpline.style.display = 'none';
++        if (legEnergy) legEnergy.style.display = 'none';
++        if (card2Medians) card2Medians.style.display = 'none';
++        return;
++      }}
++
++      // 1. Wash-type badge pill
++      if (badgeEl) {{
++        badgeEl.style.display = 'inline-flex';
++        badgeEl.title = 'Classification rule: Heater > 1 kW for > 2 min and \u2265 2 spin blocks \u2192 Long hot; no heater and \u2265 3 spin blocks \u2192 Long cold; no heater, 1 spin block, < 35 min active \u2192 Quick; max power < 50 W \u2192 No power data. Spin block = \u2265 20 consecutive windows (100 s) at 200\u20131,000 W.';
++        if (sum.programme) {{
++          badgeEl.className = 'badge-wash-type programme';
++          const tempPart = sum.water_temp ? ` \u00b7 ${{sum.water_temp}}` : '';
++          const srcPart = sum.context_source === 'manual' ? 'manual' : 'SmartThings';
++          badgeEl.innerText = `${{sum.programme}}${{tempPart}} (${{srcPart}})`;
++        }} else {{
++          const sig = sum.signature || 'Unclassified';
++          if (sig.includes('Long hot')) {{
++            badgeEl.className = 'badge-wash-type hot';
++            badgeEl.innerText = 'Long hot (inferred from power)';
++          }} else if (sig.includes('Long cold')) {{
++            badgeEl.className = 'badge-wash-type cold';
++            badgeEl.innerText = 'Long cold (inferred from power)';
++          }} else if (sig.includes('Quick')) {{
++            badgeEl.className = 'badge-wash-type quick';
++            badgeEl.innerText = 'Quick (inferred from power)';
++          }} else if (sig === 'No power data') {{
++            badgeEl.className = 'badge-wash-type unmetered';
++            badgeEl.innerText = 'No power data';
++          }} else {{
++            badgeEl.className = 'badge-wash-type unmetered';
++            badgeEl.innerText = `${{sig}} (inferred from power)`;
++          }}
++        }}
++      }}
++
++      // 2. Timeline subtitle summary line
++      if (subTimeline && ACTIVE_DATA && ACTIVE_DATA.length > 0) {{
++        const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
++        if (sum.signature === 'No power data') {{
++          subTimeline.innerText = `${{durMin}}-min run • No electrical power data tracked for this cycle • ${{activeSessionName}}`;
++        }} else {{
++          const act = sum.active_min;
++          const heat = sum.heater_min;
++          const heatStr = heat > 0 ? ((heat % 1 === 0 ? heat.toFixed(0) : heat.toFixed(1)) + ' min heater') : 'no heater';
++          const spins = sum.spin_blocks;
++          const spinStr = `${{spins}} spin block${{spins === 1 ? '' : 's'}}`;
++          const tailNote = (durMin - act >= 8) ? ' (~10 min idle tail)' : '';
++          subTimeline.innerText = `${{act}} min active \u00b7 ${{heatStr}} \u00b7 ${{spinStr}} • ${{durMin}} min recorded${{tailNote}} • ${{activeSessionName}}`;
++        }}
++      }}
++
++      // 3. Block shading chart legends
++      const hasBlocks = (sum.blocks && sum.blocks.length > 0);
++      if (legSpline) legSpline.style.display = hasBlocks ? 'inline-flex' : 'none';
++      if (legEnergy) legEnergy.style.display = hasBlocks ? 'inline-flex' : 'none';
++
++      // 4. Run medians in Card 2
++      if (card2Medians) {{
++        if (sum.run_medians) {{
++          const rm = sum.run_medians;
++          card2Medians.style.display = 'flex';
++          const domEl = document.getElementById('run-med-dom');
++          const sigEl = document.getElementById('run-med-sigma');
++          const magEl = document.getElementById('run-med-mag');
++          if (domEl) domEl.innerText = rm.vib_dom_hz !== null ? `${{rm.vib_dom_hz.toFixed(1)}} Hz` : '\u2014';
++          if (sigEl) sigEl.innerText = `${{rm.vib_std_x.toFixed(3)}} / ${{rm.vib_std_y.toFixed(3)}} / ${{rm.vib_std_z.toFixed(3)}} m/s\u00b2`;
++          if (magEl) magEl.innerText = `${{rm.vib_mag_std.toFixed(3)}} m/s\u00b2`;
++        }} else {{
++          card2Medians.style.display = 'none';
++        }}
+       }}
+     }}
+ 
+@@ -1240,6 +1483,7 @@ def generate_html(default_view='live'):
+       const isAxisSigma = isHistoric ? seriesHasAxisStd(ACTIVE_DATA) : seriesHasAxisStd(LIVE_BUFFER);
+ 
+       updateCard2Labels(isAxisSigma);
++      updateWashTypeBadgeAndSummary(isHistoric ? LOADED_SESSIONS[activeSessionKey] : null);
+ 
+       if (isHistoric) {{
+         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
+@@ -2300,6 +2544,44 @@ def generate_html(default_view='live'):
+         drawTimeGrid(splineCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
+       }}
+ 
++      // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
++      if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {{
++        const session = LOADED_SESSIONS[activeSessionKey];
++        const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
++        if (blocks.length > 0) {{
++          const totalPts = ACTIVE_DATA.length;
++          const winSize = 40;
++          const startIdx = isFull ? 0 : Math.max(0, currentIndex - Math.floor(winSize / 2));
++          const endIdx = isFull ? (totalPts - 1) : Math.min(totalPts - 1, startIdx + winSize);
++          const ptsCount = isFull ? totalPts : (endIdx - startIdx + 1);
++
++          for (let b = 0; b < blocks.length; b++) {{
++            const blk = blocks[b];
++            const ov0 = Math.max(blk.i0, startIdx);
++            const ov1 = Math.min(blk.i1, endIdx);
++            if (ov0 <= ov1 && ptsCount > 1) {{
++              const x0 = marginLeft + (((ov0 - startIdx) / (ptsCount - 1)) * plotW);
++              const x1 = marginLeft + (((ov1 - startIdx) / (ptsCount - 1)) * plotW);
++              const clX0 = Math.max(marginLeft, Math.min(w - marginRight, x0));
++              const clX1 = Math.max(marginLeft, Math.min(w - marginRight, x1));
++              const rectW = Math.max(1 * dpr, clX1 - clX0);
++
++              if (blk.type === 'heater') {{
++                splineCtx.fillStyle = 'rgba(251, 146, 60, 0.16)';
++                splineCtx.fillRect(clX0, marginTop, rectW, plotH);
++                splineCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
++                splineCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
++              }} else if (blk.type === 'spin') {{
++                splineCtx.fillStyle = 'rgba(0, 240, 210, 0.14)';
++                splineCtx.fillRect(clX0, marginTop, rectW, plotH);
++                splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
++                splineCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
++              }}
++            }}
++          }}
++        }}
++      }}
++
+       // Dynamic RMS scale based on visible points
+       const maxRmsInPoints = points.reduce((m, p) => Math.max(m, p[4]), 0);
+       const scaleConf = getRmsScale(maxRmsInPoints);
+@@ -3260,6 +3542,34 @@ def generate_html(default_view='live'):
+         drawTimeGrid(energyCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
+       }}
+ 
++      // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
++      if (currentMode === 'historic' && total > 1) {{
++        const session = LOADED_SESSIONS[activeSessionKey];
++        const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
++        if (blocks.length > 0) {{
++          for (let b = 0; b < blocks.length; b++) {{
++            const blk = blocks[b];
++            const x0 = marginLeft + ((blk.i0 / (total - 1)) * plotW);
++            const x1 = marginLeft + ((blk.i1 / (total - 1)) * plotW);
++            const clX0 = Math.max(marginLeft, Math.min(w - marginRight, x0));
++            const clX1 = Math.max(marginLeft, Math.min(w - marginRight, x1));
++            const rectW = Math.max(1 * dpr, clX1 - clX0);
++
++            if (blk.type === 'heater') {{
++              energyCtx.fillStyle = 'rgba(251, 146, 60, 0.16)';
++              energyCtx.fillRect(clX0, marginTop, rectW, plotH);
++              energyCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
++              energyCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
++            }} else if (blk.type === 'spin') {{
++              energyCtx.fillStyle = 'rgba(0, 240, 210, 0.14)';
++              energyCtx.fillRect(clX0, marginTop, rectW, plotH);
++              energyCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
++              energyCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
++            }}
++          }}
++        }}
++      }}
++
+       // Fill area under power curve
+       const grad = energyCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
+       grad.addColorStop(0, 'rgba(250, 204, 21, 0.28)');
+@@ -3573,7 +3883,8 @@ def generate_html(default_view='live'):
+         LOADED_SESSIONS[sessionKey] = {{
+           name: cleanName,
+           displayName: displayName,
+-          data: records
++          data: records,
++          category: 'custom'
+         }};
+ 
+         const groupCustom = document.getElementById('group-custom-sessions');
+@@ -3636,7 +3947,19 @@ def generate_html(default_view='live'):
+     }});
+ 
+     // Initial boot setup
+-    setViewMode('{default_view}');
++    const initialSessionParam = urlParams.get('session');
++    if (initialSessionParam && LOADED_SESSIONS[initialSessionParam]) {{
++      switchToSession(initialSessionParam);
++    }} else if (initialSessionParam) {{
++      const foundKey = Object.keys(LOADED_SESSIONS).find(k => k.includes(initialSessionParam) || (LOADED_SESSIONS[k].name && LOADED_SESSIONS[k].name.includes(initialSessionParam)));
++      if (foundKey) {{
++        switchToSession(foundKey);
++      }} else {{
++        setViewMode('{default_view}');
++      }}
++    }} else {{
++      setViewMode('{default_view}');
++    }}
+     window.addEventListener('load', () => {{
+       resizeCanvases();
+       if (PAGE_DEFAULT_VIEW === 'live' && currentMode === 'live') {{
+diff --git a/firmware/tests/test_daemon_offline.py b/firmware/tests/test_daemon_offline.py
+index 7378c8f..7f1aa8a 100644
+--- a/firmware/tests/test_daemon_offline.py
++++ b/firmware/tests/test_daemon_offline.py
+@@ -66,49 +66,55 @@ def main() -> int:
+         d.DATA_DIR = td
+         stc.PHASE_DIR = td / "phases"
+         import firmware.session_context as sc
+-        sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
+-        sc.REAL_SESSIONS_DIR = td / "real"
+-        d.get_smartthings_status = lambda **_: {}
+-        d.rebuild_derived = lambda: None
+-
+-        e0 = 1_792_300_000_000
+-        db = {
+-            "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
+-            "sessions": {
+-                "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
+-                "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
+-                "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
+-                "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
+-            },
+-            "session_meta": {
+-                "wash_2026-10-20_081500": {"start": 1, "end": 2},
+-                "wash_2026-10-21_090000": {"start": 3},            # still running
+-                "wash_2026-10-19_070000": {"start": 1, "end": 2},
+-            },
+-        }
+-        fake = FakeFB(db)
+-        d.get_client = lambda: fake
+-        hist = {"wash_old_legacy": {"completed": True}}
+-        # pre-existing CSV for the 19 Oct session must NOT be overwritten
+-        (se.REAL_DIR).mkdir(parents=True)
+-        existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
+-        existing.write_text("keep me\n")
+-
+-        n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
+-        downloads = [g for g in fake.gets if g.startswith("sessions/")]
+-        assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
+-        assert n == 1, n
+-        assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
+-        assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
+-        assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
+-        assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
+-        assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
+-
+-        fake.gets.clear()
+-        n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
+-        assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
+-        assert n2 == 0
+-        print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
++        orig_context_file = sc.DEFAULT_CONTEXT_FILE
++        orig_real_dir = sc.REAL_SESSIONS_DIR
++        try:
++            sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
++            sc.REAL_SESSIONS_DIR = td / "real"
++            d.get_smartthings_status = lambda **_: {}
++            d.rebuild_derived = lambda: None
++
++            e0 = 1_792_300_000_000
++            db = {
++                "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
++                "sessions": {
++                    "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
++                    "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
++                    "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
++                    "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
++                },
++                "session_meta": {
++                    "wash_2026-10-20_081500": {"start": 1, "end": 2},
++                    "wash_2026-10-21_090000": {"start": 3},            # still running
++                    "wash_2026-10-19_070000": {"start": 1, "end": 2},
++                },
++            }
++            fake = FakeFB(db)
++            d.get_client = lambda: fake
++            hist = {"wash_old_legacy": {"completed": True}}
++            # pre-existing CSV for the 19 Oct session must NOT be overwritten
++            (se.REAL_DIR).mkdir(parents=True)
++            existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
++            existing.write_text("keep me\n")
++
++            n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
++            downloads = [g for g in fake.gets if g.startswith("sessions/")]
++            assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
++            assert n == 1, n
++            assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
++            assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
++            assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
++            assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
++            assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
++
++            fake.gets.clear()
++            n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
++            assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
++            assert n2 == 0
++            print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
++        finally:
++            sc.DEFAULT_CONTEXT_FILE = orig_context_file
++            sc.REAL_SESSIONS_DIR = orig_real_dir
+     return 0
  
  
-+    def test_backfill_reconciles_phantom_rows(self) -> None:
-+        """
-+        Verify that backfill reconciles phantom rows:
-+        - Removes entries whose CSV does not exist on disk if context_source != 'manual'
-+        - Retains entries whose context_source == 'manual' even if CSV is absent
-+        """
-+        # 1. Create one real CSV on disk
-+        real_csv = self.sessions_dir / "wash_cycle_real.csv"
-+        with open(real_csv, "w", encoding="utf-8", newline="") as f:
-+            w = csv.writer(f)
-+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms"])
-+            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248])
-+
-+        # 2. Pre-populate context file with 3 rows:
-+        # a) real file
-+        # b) phantom file (unknown source) -> must be removed
-+        # c) missing file (manual source) -> must be retained
-+        rows = [
-+            {
-+                "session_file": "wash_cycle_real.csv",
-+                "start_epoch_ms": "1792530853248",
-+                "end_epoch_ms": "1792532644998",
-+                "programme": "unknown",
-+                "water_temp": "",
-+                "spin_level": "",
-+                "context_source": "unknown",
-+                "note": "",
-+            },
-+            {
-+                "session_file": "wash_cycle_phantom_temp.csv",
-+                "start_epoch_ms": "1792300005024",
-+                "end_epoch_ms": "1792300904320",
-+                "programme": "unknown",
-+                "water_temp": "",
-+                "spin_level": "",
-+                "context_source": "unknown",
-+                "note": "phantom row",
-+            },
-+            {
-+                "session_file": "wash_cycle_manual_missing.csv",
-+                "start_epoch_ms": "1792400000000",
-+                "end_epoch_ms": "1792401000000",
-+                "programme": "CustomSpecial",
-+                "water_temp": "60C",
-+                "spin_level": "1400",
-+                "context_source": "manual",
-+                "note": "retained manual note",
-+            },
-+        ]
-+        save_session_context(rows, context_file=self.context_file)
-+
-+        # 3. Run backfill
-+        backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
-+
-+        # 4. Verify context rows
-+        result_rows = {r["session_file"]: r for r in load_session_context(self.context_file)}
-+        self.assertIn("wash_cycle_real.csv", result_rows)
-+        self.assertNotIn("wash_cycle_phantom_temp.csv", result_rows, "Phantom non-manual row should be removed")
-+        self.assertIn("wash_cycle_manual_missing.csv", result_rows, "Manual row must be retained even if CSV missing")
-+        self.assertEqual(result_rows["wash_cycle_manual_missing.csv"]["programme"], "CustomSpecial")
-+
-+
- if __name__ == "__main__":
-     unittest.main()
 diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
-index 46ad518..a8fc041 100644
+index a8fc041..86eee1d 100644
 --- a/ml/cycle_signature_report.py
 +++ b/ml/cycle_signature_report.py
-@@ -8,28 +8,27 @@ Analyzes each archived wash cycle in `data/real_sessions/` to extract its
- measured physical profile:
-   - Duration (total recorded minutes, active minutes with power >= 8W)
-   - Thermal profile (heater minutes with power > 1000W)
--  - Mechanical signature (high-power spin blocks, spin dominant frequency p90)
-+  - Mechanical spin profile (spin blocks of >= 20 windows with 200W < power <= 1000W)
-   - Acquisition quality counters for firmware-07 (accel count, FIFO overflows,
--    clipped samples, max window gap, idle vibration floor)
-+    clipped samples, max window gap from timestamp_ms, epoch clock jitter,
-+    idle vibration noise floor)
-   - ESP32 boot indicator (whether cycle started within 30s of edge MCU boot)
-   - Context join (programme, water temperature from data/session_context.csv)
-+  - Objective physical signature classification (inferred from power metrics)
- 
--Outputs:
----------
--Writes `ml/models/cycle_signature_report.md`, concluding with a classification
--table grouping cycles by wash programme / signature.
--
--Invariants:
-------------
-+Golden Invariants:
-+------------------
- - Never modifies data in data/real_sessions/ or data/session_context.csv.
- - Standalone analysis report: does not alter ML training pipelines, detectors, or LOCO.
--- Honest outputs: only physically measured facts, no synthetic health % or RUL claims.
-+- Honest outputs: only physically measured facts; no invented programme names,
-+  no unmeasured temperature labels, and no synthetic health % or RUL claims.
-+- Dynamic grouping: clusters are computed strictly from rules, never hard-coded.
- """
- 
- from __future__ import annotations
- 
- # =============================================================================
--# SECTION 1: Imports & Paths
-+# SECTION 1: Imports & Rule Constants (Reused by Dashboard Badge Rules)
- # =============================================================================
- import csv
- from datetime import datetime
-@@ -47,9 +46,18 @@ OUTPUT_REPORT_PATH = BASE_DIR / "ml" / "models" / "cycle_signature_report.md"
- if str(BASE_DIR) not in sys.path:
-     sys.path.insert(0, str(BASE_DIR))
- 
-+# Signature Classification Rule Thresholds (shared with dashboard badge logic)
-+HEATER_W = 1000.0                # Threshold above which power indicates heating element (> 1 kW)
-+HEATER_MIN_THRESHOLD = 2.0       # Minimum heater minutes to classify as Long hot
-+SPIN_MIN_W = 200.0               # Minimum power for mechanical drum spin extraction
-+MIN_SPIN_WINDOWS = 20            # >= 20 consecutive windows (approx 100 s) for a spin block
-+MAX_POWER_NO_DATA_W = 50.0       # Max cycle power < 50 W indicates unmetered / no power data
-+QUICK_ACTIVE_MAX_MIN = 35.0      # Maximum active minutes for Quick signature class
-+HIGH_POWER_BLOCK_MIN_WIN = 3     # >= 3 consecutive windows > 200 W for general high-power table
-+
- 
- # =============================================================================
--# SECTION 2: Helper Functions for Signature Extraction
-+# SECTION 2: Metric Extraction & Signature Detection Helpers
- # =============================================================================
- def load_session_context_map() -> Dict[str, Dict[str, str]]:
-     """Load session context sidecar file as a dictionary keyed by session_file."""
-@@ -70,15 +78,43 @@ def load_session_context_map() -> Dict[str, Dict[str, str]]:
-     return context_map
+@@ -106,6 +106,49 @@ def count_spin_blocks(
+     return spin_blocks
  
  
-+def count_spin_blocks(
++def find_signature_blocks(
 +    powers: List[float],
-+    min_windows: int = MIN_SPIN_WINDOWS,
-+    min_power: float = SPIN_MIN_W,
-+    max_power: float = HEATER_W,
-+) -> int:
++    min_spin_windows: int = MIN_SPIN_WINDOWS,
++    min_spin_w: float = SPIN_MIN_W,
++    heater_w: float = HEATER_W,
++) -> List[Dict[str, Any]]:
 +    """
-+    Count contiguous spin extraction blocks:
-+    >= min_windows consecutive windows where min_power < power <= max_power.
-+    Electrical heater windows (> max_power) are explicitly excluded.
++    Find contiguous row-index spans for electrical heater and mechanical spin blocks:
++    - 'spin': >= min_spin_windows consecutive windows where min_spin_w < power <= heater_w
++    - 'heater': contiguous windows where power > heater_w (>= min_spin_windows consecutive)
++    Returns list of dicts: [{'type': 'heater'|'spin', 'i0': int, 'i1': int}] sorted by i0.
++    Reused by build_clean_dashboard.py to shade blocks on power & vibration charts.
 +    """
-+    spin_blocks = 0
-+    current_run = 0
++    blocks: List[Dict[str, Any]] = []
 +
-+    for p in powers:
-+        if min_power < p <= max_power:
-+            current_run += 1
++    # 1. Spin extraction spans (200W < power <= 1000W)
++    cur_spin: List[int] = []
++    for i, p in enumerate(powers):
++        if min_spin_w < p <= heater_w:
++            cur_spin.append(i)
 +        else:
-+            if current_run >= min_windows:
-+                spin_blocks += 1
-+            current_run = 0
++            if len(cur_spin) >= min_spin_windows:
++                blocks.append({"type": "spin", "i0": cur_spin[0], "i1": cur_spin[-1]})
++            cur_spin = []
++    if len(cur_spin) >= min_spin_windows:
++        blocks.append({"type": "spin", "i0": cur_spin[0], "i1": cur_spin[-1]})
 +
-+    if current_run >= min_windows:
-+        spin_blocks += 1
++    # 2. Electrical heating spans (power > 1000W)
++    cur_heater: List[int] = []
++    for i, p in enumerate(powers):
++        if p > heater_w:
++            cur_heater.append(i)
++        else:
++            if len(cur_heater) >= min_spin_windows:
++                blocks.append({"type": "heater", "i0": cur_heater[0], "i1": cur_heater[-1]})
++            cur_heater = []
++    if len(cur_heater) >= min_spin_windows:
++        blocks.append({"type": "heater", "i0": cur_heater[0], "i1": cur_heater[-1]})
 +
-+    return spin_blocks
++    blocks.sort(key=lambda b: b["i0"])
++    return blocks
 +
 +
  def find_high_power_blocks(
      powers: List[float],
      dt_seconds: float = 5.024,
-     threshold_w: float = 200.0,
--    min_consecutive: int = 3,
-+    min_consecutive: int = HIGH_POWER_BLOCK_MIN_WIN,
- ) -> List[Dict[str, Any]]:
-     """
--    Find contiguous blocks of consecutive windows with power > threshold_w.
--    Returns a list of dicts with start_min, max_w, duration_min, and window count.
-+    Find contiguous runs of >= min_consecutive windows with power > threshold_w.
-+    Used for the comprehensive electrical timing breakdown in Section 4.
-     """
-     blocks: List[Dict[str, Any]] = []
-     current_run: List[Tuple[int, float]] = []
-@@ -97,7 +133,6 @@ def find_high_power_blocks(
-                     "max_w": round(max_w, 0),
-                     "dur_min": round(dur_min, 1),
-                     "windows": len(current_run),
--                    "indices": [idx for idx, _ in current_run],
-                 })
-             current_run = []
- 
-@@ -111,15 +146,39 @@ def find_high_power_blocks(
-             "max_w": round(max_w, 0),
-             "dur_min": round(dur_min, 1),
-             "windows": len(current_run),
--            "indices": [idx for idx, _ in current_run],
-         })
- 
-     return blocks
- 
- 
-+def classify_signature(
-+    max_power: float,
-+    heater_min: float,
-+    spin_blocks: int,
-+    active_min: float,
-+) -> str:
-+    """
-+    Objectively infer signature class from measured electrical & spin parameters:
-+    - max_power < 50 W -> 'No power data'
-+    - heater_min > 2 min and spin_blocks >= 2 -> 'Long hot (inferred)'
-+    - heater_min == 0 and spin_blocks >= 3 -> 'Long cold (inferred)'
-+    - heater_min == 0 and spin_blocks == 1 and active_min < 35 min -> 'Quick (inferred)'
-+    - otherwise -> 'Unclassified'
-+    """
-+    if max_power < MAX_POWER_NO_DATA_W:
-+        return "No power data"
-+    if heater_min > HEATER_MIN_THRESHOLD and spin_blocks >= 2:
-+        return "Long hot (inferred)"
-+    if heater_min == 0.0 and spin_blocks >= 3:
-+        return "Long cold (inferred)"
-+    if heater_min == 0.0 and spin_blocks == 1 and active_min < QUICK_ACTIVE_MAX_MIN:
-+        return "Quick (inferred)"
-+    return "Unclassified"
-+
-+
- def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[str, Any]:
-     """
--    Parse a single session CSV file and extract all physical signature metrics.
-+    Parse a single session CSV file and compute its physical signature metrics.
-     """
-     with open(csv_path, "r", encoding="utf-8") as f:
-         reader = csv.DictReader(f)
-@@ -131,65 +190,79 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-     schema_label = "fw07" if is_fw07 else "legacy"
-     dt_seconds = 5.024 if is_fw07 else 5.0
- 
--    # Extract powers and timestamps
-     powers: List[float] = []
-     timestamps_ms: List[float] = []
-+    epochs_ms: List[float] = []
-+
-     for r in rows:
-         try:
--            p = float(r.get("power_w") or 0.0)
--            powers.append(p)
-+            powers.append(float(r.get("power_w") or 0.0))
-         except (ValueError, TypeError):
-             powers.append(0.0)
-         try:
--            t = float(r.get("timestamp_ms") or 0.0)
--            timestamps_ms.append(t)
-+            timestamps_ms.append(float(r.get("timestamp_ms") or 0.0))
-         except (ValueError, TypeError):
-             timestamps_ms.append(0.0)
-+        if is_fw07 and "epoch_ms" in r:
-+            try:
-+                epochs_ms.append(float(r.get("epoch_ms") or 0.0))
-+            except (ValueError, TypeError):
-+                epochs_ms.append(0.0)
-+
-+    max_power = max(powers) if powers else 0.0
- 
-     # 1. Total recorded minutes
--    if is_fw07 and "epoch_ms" in header:
--        try:
--            e0 = float(rows[0]["epoch_ms"])
--            e1 = float(rows[-1]["epoch_ms"])
--            recorded_min = round((e1 - e0) / 60000.0, 1)
--        except Exception:
--            recorded_min = round(n_rows * dt_seconds / 60.0, 1)
-+    if is_fw07 and epochs_ms:
-+        recorded_min = round((epochs_ms[-1] - epochs_ms[0]) / 60000.0, 1)
-     else:
-         recorded_min = round(n_rows * dt_seconds / 60.0, 1)
- 
-     # 2. Active minutes (power >= 8W)
--    has_valid_power = any(p > 0.5 for p in powers)
-+    has_valid_power = max_power >= MAX_POWER_NO_DATA_W
-     if not has_valid_power:
-+        active_min_num = 0.0
-         active_min_str = "n/a"
-+        heater_min_num = 0.0
-         heater_min_str = "n/a"
--        high_power_blocks = []
--        n_blocks_str = "n/a"
-+        spin_blocks = 0
-+        spin_blocks_str = "n/a"
-+        high_power_blocks: List[Dict[str, Any]] = []
-+        n_high_power_str = "n/a"
-     else:
-         active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
-         if active_indices:
--            # Active duration span from first active window to end of last active window
-             t_start = timestamps_ms[active_indices[0]]
-             t_end = timestamps_ms[active_indices[-1]]
-             dt_ms = dt_seconds * 1000.0
--            if t_end >= t_start:
--                span_min = (t_end - t_start + dt_ms) / 60000.0
--            else:
--                span_min = len(active_indices) * dt_seconds / 60.0
--            active_min_val = round(span_min)
--            active_min_str = str(int(active_min_val))
-+            span_min = (t_end - t_start + dt_ms) / 60000.0 if t_end >= t_start else (len(active_indices) * dt_seconds / 60.0)
-+            active_min_num = span_min
-+            active_min_str = str(int(round(span_min)))
-         else:
-+            active_min_num = 0.0
-             active_min_str = "0"
- 
-         # 3. Heater minutes (power > 1000W)
--        heater_count = sum(1 for p in powers if p > 1000.0)
--        heater_min = round((heater_count * dt_seconds) / 60.0, 1)
--        heater_min_str = f"{heater_min:.1f}" if heater_min > 0 else "0"
-+        heater_count = sum(1 for p in powers if p > HEATER_W)
-+        heater_min_num = round((heater_count * dt_seconds) / 60.0, 1)
-+        heater_min_str = f"{heater_min_num:.1f}" if heater_min_num > 0 else "0"
-+
-+        # 4. Spin blocks (>= 20 windows with 200W < power <= 1000W)
-+        spin_blocks = count_spin_blocks(powers)
-+        spin_blocks_str = str(spin_blocks)
- 
--        # 4. High-power blocks (>= 3 consecutive windows > 200W)
-+        # 5. General high-power blocks (>= 3 windows > 200W)
-         high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
--        n_blocks_str = str(len(high_power_blocks))
-+        n_high_power_str = str(len(high_power_blocks))
- 
--    # 5. Firmware-07 specific data quality counters
-+    # 6. Signature class (inferred from power)
-+    signature_class = classify_signature(
-+        max_power=max_power,
-+        heater_min=heater_min_num,
-+        spin_blocks=spin_blocks,
-+        active_min=active_min_num,
-+    )
-+
-+    # 7. Firmware-07 data quality counters
-     if is_fw07:
-         n_accels = [float(r["n_accel"]) for r in rows if r.get("n_accel")]
-         med_n_accel = round(float(np.median(n_accels))) if n_accels else 0
-@@ -198,15 +271,19 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         fifo_ov = sum(int(float(r["fifo_overflows"])) for r in rows if r.get("fifo_overflows"))
-         clip_samples = sum(int(float(r["accel_clip_samples"])) for r in rows if r.get("accel_clip_samples"))
- 
--        # Max window gap
--        if "epoch_ms" in header:
--            epochs = [float(r["epoch_ms"]) for r in rows if r.get("epoch_ms")]
--            gaps = [(epochs[i] - epochs[i - 1]) / 1000.0 for i in range(1, len(epochs))]
--            max_gap_s = round(max(gaps), 2) if gaps else dt_seconds
-+        # Max window gap computed strictly from device hardware timestamps_ms (millis)
-+        gaps_ts = [(timestamps_ms[i] - timestamps_ms[i - 1]) / 1000.0 for i in range(1, len(timestamps_ms))]
-+        max_gap_s = round(max(gaps_ts), 2) if gaps_ts else dt_seconds
-+
-+        # Epoch jitter: max |Δepoch_ms - Δtimestamp_ms|
-+        if len(epochs_ms) == len(timestamps_ms) and len(epochs_ms) > 1:
-+            gaps_ep = [(epochs_ms[i] - epochs_ms[i - 1]) / 1000.0 for i in range(1, len(epochs_ms))]
-+            jitter = [abs(gaps_ep[i] - gaps_ts[i]) for i in range(len(gaps_ts))]
-+            epoch_jitter_max_s = round(max(jitter), 2) if jitter else 0.0
-         else:
--            max_gap_s = dt_seconds
-+            epoch_jitter_max_s = 0.0
- 
--        # Idle vibration floor: vib_mag_std when machine power < 5W
-+        # Idle vibration floor: vib_mag_std when power < 5W
-         idle_vib = [
-             float(r["vib_mag_std"])
-             for r in rows
-@@ -214,16 +291,15 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         ]
-         idle_vib_med = round(float(np.median(idle_vib)), 3) if idle_vib else 0.032
- 
--        # Spin dominant frequency p90 across high-power extraction blocks (excluding heater)
--        # Power between 200W and 1000W represents motor spin acceleration / high-speed extraction
-+        # Spin dominant frequency p90 across mechanical spin extraction windows (200W < power <= 1000W)
-         spin_vdf = [
-             float(r["vib_dom_hz"])
-             for r in rows
--            if 200.0 < float(r.get("power_w") or 0.0) < 1000.0 and r.get("vib_dom_hz")
-+            if SPIN_MIN_W < float(r.get("power_w") or 0.0) <= HEATER_W and r.get("vib_dom_hz")
-         ]
-         spin_vdf_p90 = round(float(np.percentile(spin_vdf, 90)), 1) if spin_vdf else 0.0
- 
--        # Boot at start: first timestamp_ms < 30,000 ms (< 30 seconds since ESP32 boot)
-+        # Boot at start: first timestamp_ms < 30,000 ms (< 30s since ESP32 boot)
-         first_t = timestamps_ms[0] if timestamps_ms else 999999
-         boot_at_start = "yes" if first_t < 30000 else "no"
- 
-@@ -233,15 +309,23 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         fifo_ov = "-"
-         clip_samples = "-"
-         max_gap_s = "-"
-+        epoch_jitter_max_s = "-"
-         idle_vib_med = "-"
-         spin_vdf_p90 = "-"
-         boot_at_start = "-"
- 
--    # Context fields
--    programme = context_info.get("programme") or "unknown"
-+    # Context & Honest Programme Display Rule:
-+    # Only display sidecar programme if context_source is an authenticated or manual source.
-+    # Otherwise, strictly output 'unknown' (never invent commercial programme names).
-+    raw_source = context_info.get("context_source") or "unknown"
-+    raw_prog = context_info.get("programme") or "unknown"
-+
-+    if raw_source in ("smartthings_live", "smartthings_history", "manual") and raw_prog != "unknown":
-+        programme_display = raw_prog
-+    else:
-+        programme_display = "unknown"
-+
-     water_temp = context_info.get("water_temp") or ""
--    spin_level = context_info.get("spin_level") or ""
--    context_source = context_info.get("context_source") or "unknown"
- 
-     return {
-         "file": csv_path.name,
-@@ -249,34 +333,40 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         "rows": n_rows,
-         "recorded_min": recorded_min,
-         "active_min": active_min_str,
-+        "active_min_num": active_min_num,
-         "heater_min": heater_min_str,
--        "n_blocks": n_blocks_str,
-+        "heater_min_num": heater_min_num,
-+        "spin_blocks": spin_blocks_str,
-+        "spin_blocks_num": spin_blocks,
-+        "n_high_power": n_high_power_str,
-         "blocks": high_power_blocks,
-+        "signature_class": signature_class,
-         "med_n_accel": med_n_accel,
-         "min_n_accel": min_n_accel,
-         "fifo_ov": fifo_ov,
-         "clip_samples": clip_samples,
-         "max_gap_s": max_gap_s,
-+        "epoch_jitter_max_s": epoch_jitter_max_s,
-         "idle_vib_med": idle_vib_med,
-         "spin_vdf_p90": spin_vdf_p90,
-         "boot_at_start": boot_at_start,
--        "programme": programme,
-+        "programme": programme_display,
-         "water_temp": water_temp,
--        "spin_level": spin_level,
--        "context_source": context_source,
-+        "context_source": raw_source,
-     }
- 
- 
- # =============================================================================
--# SECTION 3: Report Generator
-+# SECTION 3: Dynamic Report Generation
- # =============================================================================
- def generate_cycle_signature_report() -> Path:
-     """
-     Generate markdown report for all real sessions and write to ml/models/cycle_signature_report.md.
-+    All summary text, classifications, and grouping tables are computed dynamically.
-     """
-     context_map = load_session_context_map()
- 
--    # Find all CSV files in data/real_sessions/ (ignoring desktop.ini)
-+    # Collect only .csv files, ignoring desktop.ini or non-csv items
-     csv_files = sorted([
-         f for f in REAL_SESSIONS_DIR.iterdir()
-         if f.is_file() and f.suffix.lower() == ".csv"
-@@ -288,6 +378,23 @@ def generate_cycle_signature_report() -> Path:
-         res = analyze_session_csv(f, ctx)
-         results.append(res)
- 
-+    # Compute grouping dictionary dynamically: signature_class -> list of session records
-+    groups: Dict[str, List[Dict[str, Any]]] = {}
-+    for r in results:
-+        sig = r["signature_class"]
-+        groups.setdefault(sig, []).append(r)
-+
-+    # Assert that every session strictly satisfies its class criteria
-+    for r in results:
-+        sig = r["signature_class"]
-+        expected_sig = classify_signature(
-+            max_power=100.0 if r["active_min"] != "n/a" else 0.0,
-+            heater_min=r["heater_min_num"],
-+            spin_blocks=r["spin_blocks_num"],
-+            active_min=r["active_min_num"],
-+        )
-+        assert sig == expected_sig, f"Grouping invariant violated for {r['file']}: {sig} != {expected_sig}"
-+
-     # Format Markdown document
-     lines: List[str] = [
-         "# Wash Cycle Physical Signatures & Programme Report",
-@@ -300,24 +407,35 @@ def generate_cycle_signature_report() -> Path:
-         "",
-         "## 1. Executive Summary & Physics Findings",
-         "",
--        "Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:",
--        "- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).",
--        "- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).",
--        "- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).",
--        "- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.",
-+        "Archived wash cycles were classified by their measured electrical power and mechanical spin signatures into computed groups:",
-+    ]
-+
-+    for sig_name in sorted(groups.keys()):
-+        members = groups[sig_name]
-+        member_files = ", ".join(f"`{m['file']}`" for m in members)
-+        lines.append(f"- **{sig_name} ({len(members)} cycles):** {member_files}")
-+
-+    lines.extend([
-+        "",
-+        "**Sensor Integrity Across Firmware-07 Runs:**",
-+        "- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.",
-+        "- Maximum spin extraction dominant frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM) across all spin blocks.",
-+        "- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).",
-+        "- Zero accelerometer clipping samples occurred across all sessions.",
+@@ -421,7 +464,7 @@ def generate_cycle_signature_report() -> Path:
+         "- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.",
+         "- Maximum spin extraction dominant frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM) across all spin blocks.",
+         "- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).",
+-        "- Zero accelerometer clipping samples occurred across all sessions.",
++        "- Zero accelerometer clipping samples occurred across all firmware-07 sessions.",
          "",
          "---",
          "",
-         "## 2. Comprehensive Cycle Signatures Table",
-         "",
--        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |",
--        "|---|---|---|---|---|---|---|---|---|---|",
--    ]
-+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |",
-+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
-+    ])
- 
-     for r in results:
-         lines.append(
-             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
--            f"{r['heater_min']} | {r['n_blocks']} | {r['programme']} | {r['water_temp'] or '-'} | `{r['context_source']}` |"
-+            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
-+            f"`{r['programme']}` | {r['water_temp'] or '-'} | `{r['context_source']}` |"
-         )
- 
-     lines.extend([
-@@ -328,15 +446,15 @@ def generate_cycle_signature_report() -> Path:
-         "",
-         "Telemetry verification table for firmware-07 45-column windowed records:",
-         "",
--        "| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |",
--        "|---|---|---|---|---|---|---|---|",
-+        "| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Epoch Jitter Max (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |",
-+        "|---|---|---|---|---|---|---|---|---|",
-     ])
- 
-     fw07_results = [r for r in results if r["schema"] == "fw07"]
-     for r in fw07_results:
-         lines.append(
-             f"| `{r['file']}` | {r['med_n_accel']} / {r['min_n_accel']} | {r['fifo_ov']} | {r['clip_samples']} | "
--            f"{r['max_gap_s']} s | {r['idle_vib_med']} m/s² | {r['spin_vdf_p90']} Hz | {r['boot_at_start']} |"
-+            f"{r['max_gap_s']} s | {r['epoch_jitter_max_s']} s | {r['idle_vib_med']} m/s² | {r['spin_vdf_p90']} Hz | {r['boot_at_start']} |"
-         )
- 
-     lines.extend([
-@@ -355,29 +473,50 @@ def generate_cycle_signature_report() -> Path:
-             lines.append("- *No high-power blocks recorded.*")
-         else:
-             for i, b in enumerate(r["blocks"], 1):
--                block_type = "Heater (Wash Temp Control)" if b["max_w"] > 1000 else "Spin Extraction"
-+                block_type = "Heater" if b["max_w"] > HEATER_W else "Spin Extraction"
-                 lines.append(
-                     f"- **Block {i}** ({block_type}): start at **{b['start_min']} min**, peak **{int(b['max_w'])} W**, duration **{b['dur_min']} min** ({b['windows']} windows)"
-                 )
-         lines.append("")
- 
--    # Grouping Table
-+    # Section 5: Grouping Table (computed dynamically)
-     lines.extend([
-         "---",
-         "",
-         "## 5. Physical Signature Grouping",
-         "",
--        "Cycles clustered by verified physical parameters (Heater Activity $\\times$ Spin Block Count):",
-+        "Cycles clustered dynamically by verified physical rules (Heater Minutes $\\times$ Spin Block Count):",
-         "",
--        "| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |",
-+        "| Signature Class | Physical Decision Rule | Member Count | Member Sessions |",
-         "|---|---|---|---|",
--        "| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |",
--        "| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |",
--        "| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |",
--        "| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |",
--        "",
-     ])
- 
-+    rule_descriptions = {
-+        "Long cold (inferred)": "Heater == 0 min, Spin Blocks >= 3",
-+        "Long hot (inferred)": "Heater > 2 min (>1 kW), Spin Blocks >= 2",
-+        "Quick (inferred)": "Heater == 0 min, Spin Blocks == 1, Active < 35 min",
-+        "No power data": "Maximum power < 50 W (legacy unmetered runs)",
-+        "Unclassified": "Does not match predefined operational patterns",
-+    }
-+
-+    # Order groups predictably
-+    ordered_groups = [
-+        "Long cold (inferred)",
-+        "Long hot (inferred)",
-+        "Quick (inferred)",
-+        "No power data",
-+        "Unclassified",
-+    ]
-+
-+    for g_name in ordered_groups:
-+        if g_name in groups:
-+            members = groups[g_name]
-+            rule_text = rule_descriptions.get(g_name, "-")
-+            member_str = "<br>".join(f"`{m['file']}`" for m in members)
-+            lines.append(f"| **{g_name}** | {rule_text} | {len(members)} | {member_str} |")
-+
-+    lines.append("")
-+
-     OUTPUT_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-     report_content = "\n".join(lines) + "\n"
-     OUTPUT_REPORT_PATH.write_text(report_content, encoding="utf-8")
 diff --git a/ml/models/cycle_signature_report.md b/ml/models/cycle_signature_report.md
-index 4188d9f..60f966f 100644
+index 60f966f..15ca0d8 100644
 --- a/ml/models/cycle_signature_report.md
 +++ b/ml/models/cycle_signature_report.md
 @@ -1,6 +1,6 @@
  # Wash Cycle Physical Signatures & Programme Report
  
--**Generated:** 2026-10-21 15:28:29  
-+**Generated:** 2026-10-21 15:44:53  
+-**Generated:** 2026-10-21 15:44:53  
++**Generated:** 2026-10-21 16:20:02  
  **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
  **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
  
-@@ -8,31 +8,37 @@
- 
- ## 1. Executive Summary & Physics Findings
- 
--Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:
--- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).
--- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).
--- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).
--- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.
-+Archived wash cycles were classified by their measured electrical power and mechanical spin signatures into computed groups:
-+- **Long cold (inferred) (4 cycles):** `wash_cycle_2026-10-16_0857.csv`, `wash_cycle_2026-10-17_0718.csv`, `wash_cycle_2026-10-18_0516.csv`, `wash_cycle_2026-10-19_0911.csv`
-+- **Long hot (inferred) (1 cycles):** `wash_cycle_2026-10-20_0744.csv`
-+- **No power data (6 cycles):** `wash_cycle_2026-10-11_1019.csv`, `wash_cycle_2026-10-12_1019.csv`, `wash_cycle_2026-10-15_1020.csv`, `wash_cycle_2026-10-15_morning.csv`, `wash_cycle_2026-10-17_0835.csv`, `wash_cycle_2026-10-19_0022.csv`
-+- **Quick (inferred) (2 cycles):** `wash_cycle_2026-10-21_0514.csv`, `wash_cycle_2026-10-21_0631.csv`
-+
-+**Sensor Integrity Across Firmware-07 Runs:**
-+- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
-+- Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
-+- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).
-+- Zero accelerometer clipping samples occurred across all sessions.
+@@ -18,7 +18,7 @@ Archived wash cycles were classified by their measured electrical power and mech
+ - Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
+ - Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
+ - Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).
+-- Zero accelerometer clipping samples occurred across all sessions.
++- Zero accelerometer clipping samples occurred across all firmware-07 sessions.
  
  ---
- 
- ## 2. Comprehensive Cycle Signatures Table
- 
--| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |
--|---|---|---|---|---|---|---|---|---|---|
--| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | unknown | - | `unknown` |
--| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
--| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | unknown | - | `unknown` |
--| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
--| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 5 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | 0 | 0 | 0 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 4 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | 0 | 0 | 0 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 4 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | unknown | - | `unknown` |
--| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | unknown | - | `unknown` |
-+| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |
-+|---|---|---|---|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | `smartthings_live` |
-+| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
-+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
- 
- ---
- 
-@@ -40,12 +46,12 @@ Firmware-07 wash cycles exhibit distinct physical profiles directly correspondin
- 
- Telemetry verification table for firmware-07 45-column windowed records:
- 
--| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |
--|---|---|---|---|---|---|---|---|
--| `wash_cycle_2026-10-19_0911.csv` | 1013 / 965 | 1 | 0 | 7.75 s | 0.032 m/s² | 19.9 Hz | yes |
--| `wash_cycle_2026-10-20_0744.csv` | 1014 / 964 | 1 | 0 | 8.78 s | 0.032 m/s² | 19.9 Hz | yes |
--| `wash_cycle_2026-10-21_0514.csv` | 1013 / 962 | 1 | 0 | 8.38 s | 0.032 m/s² | 20.0 Hz | yes |
--| `wash_cycle_2026-10-21_0631.csv` | 1013 / 1012 | 0 | 0 | 8.68 s | 0.032 m/s² | 20.0 Hz | no |
-+| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Epoch Jitter Max (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |
-+|---|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-19_0911.csv` | 1013 / 965 | 1 | 0 | 5.02 s | 2.74 s | 0.032 m/s² | 19.9 Hz | yes |
-+| `wash_cycle_2026-10-20_0744.csv` | 1014 / 964 | 1 | 0 | 5.02 s | 3.75 s | 0.032 m/s² | 19.9 Hz | yes |
-+| `wash_cycle_2026-10-21_0514.csv` | 1013 / 962 | 1 | 0 | 5.02 s | 3.36 s | 0.032 m/s² | 20.0 Hz | yes |
-+| `wash_cycle_2026-10-21_0631.csv` | 1013 / 1012 | 0 | 0 | 5.02 s | 3.65 s | 0.032 m/s² | 20.0 Hz | no |
- 
- ---
- 
-@@ -59,7 +65,7 @@ Detailed timing and electrical peak for all blocks with $\ge 3$ consecutive wind
- - **Block 3** (Spin Extraction): start at **60.6 min**, peak **372 W**, duration **2.5 min** (30 windows)
- 
- ### `wash_cycle_2026-10-20_0744.csv` (fw07, 71 active min)
--- **Block 1** (Heater (Wash Temp Control)): start at **3.5 min**, peak **2290 W**, duration **11.9 min** (142 windows)
-+- **Block 1** (Heater): start at **3.5 min**, peak **2290 W**, duration **11.9 min** (142 windows)
- - **Block 2** (Spin Extraction): start at **40.1 min**, peak **614 W**, duration **2.6 min** (31 windows)
- - **Block 3** (Spin Extraction): start at **50.7 min**, peak **902 W**, duration **2.6 min** (31 windows)
- - **Block 4** (Spin Extraction): start at **67.4 min**, peak **405 W**, duration **2.4 min** (29 windows)
-@@ -74,12 +80,12 @@ Detailed timing and electrical peak for all blocks with $\ge 3$ consecutive wind
- 
- ## 5. Physical Signature Grouping
- 
--Cycles clustered by verified physical parameters (Heater Activity $\times$ Spin Block Count):
-+Cycles clustered dynamically by verified physical rules (Heater Minutes $\times$ Spin Block Count):
- 
--| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |
-+| Signature Class | Physical Decision Rule | Member Count | Member Sessions |
- |---|---|---|---|
--| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |
--| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |
--| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |
--| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |
-+| **Long cold (inferred)** | Heater == 0 min, Spin Blocks >= 3 | 4 | `wash_cycle_2026-10-16_0857.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-19_0911.csv` |
-+| **Long hot (inferred)** | Heater > 2 min (>1 kW), Spin Blocks >= 2 | 1 | `wash_cycle_2026-10-20_0744.csv` |
-+| **Quick (inferred)** | Heater == 0 min, Spin Blocks == 1, Active < 35 min | 2 | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` |
-+| **No power data** | Maximum power < 50 W (legacy unmetered runs) | 6 | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-19_0022.csv` |
  
