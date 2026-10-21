@@ -1,52 +1,42 @@
 # Plan for Antigravity
 
-**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Stop writing a guessed load class; record real load (kg) in the session context file
+**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Title:** Fix misleading health-index descriptions in the feature dictionary (follow-up to load_class)
 **Date:** 2026-10-21
 
-## Step 0 (do first, every task from now on)
-Commit this PLAN.md before any other change: `docs: plan load_class retirement`. On 21 Oct a pull rolled PLAN.md back to an older committed copy and the task was lost; committing it first prevents that.
+## Step 0
+Commit this PLAN.md first: `docs: plan dictionary honesty fix`.
 
 ## Review verdict that produced this plan
-APPROVED: `c597e60`, `03a883e` (dashboard wash-type badge, summary line, block shading, cursor vs run badges, review notes). Previous plan archived as `PLAN_DONE_2026-10-21_dashboard_badge.md`.
+CHANGES NEEDED on `020e93e` (load_class retirement). Previous plan archived by you as `PLAN_DONE_2026-10-21_load_class.md`.
 
-Checked by Claude: badges for all 13 sessions match the report; summary lines match (64/71/22/21 active min, 11.9 min heater on 20 Oct); screenshots show 1 heater + 3 spin shadings on 20 Oct and 1 spin on 21 Oct 0514, with "(inferred from power)"; "(at cursor)" labels and run-median row present; `maxAgeMs` line unchanged; `node --check` passes on all four pages (re-run by Claude); no "rpm" in the pages; patch is clean UTF-8.
+What passed (checked by Claude): PLAN.md committed first (`bb8aca3`); `session_export.py` writes `load_class = "unknown"` and no longer calls the heuristic; `compute_weight_and_class()` has the warning docstring; `data/session_context.csv` has 13 rows with empty `load_kg,load_source`; tests cover manual load surviving backfill; report has a Load (kg) column; no `data/real_sessions/` change; no secrets; patch UTF-8.
 
-Notes, no rework:
-- Page size is now 787,709 bytes against the 800 KB limit: about 12 KB of headroom. Any future dashboard task must remove bytes before adding.
-- The `?session=` URL parameter was not in the plan. It only looks up an existing session key, so it is safe; keep it, but list unplanned additions under "Suggestions for Claude" next time instead of shipping them.
-- "Run median Dom. freq" is ~2 Hz because most running windows are drum tumbling, not spin. It is honest; a "spin-block median" (≈20 Hz) could be added later when page space allows.
+What failed:
+1. **`data/pdm_feature_dictionary.json` now claims the health indices are measured.** The commit changed `bearing_health_index`, `damper_health_index` and `machine_health_index` descriptions to "Measured primarily via 16 kHz INMP441…", "Measured via low-frequency MPU-6050…", "Smoothed via EWMA/CUSUM at the cycle level". This was not in the plan and breaks the honest-labels rule (INVARIANTS §3, CLAUDE.md: "its health-index and parasitic-drag fields are not model outputs"). It is also factually wrong: "50 Hz MPU-6050, Nyquist 25 Hz" (firmware 07 samples at 200 Hz) and "CUSUM" (tried and rejected, see `ml/calibration.py`).
+2. **HANDOFF did not follow the template:** missing "Excluded from Patch", "Acceptance Criteria" checklist, "Invariants Check", "Blocked / Questions"; dropped the carried-forward `Open UNVERIFIED items`; patch is 48.7 KB with no `git diff --stat` at the top (workflow rule 6).
 
-## Objective
-Adam asked (21 Oct) why every cycle says `load_class = MEDIUM`. It is a guess: `compute_weight_and_class()` (`firmware/smartthings_client.py`) averages power between 60–350 W in the first 30 rows; on firmware 07 those rows are fill at ~5–30 W, so nothing qualifies and it falls back to SmartThings water level, else a hard-coded 5 kg → MEDIUM. The kg formula `(W − 70) / 15` was never calibrated. The ML does not use it. After this task, new archived sessions say `unknown` instead of a guess, and real load can be recorded per session in `data/session_context.csv`.
-
-## Context
-- INVARIANTS §4: `data/real_sessions/*.csv` are originals (do not rewrite old values); the CSV column `load_class` must stay (schema). §1: honest reporting.
-- Code style: exhaustive inline comments, section headers.
+Notes (no action): `firmware/session_export.py` and `firmware/tests/test_session_export.py` show as new files in git, so earlier working code was committed for the first time. That is fine; say so in HANDOFF when it happens. The dictionary was also re-indented (arrays split over lines); acceptable.
 
 ## Implementation Steps
-1. `firmware/session_export.py`: write `load_class = "unknown"` for every new session. Keep calling nothing else that guesses. Leave `compute_weight_and_class()` in place but add a docstring warning "UNCALIBRATED heuristic, not used for exported data since 2026-10-21"; do not delete it (other scripts import it).
-2. `data/session_context.csv`: add two columns at the end, `load_kg` and `load_source` (`manual` / `smartthings` / empty). Update `firmware/session_context.py` (load, save, upsert) so existing rows get empty values, `manual` rows keep their values, and backfill stays idempotent. Do not guess kg anywhere.
-3. `data/pdm_feature_dictionary.json`: mark `load_class` (and `estimated_load_kg` if present) as "heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown". Wording only.
-4. `ml/cycle_signature_report.py`: add a "Load (kg)" column from the sidecar (`-` when empty). Do not add load to the dashboard (no page budget).
-5. `firmware/capture_pdm_dataset.py` still prints and stores `estimated_load_kg`, `load_class` and a "parasitic drag" derived from them. Do NOT change its maths in this task; add a printed line "(load estimate is an uncalibrated heuristic)" next to the load output, and list the file under "Suggestions for Claude" if you think it should be retired.
-6. Tests: extend `firmware/tests/test_session_context.py` (new columns, manual load kept, idempotent backfill); update `firmware/tests/test_session_export.py` if it asserts a load class. Run all suites below.
-7. HANDOFF with the template (keep `Open UNVERIFIED items`), `last_diff.patch` per workflow rule 6. Commit `fix(data): stop exporting guessed load_class; add load_kg to session context`. Pull --rebase, push.
+1. In `data/pdm_feature_dictionary.json`, set the description of `bearing_health_index`, `damper_health_index`, `machine_health_index`, `parasitic_drag_w` and `parasitic_drag_pct` to: "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)." Keep `type` and `unit`. Keep the load_class / estimated_load_kg wording you added.
+2. Make the embedded schema in `firmware/capture_pdm_dataset.py` `save_feature_dictionary()` produce exactly the same descriptions (it rewrites the JSON every run, so the two must match). Do not change any maths in that script.
+3. Search the rest of the repo outside `archive/` (`docs/`, `ml/`, `firmware/`, `build_clean_dashboard.py`) for "Nyquist limit (25 Hz)" or "50 Hz MPU": report any hits in HANDOFF under "Suggestions for Claude"; do not edit them in this task.
+4. Run `py firmware/capture_pdm_dataset.py --help` (or import the module and call `save_feature_dictionary()` into a temp dir) to show the generated JSON equals the committed file. Do not run a live capture.
+5. HANDOFF using the full template from `.agents/rules/architect-handoff-workflow.md` §7, including `Open UNVERIFIED items (carried forward)` from the 21 Oct 16:38 handoff (Apps Script trigger; workflow run with GitHub secrets; real-wash session start/END/archive; active-wash polling; session-change reset; historical.html visual check; DevTools network checks; `/window.json` and `WHO_AM_I` 0x75 quirk) plus "real weighed load entry". `last_diff.patch` per rule 6 with `--stat` on top if over 40 KB. Commit `fix(data): dictionary health fields are legacy, not measured`. Pull --rebase, push.
 
 ## Out of Scope
-- Rewriting any existing CSV in `data/real_sessions/` or `data/testing_data/`.
-- Dashboard, firmware, ML pipeline/features/thresholds/LOCO.
-- Building a new load estimator (needs weighed loads first).
+Everything else; no code logic changes.
 
 ## Acceptance Criteria
-- [x] PLAN.md committed first (hash in HANDOFF).
-- [x] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
-- [x] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
-- [x] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
-- [x] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
-- [x] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
+- [ ] PLAN.md committed first.
+- [ ] `grep -n "Measured\|Nyquist\|CUSUM" data/pdm_feature_dictionary.json` → no hits.
+- [ ] The five legacy fields carry the LEGACY CONTRACT FIELD wording in both the JSON and `capture_pdm_dataset.py`; generated JSON equals the committed file.
+- [ ] HANDOFF follows the full template, with the carried-forward UNVERIFIED list.
+- [ ] `py -m py_compile firmware/capture_pdm_dataset.py`; `py firmware/tests/test_session_export.py` passes; no secrets; pushed.
 
 ## Queue (Claude will plan these next; do not start)
-1. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot (rig reboots as the washer switches on). Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE); consider fixing `epochMs()` jitter (2.7–3.8 s) in the same task. Needs a flash, so Adam confirms first.
-2. **ML: programme-aware evaluation.** Once each signature class has ≥ 3 firmware-07 cycles, add LOCO results per class and test SmartThings-phase conditioning. Per-cycle normalisation is not allowed.
-3. **Dashboard page budget.** Pages are at 787.7 KB of 800 KB; before any further dashboard feature, plan a size reduction (e.g. stop embedding testing sessions, or load session data from separate JSON files).
+1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
+2. **ML: programme-aware evaluation** once each signature class has ≥ 3 firmware-07 cycles. No per-cycle normalisation.
+3. **Dashboard page budget** (787.7 KB of 800 KB) before any new dashboard feature.
+4. **Docs: track is now PLANET · 03 Energy Efficiency (Adam, 21 Oct).** Update `docs/proposals/PROPOSAL_WRITING_GUIDE.md` (and any repo doc naming "02 Circular Economy" as our track) to say the one track is Energy Efficiency, with circular economy as a supporting benefit only. Add the two new citable sources used in the proposal: Saidur 2009, *Energy Policy* 37(10):4104–4113, doi:10.1016/j.enpol.2009.04.052 (air-conditioning ≈ 57% of energy in Malaysian office buildings), and Melgaard et al. 2022, *Energies* 15(12):4366, doi:10.3390/en15124366 (wear-related faults raise building energy use; US faults ≈ 103–500 TWh/yr, citing Roth et al. 2004). Note that the 5–20% O&M energy-savings range is in US DOE FEMP O&M guide §2.4. The RM 900/yr figure stays labelled as an estimate. Docs only. The Drive copies in `Hackathon/` were already updated by Claude on 21 Oct.
