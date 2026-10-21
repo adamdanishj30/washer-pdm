@@ -77,7 +77,10 @@ Write the failure into `HANDOFF.md` and stop.
 
 ## 6. Handoff Rules
 
-1. **Diff Patch (`docs/handoffs/last_diff.patch`):** Every handoff saves the full diff of the task's commit(s) to `docs/handoffs/last_diff.patch` (overwrite each time; exclude binary files and generated pages `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html`, `*.pdf`, `proposal_*presentation.html`; list excluded files by name with their size change). `HANDOFF.md` links to it.
+1. **Diff Patch (`docs/handoffs/last_diff.patch`):** Every handoff saves the diff of the task's commit(s) to `docs/handoffs/last_diff.patch` (overwrite each time). HANDOFF.md links to it.
+   - **Write it as UTF-8 with git itself, never with PowerShell `>`** (PowerShell writes UTF-16, which doubles the size and is unreadable to Claude). Use: `git diff <first>^ <last> --output=docs/handoffs/last_diff.patch -- . ":(exclude)*.pdf" ":(exclude)index.html" ":(exclude)dashboard.html" ":(exclude)cloud_dashboard.html" ":(exclude)historical.html" ":(exclude)docs/proposals/proposal_*presentation.html" ":(exclude)docs/handoffs/PLAN.md" ":(exclude)docs/handoffs/HANDOFF.md" ":(exclude)docs/handoffs/last_diff.patch"`.
+   - Exclude PLAN.md and HANDOFF.md (Claude reads those directly) and the generated or binary files above; list excluded files by name with their size change in HANDOFF.
+   - Check before handing off: the file starts with `diff --git` when opened as text, and contains no NUL bytes. If it is over 40 KB, put `git diff --stat` at the top and say in HANDOFF which file makes it large.
 2. **No Amending:** Never run `git commit --amend`. Record the commit hash in `HANDOFF.md` without committing `HANDOFF.md` again, or commit `HANDOFF.md` in a separate follow-up commit.
 
 ---
