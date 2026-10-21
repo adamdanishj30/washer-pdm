@@ -493,7 +493,7 @@ def generate_cycle_signature_report() -> Path:
             else:
                 lines.append(f"- **{display}:** n/a (unmetered runs)")
     lines.append("")
-    lines.append("Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.")
+    lines.append("Energy is integrated from the smart-plug power on each row: on firmware 07 a per-window mean of 1 Hz readings, on legacy runs a single reading every 5 s. Peak W is the highest row value, not an instantaneous peak. This is the washer's total electrical draw, not a fault signal.")
 
     lines.extend([
         "",

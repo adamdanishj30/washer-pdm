@@ -1,6 +1,6 @@
 # Wash Cycle Physical Signatures & Programme Report
 
-**Generated:** 2026-10-21 19:05:25  
+**Generated:** 2026-10-21 19:30:11  
 **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
 **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
 
@@ -20,7 +20,7 @@ Archived wash cycles were classified by their measured electrical power and mech
 - **Quick:** 0.03–0.04 kWh per wash
 - **No power data:** n/a (unmetered runs)
 
-Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.
+Energy is integrated from the smart-plug power on each row: on firmware 07 a per-window mean of 1 Hz readings, on legacy runs a single reading every 5 s. Peak W is the highest row value, not an instantaneous peak. This is the washer's total electrical draw, not a fault signal.
 
 **Sensor Integrity Across Firmware-07 Runs:**
 - Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
