@@ -138,8 +138,9 @@ def archive_session(sid: str, history: Dict[str, Any], prune: bool = False,
     if history[sid].get("schema") == 3:
         try:
             from firmware.session_context import resolve_context_for_session, upsert_session_context
-            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path)
-            upsert_session_context(ctx)
+            target_context = DATA_DIR / "session_context.csv"
+            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path, context_file=target_context)
+            upsert_session_context(ctx, context_file=target_context)
             print(f"  [CONTEXT] recorded session context: {ctx.get('programme', 'unknown')} ({ctx.get('context_source', 'unknown')})")
         except Exception as ctx_err:
             print(f"  [WARN] could not record session context: {ctx_err}")

@@ -323,6 +323,12 @@ def resolve_context_for_session(
         except Exception as e:
             note = f"timeline query error: {e}"
 
+    # Minor rule: If programme is unknown but water_temp or spin_level was retrieved
+    # from the live timeline, attribute context_source to smartthings_live with note.
+    if programme == "unknown" and (water_temp or spin_level):
+        source = "smartthings_live"
+        note = "partial: no programme"
+
     # Calculate start and end epoch
     path_to_check = csv_path or (REAL_SESSIONS_DIR / session_file)
     start_ms, end_ms = extract_session_time_bounds(path_to_check)
@@ -360,6 +366,25 @@ def backfill_all_sessions(
 
     # Collect only .csv files, explicitly ignoring desktop.ini or temporary files
     csv_files = sorted([f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() == ".csv"])
+    valid_files = {f.name for f in csv_files}
+
+    # Reconcile sidecar against existing files:
+    # Any row in session_context.csv whose session_file does not exist on disk is removed,
+    # UNLESS context_source == 'manual' (which is preserved with a warning).
+    existing_rows = load_session_context(target_context)
+    if existing_rows:
+        reconciled_rows = []
+        for r in existing_rows:
+            sf = r.get("session_file")
+            if sf in valid_files:
+                reconciled_rows.append(r)
+            else:
+                if r.get("context_source") == "manual":
+                    print(f"  [SESSION CONTEXT] Warning: manual record for {sf} retained but file is missing from {target_dir.name}")
+                    reconciled_rows.append(r)
+                else:
+                    print(f"  [SESSION CONTEXT] Reconciling: removing phantom session {sf}")
+        save_session_context(reconciled_rows, target_context)
 
     print(f"[SESSION CONTEXT] Backfilling context for {len(csv_files)} sessions from {target_dir.name}...")
     processed = 0

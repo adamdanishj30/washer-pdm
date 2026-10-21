@@ -150,8 +150,8 @@ class TestSessionContext(unittest.TestCase):
             w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248, 1013])
             w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "LIGHT", 1792532644998, 1014])
 
-        # 2. Create mock legacy session CSV
-        legacy_file = self.sessions_dir / "wash_cycle_2026-10-16_0857.csv"
+        # 2. Create mock legacy session CSV (use a filename with no Firebase phase data)
+        legacy_file = self.sessions_dir / "wash_cycle_2026-10-11_1019.csv"
         with open(legacy_file, "w", encoding="utf-8", newline="") as f:
             w = csv.writer(f)
             w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class"])
@@ -192,6 +192,68 @@ class TestSessionContext(unittest.TestCase):
         content2 = self.context_file.read_text(encoding="utf-8")
 
         self.assertEqual(content1, content2, "Backfill must be strictly idempotent")
+
+
+    def test_backfill_reconciles_phantom_rows(self) -> None:
+        """
+        Verify that backfill reconciles phantom rows:
+        - Removes entries whose CSV does not exist on disk if context_source != 'manual'
+        - Retains entries whose context_source == 'manual' even if CSV is absent
+        """
+        # 1. Create one real CSV on disk
+        real_csv = self.sessions_dir / "wash_cycle_real.csv"
+        with open(real_csv, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms"])
+            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248])
+
+        # 2. Pre-populate context file with 3 rows:
+        # a) real file
+        # b) phantom file (unknown source) -> must be removed
+        # c) missing file (manual source) -> must be retained
+        rows = [
+            {
+                "session_file": "wash_cycle_real.csv",
+                "start_epoch_ms": "1792530853248",
+                "end_epoch_ms": "1792532644998",
+                "programme": "unknown",
+                "water_temp": "",
+                "spin_level": "",
+                "context_source": "unknown",
+                "note": "",
+            },
+            {
+                "session_file": "wash_cycle_phantom_temp.csv",
+                "start_epoch_ms": "1792300005024",
+                "end_epoch_ms": "1792300904320",
+                "programme": "unknown",
+                "water_temp": "",
+                "spin_level": "",
+                "context_source": "unknown",
+                "note": "phantom row",
+            },
+            {
+                "session_file": "wash_cycle_manual_missing.csv",
+                "start_epoch_ms": "1792400000000",
+                "end_epoch_ms": "1792401000000",
+                "programme": "CustomSpecial",
+                "water_temp": "60C",
+                "spin_level": "1400",
+                "context_source": "manual",
+                "note": "retained manual note",
+            },
+        ]
+        save_session_context(rows, context_file=self.context_file)
+
+        # 3. Run backfill
+        backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
+
+        # 4. Verify context rows
+        result_rows = {r["session_file"]: r for r in load_session_context(self.context_file)}
+        self.assertIn("wash_cycle_real.csv", result_rows)
+        self.assertNotIn("wash_cycle_phantom_temp.csv", result_rows, "Phantom non-manual row should be removed")
+        self.assertIn("wash_cycle_manual_missing.csv", result_rows, "Manual row must be retained even if CSV missing")
+        self.assertEqual(result_rows["wash_cycle_manual_missing.csv"]["programme"], "CustomSpecial")
 
 
 if __name__ == "__main__":
