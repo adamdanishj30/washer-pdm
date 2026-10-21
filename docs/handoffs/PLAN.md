@@ -1,48 +1,47 @@
 # Plan for Antigravity
 
-**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-**Title:** Stop the synthetic ML test writing to the real `ml/models/`; clarify the energy note
+**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Title:** Repo hygiene: commit untracked source files (after a secrets scan) and mark `capture_pdm_dataset.py` as legacy
 **Date:** 2026-10-21
 
 ## Step 0
-Before ANY other git command (no pull, stash, checkout or reset first): `git add docs/handoffs/PLAN.md` and commit `docs: plan isolate synthetic test outputs`. Then `git pull --rebase` (no `--autostash`).
+Before ANY other git command (no pull, stash, checkout or reset first): `git add docs/handoffs/PLAN.md` and commit `docs: plan repo hygiene`. Then `git pull --rebase` (no `--autostash`).
 
 ## Review verdict that produced this plan
-APPROVED: `06595ff`, `f576438` (energy per wash). You archived the plan as `PLAN_DONE_2026-10-21_energy_per_wash.md`.
-
-Checked by Claude: `energy_kwh` / `peak_power_w` computed in `analyze_session_csv()` with the existing `dt_seconds`; `None` → `n/a` for all 6 No power data rows; classes, member lists and counters unchanged in the regenerated report; script values match Claude's within 0.001 kWh (18 Oct 0.106 vs 0.107 is the legacy 5.0 s step, accepted); the new test uses a temp dir; guide §4 row and §3 Say line carry the "one household washer" rule. Your diagnosis of the `loco_report.md` mtime is correct and is the task below.
+APPROVED: `ef627d7`, `f40d373` (synthetic test isolation, energy note). Adam asked on 21 Oct to finish the queue.
 
 ## Objective
-`ml/tests/test_pipeline_synthetic.py` runs `train_unsupervised_pdm.py`, which writes the synthetic model and LOCO report over the REAL `ml/models/pdm_detector.joblib`, `pdm_detector_meta.json` and `loco_report.{md,json}`, then restores the old bytes in `finally`. While the test runs, the deployed detector is a synthetic one, and if the process is killed before `finally`, the real artifacts are lost. Make the test write only to a temp dir.
-
-Also, one wording fix: the report says energy comes from "1 Hz smart-plug power averaged per window", which is true for firmware 07 only. Legacy rows are a single power snapshot every 5 s, and "Peak W" is the highest per-row value, not an instantaneous peak.
+Adam will put the repo link in the hackathon proposal. In the last patch, `ml/train_unsupervised_pdm.py` and `ml/tests/test_pipeline_synthetic.py` showed as `new file`, so source code may have been missing from git. Make sure every source file is tracked and nothing secret is. Also stop `firmware/capture_pdm_dataset.py` from looking like the production path. It still computes a load guess and "parasitic drag", and production archiving no longer uses it.
 
 ## Context
-- `ml/train_unsupervised_pdm.py`: `MODELS_DIR`, `ARTIFACT`, `META` are module constants (lines ~53–55). It writes in lines ~122–144. argparse is in `main()` (~line 92) and already has `--data-dir`.
-- `ml/tests/test_pipeline_synthetic.py` lines ~63–86: backup/restore block, reads `models / "loco_report.json"` and `models / "pdm_detector_meta.json"`.
-- Check whether any other file imports `MODELS_DIR`, `ARTIFACT` or `META` from `train_unsupervised_pdm` (grep `ml/` and `firmware/`). Their default behaviour must not change.
+- `.gitignore` already excludes `.env`, `.env.local`, `secrets.h`, `.smartthings_token_cache.json`, `*.bin`, `**/build/`, `firmware/tapo-esp32-ref/`, `.agents/*`.
+- `CLAUDE.md` lines ~55, 56, 62 and 76 present `capture_pdm_dataset.py` as a normal command or tool.
+- Never read or list inside `archive/`. Never modify `data/real_sessions/*.csv`.
 
 ## Implementation Steps
-1. `train_unsupervised_pdm.py`: add `--models-dir` (default: the current `ml/models` path). Derive the artifact, meta and report paths from it inside `main()`, and use those for every write and for the `[SAVE]` print. Keep the module constants as defaults, so imports elsewhere still work. Make no change to training, evaluation or thresholds.
-2. `test_pipeline_synthetic.py`: pass `--models-dir <tempdir>/models`, read both JSONs from there, and delete the backup/restore block. Keep every assertion unchanged.
-3. `ml/cycle_signature_report.py`: replace the energy note with: "Energy is integrated from the smart-plug power on each row: on firmware 07 a per-window mean of 1 Hz readings, on legacy runs a single reading every 5 s. Peak W is the highest row value, not an instantaneous peak. This is the washer's total electrical draw, not a fault signal." Regenerate `ml/models/cycle_signature_report.md`. Only that note may change in the diff, plus the Generated line.
-4. Proof: before and after running the synthetic test, record the size and mtime of every file in `ml/models/`, and put both lists in HANDOFF (they must be identical). Run all tests.
-5. HANDOFF with the full template plus the carried-forward UNVERIFIED list. `last_diff.patch` per rule 6. Commit `ml: synthetic test writes to temp models dir; energy note wording`. Pull --rebase (no autostash), push.
+1. Run `git status --porcelain --untracked-files=all` (gitignored files excluded). Put the full list in HANDOFF, grouped as: source (`.py`, `.ino`, `.h`, `.js`, `.html`, `.md`, `.json` configs), data (`data/`), and other. Skip anything under `archive/`, and only count it.
+2. Secrets scan on every untracked **source** file before adding. Search case-insensitively for: `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `auth=`, `FIREBASE_AUTH`, `WIFI_PASS`, `Bearer `, long base64-like strings (≥ 32 chars), and the Wi-Fi SSID `leo` assigned next to a password. List every hit in HANDOFF with file:line and whether it is a real value or just a variable name or comment. Do NOT add any file with a real value; list it under Blocked for Adam.
+3. `git add` only the clean untracked source files, and commit `chore: track untracked source files (secrets-scanned)`. Do not add `data/` files in this task: list them, with sizes, for Adam to decide.
+4. Also check what IS tracked: `git ls-files | grep -iE "\.env|secrets\.h|token_cache|\.bin$"` must be empty. If not, stop and report under Blocked. Do not rewrite history.
+5. `firmware/capture_pdm_dataset.py`: add a banner at the top of the docstring: "LEGACY (not used by production archiving since firmware 07). Its load guess and 'parasitic drag' are uncalibrated heuristics, not measurements. Production path: `firmware/auto_drive_sync_daemon.py` + `firmware/session_export.py`." (Confirm those two paths are the production archive path. If not, name the right ones.) Add a one-line `print` warning with the same meaning at the start of `main()`. Do not change any computation.
+6. `CLAUDE.md`: mark the capture-script commands (lines ~55–56) and the tree entry (~76) as "legacy, not the production path". Keep the `py_compile` line.
+7. Run all tests (`ml/tests/*`, `firmware/tests/*`) and `py -m py_compile` on the edited script.
+8. HANDOFF with the full template, the untracked-file list, the secrets-scan table, the carried-forward UNVERIFIED list, and an answer: "Is every `.py` under `ml/` and `firmware/` now tracked? yes/no". `last_diff.patch` per rule 6 (list newly tracked files by name and size in the stat, since their full content is not a change to review). Commit `chore: mark capture_pdm_dataset.py legacy`. Pull --rebase (no autostash), push.
 
 ## Out of Scope
-Model training logic, thresholds, features, retraining on real data, `loco_report.md` content, classification rules, dashboard, firmware, proposal / `Hackathon/` / video files, `data/`.
+History rewriting, deleting or moving files, `archive/`, `data/` contents, any computation change, firmware `.ino`, dashboard, proposal / `Hackathon/` / video files, secret rotation (Adam's job).
 
 ## Acceptance Criteria
 - [ ] PLAN.md committed before any other git command.
-- [ ] `py ml/train_unsupervised_pdm.py --help` shows `--models-dir`; with no flag, it writes to `ml/models/` exactly as before.
-- [ ] `test_pipeline_synthetic.py` has no backup/restore and passes. The `ml/models/` size and mtime list is identical before and after the run.
-- [ ] Every test assertion is unchanged (diff shows only path changes in the test).
-- [ ] The cycle signature report diff shows only the new energy note and the Generated line.
-- [ ] Pushed; hashes reported.
+- [ ] HANDOFF lists every untracked file found, grouped, and the secrets-scan result for each source file.
+- [ ] No file containing a real secret value was added. `git ls-files` shows no `.env`, `secrets.h`, token cache or `.bin`.
+- [ ] Every clean source file under `ml/`, `firmware/`, `docs/` and the repo root is tracked (`git status --porcelain` shows no untracked source).
+- [ ] `capture_pdm_dataset.py` has the LEGACY banner and warning, and its code diff is only those lines.
+- [ ] `CLAUDE.md` marks the capture script as legacy.
+- [ ] All tests pass (dsp parity SKIP allowed). Pushed; hashes reported.
 
-## Queue (Claude will plan these next; do not start)
-1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
-2. **ML: programme-aware evaluation** once each signature class has ≥ 3 firmware-07 cycles. No per-cycle normalisation.
-3. **Dashboard page budget** (787.7 KB of 800 KB) before any new dashboard feature.
-4. **Retire or clearly mark `firmware/capture_pdm_dataset.py`** (still computes a load guess and "parasitic drag"; production archiving no longer uses it). Antigravity suggestion, 21 Oct.
-5. **Proposal submission files** (track "02 Circular Economy" hits, session counts, energy-per-wash line, other firmware-05-era claims such as `/live.json` at 1 Hz): Adam's `Hackathon/NEEDS_CHANGING.md` batch, only when he says go.
+## Queue (do not start; Claude plans these only when Adam asks)
+1. **Dashboard page budget** (787.7 KB of 800 KB) before any new dashboard feature. Next plan.
+2. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). Needs a flash, so only if Adam says yes.
+3. **ML: programme-aware evaluation** once each signature class has ≥ 3 firmware-07 cycles (today: Long cold 1, Long hot 1, Quick 2 firmware-07). No per-cycle normalisation. Note: with 4 firmware-07 cycles, a default retrain now switches to the windowed schema (`MIN_WINDOWED_CYCLES = 3`) and overwrites `loco_report.*`. Do not retrain without a plan.
+4. **Proposal submission files:** Adam's `Hackathon/NEEDS_CHANGING.md` batch, only when he says go.
