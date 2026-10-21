@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Writing guide §4 and current-state doc: bring facts up to 21 Oct (4 firmware-07 cycles, inferred wash types, no load guess)
 **Date:** 2026-10-21
 
@@ -40,13 +40,13 @@ The guide's §4 "Approved Facts and Numbers" is the source of truth for every pi
 Proposal `.md`/PDF/HTML, `generate_*.py`, `Hackathon/`, video files, code, data files (read only), rebuilding datasets or models, §1/§2/§5–§10 of the guide.
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed first (and the current-state external edit, if any, committed separately).
-- [ ] `grep -n "load_class\|MEDIUM" docs/proposals/PROPOSAL_WRITING_GUIDE.md` returns nothing.
-- [ ] §4 has "Wash type" (with "inferred from power") and "Load weight" rows, each with a source path.
-- [ ] Session count, firmware-07 cycle count and training rows in §3, §4 and the current-state sentence agree with each other and with the files; HANDOFF shows how each was counted.
-- [ ] §4 has the local fail-safe row marked [UNVERIFIED]; "UDP broadcast" and "50 Hz vibration" are under Not allowed.
-- [ ] No number appears that is not traceable to a repo file named in the row.
-- [ ] Only the two docs (plus PLAN/HANDOFF/patch) changed; pushed; hash reported.
+- [x] PLAN.md committed first (and the current-state external edit, if any, committed separately).
+- [x] `grep -n "load_class\|MEDIUM" docs/proposals/PROPOSAL_WRITING_GUIDE.md` returns nothing.
+- [x] §4 has "Wash type" (with "inferred from power") and "Load weight" rows, each with a source path.
+- [x] Session count, firmware-07 cycle count and training rows in §3, §4 and the current-state sentence agree with each other and with the files; HANDOFF shows how each was counted.
+- [x] §4 has the local fail-safe row marked [UNVERIFIED]; "UDP broadcast" and "50 Hz vibration" are under Not allowed.
+- [x] No number appears that is not traceable to a repo file named in the row.
+- [x] Only the two docs (plus PLAN/HANDOFF/patch) changed; pushed; hash reported.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
