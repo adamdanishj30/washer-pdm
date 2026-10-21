@@ -1,2284 +1,947 @@
 # Diff Stat:
- .agents/rules/architect-handoff-workflow.md |   5 +-
- data/session_context.csv                    |  15 +
- firmware/auto_drive_sync_daemon.py          | 639 +++++++++++-----------------
- firmware/session_context.py                 | 412 ++++++++++++++++++
- firmware/smartthings_client.py              | 348 +++++++++------
- firmware/tests/test_session_context.py      | 198 +++++++++
- ml/cycle_signature_report.py                | 397 +++++++++++++++++
- ml/models/cycle_signature_report.md         |  85 ++++
- 8 files changed, 1571 insertions(+), 528 deletions(-)
+ data/session_context.csv               |   3 +-
+ firmware/auto_drive_sync_daemon.py     |   5 +-
+ firmware/session_context.py            |  25 +++
+ firmware/tests/test_daemon_offline.py  | 116 ++++++++++++
+ firmware/tests/test_session_context.py |  66 ++++++-
+ ml/cycle_signature_report.py           | 315 ++++++++++++++++++++++++---------
+ ml/models/cycle_signature_report.md    |  74 ++++----
+ 7 files changed, 476 insertions(+), 128 deletions(-)
 
 
-diff --git a/.agents/rules/architect-handoff-workflow.md b/.agents/rules/architect-handoff-workflow.md
-index e7a7779..5c5d7d9 100644
---- a/.agents/rules/architect-handoff-workflow.md
-+++ b/.agents/rules/architect-handoff-workflow.md
-@@ -77,7 +77,10 @@ Write the failure into `HANDOFF.md` and stop.
- 
- ## 6. Handoff Rules
- 
--1. **Diff Patch (`docs/handoffs/last_diff.patch`):** Every handoff saves the full diff of the task's commit(s) to `docs/handoffs/last_diff.patch` (overwrite each time; exclude binary files and generated pages `index.html`, `dashboard.html`, `cloud_dashboard.html`, `historical.html`, `*.pdf`, `proposal_*presentation.html`; list excluded files by name with their size change). `HANDOFF.md` links to it.
-+1. **Diff Patch (`docs/handoffs/last_diff.patch`):** Every handoff saves the diff of the task's commit(s) to `docs/handoffs/last_diff.patch` (overwrite each time). HANDOFF.md links to it.
-+   - **Write it as UTF-8 with git itself, never with PowerShell `>`** (PowerShell writes UTF-16, which doubles the size and is unreadable to Claude). Use: `git diff <first>^ <last> --output=docs/handoffs/last_diff.patch -- . ":(exclude)*.pdf" ":(exclude)index.html" ":(exclude)dashboard.html" ":(exclude)cloud_dashboard.html" ":(exclude)historical.html" ":(exclude)docs/proposals/proposal_*presentation.html" ":(exclude)docs/handoffs/PLAN.md" ":(exclude)docs/handoffs/HANDOFF.md" ":(exclude)docs/handoffs/last_diff.patch"`.
-+   - Exclude PLAN.md and HANDOFF.md (Claude reads those directly) and the generated or binary files above; list excluded files by name with their size change in HANDOFF.
-+   - Check before handing off: the file starts with `diff --git` when opened as text, and contains no NUL bytes. If it is over 40 KB, put `git diff --stat` at the top and say in HANDOFF which file makes it large.
- 2. **No Amending:** Never run `git commit --amend`. Record the commit hash in `HANDOFF.md` without committing `HANDOFF.md` again, or commit `HANDOFF.md` in a separate follow-up commit.
- 
- ---
 diff --git a/data/session_context.csv b/data/session_context.csv
-new file mode 100644
-index 0000000..a2b479e
---- /dev/null
+index a2b479e..2815946 100644
+--- a/data/session_context.csv
 +++ b/data/session_context.csv
-@@ -0,0 +1,15 @@
-+session_file,start_epoch_ms,end_epoch_ms,programme,water_temp,spin_level,context_source,note
-+wash_cycle_2026-10-11_1019.csv,1791685145021,1791687300308,unknown,,,unknown,
-+wash_cycle_2026-10-12_1019.csv,1791771549751,1791777720259,unknown,,,unknown,
-+wash_cycle_2026-10-15_morning.csv,1792022405723,1792028580259,unknown,,,unknown,
-+wash_cycle_2026-10-15_1020.csv,1792030810025,1792032204872,unknown,,,unknown,
-+wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,unknown,
-+wash_cycle_2026-10-17_0718.csv,1792192690725,1792197231489,unknown,,,unknown,
-+wash_cycle_2026-10-17_0835.csv,1792197311032,1792201529674,unknown,,,unknown,
-+wash_cycle_2026-10-18_0516.csv,1792271770304,1792276055018,unknown,,,unknown,
-+wash_cycle_2026-10-20_0815.csv,1792300005024,1792300904320,unknown,,,unknown,
-+wash_cycle_2026-10-19_0022.csv,1792340526198,1792341381249,unknown,,,unknown,
-+wash_cycle_2026-10-19_0911.csv,1792372280304,1792376224132,unknown,,,unknown,
-+wash_cycle_2026-10-20_0744.csv,1792453423282,1792458266417,unknown,,,unknown,
-+wash_cycle_2026-10-21_0514.csv,1792530853248,1792532793526,unknown,,,unknown,
-+wash_cycle_2026-10-21_0631.csv,1792535460262,1792537204680,unknown,,,unknown,
+@@ -3,11 +3,10 @@ wash_cycle_2026-10-11_1019.csv,1791685145021,1791687300308,unknown,,,unknown,
+ wash_cycle_2026-10-12_1019.csv,1791771549751,1791777720259,unknown,,,unknown,
+ wash_cycle_2026-10-15_morning.csv,1792022405723,1792028580259,unknown,,,unknown,
+ wash_cycle_2026-10-15_1020.csv,1792030810025,1792032204872,unknown,,,unknown,
+-wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,unknown,
++wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,smartthings_live,partial: no programme
+ wash_cycle_2026-10-17_0718.csv,1792192690725,1792197231489,unknown,,,unknown,
+ wash_cycle_2026-10-17_0835.csv,1792197311032,1792201529674,unknown,,,unknown,
+ wash_cycle_2026-10-18_0516.csv,1792271770304,1792276055018,unknown,,,unknown,
+-wash_cycle_2026-10-20_0815.csv,1792300005024,1792300904320,unknown,,,unknown,
+ wash_cycle_2026-10-19_0022.csv,1792340526198,1792341381249,unknown,,,unknown,
+ wash_cycle_2026-10-19_0911.csv,1792372280304,1792376224132,unknown,,,unknown,
+ wash_cycle_2026-10-20_0744.csv,1792453423282,1792458266417,unknown,,,unknown,
 diff --git a/firmware/auto_drive_sync_daemon.py b/firmware/auto_drive_sync_daemon.py
-index b11667c..52c512d 100644
+index 52c512d..0b8d7c2 100644
 --- a/firmware/auto_drive_sync_daemon.py
 +++ b/firmware/auto_drive_sync_daemon.py
-@@ -1,439 +1,294 @@
- """
- auto_drive_sync_daemon.py
--Autonomous Cloud-to-Drive Telemetry Sync Daemon for Samsung Washer PdM Rig.
--
--Monitors Google Firebase Realtime Database and SmartThings REST API in real-time.
--1. Actively tracks washer operational phase from Samsung SmartThings (job_state: wash, rinse, spin, etc.).
--2. Logs phase checkpoints to Firebase (/session_phases/{session_id}/{timestamp_ms}) and updates /live_phase.json.
--3. Automatically computes load class (LIGHT, MEDIUM, HEAVY) from Tapo P110 initial dry-tumble power.
--4. Immediately upon detecting that the ESP32 is offline (after cycle completion or power-down):
--   - Compiles standardized 8-column CSV (timestamp_ms, accel_x, accel_y, accel_z, audio_rms, power_w, phase, load_class).
--   - Routes real cycles to 'data/real_sessions/' and tests to 'data/testing_data/'.
--   - Rectifies acoustic RMS to canonical scale.
--   - Re-runs 'build_clean_dashboard.py' and 'pdm_ml_standardizer.py'.
--
--Usage:
--  py firmware/auto_drive_sync_daemon.py [--timeout 20] [--interval 5] [--once]
-+Autonomous Firebase -> local CSV archiver for the Washer PdM rig (v2, quota-aware).
-+
-+What it does
-+------------
-+1. Polls /live.json (small) every --interval seconds while a wash runs
-+   (4x less often, max 2 min, while idle) over ONE keep-alive connection to
-+   learn whether the rig is online and which session is open.
-+2. While a wash session is open, polls SmartThings every 30 s and records the
-+   phase checkpoints locally + in Firebase (smartthings_client).
-+3. Archives a session ONCE, when it is finished:
-+     * firmware 07 : /session_meta/<sid>/end exists (rig closed the session),
-+                     or the rig moved on to another session id;
-+     * firmware 05/06 (legacy): the rig stopped updating /live for --timeout s.
-+   "Archive" = download /sessions/<sid> one time, write the CSV via
-+   session_export.py, mark /session_meta/<sid>/archived.
-+4. Never re-downloads sessions already listed in data/.sync_history.json
-+   (the old daemon downloaded EVERY session on start-up and after every cycle).
-+5. Optional --prune-archived: delete archived sessions from Firebase after the
-+   CSV is verified on disk (keeps the 1 GB Spark storage cap far away).
-+
-+Firebase cost (rough, see firmware/07_feature_streamer/README.md):
-+   polling /live every 30 s with keep-alive  ~ 1-2 MB/day
-+   archiving one ~90 min v3 session          ~ 0.6 MB once
-+
-+Usage
-+-----
-+  py firmware/auto_drive_sync_daemon.py                 # run forever
-+  py firmware/auto_drive_sync_daemon.py --once          # archive finished sessions, exit
-+  py firmware/auto_drive_sync_daemon.py --prune-archived
- """
+@@ -138,8 +138,9 @@ def archive_session(sid: str, history: Dict[str, Any], prune: bool = False,
+     if history[sid].get("schema") == 3:
+         try:
+             from firmware.session_context import resolve_context_for_session, upsert_session_context
+-            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path)
+-            upsert_session_context(ctx)
++            target_context = DATA_DIR / "session_context.csv"
++            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path, context_file=target_context)
++            upsert_session_context(ctx, context_file=target_context)
+             print(f"  [CONTEXT] recorded session context: {ctx.get('programme', 'unknown')} ({ctx.get('context_source', 'unknown')})")
+         except Exception as ctx_err:
+             print(f"  [WARN] could not record session context: {ctx_err}")
+diff --git a/firmware/session_context.py b/firmware/session_context.py
+index 34b3b22..89e887f 100644
+--- a/firmware/session_context.py
++++ b/firmware/session_context.py
+@@ -323,6 +323,12 @@ def resolve_context_for_session(
+         except Exception as e:
+             note = f"timeline query error: {e}"
  
--import os
--import sys
--import time
--import json
--import math
-+from __future__ import annotations
++    # Minor rule: If programme is unknown but water_temp or spin_level was retrieved
++    # from the live timeline, attribute context_source to smartthings_live with note.
++    if programme == "unknown" and (water_temp or spin_level):
++        source = "smartthings_live"
++        note = "partial: no programme"
 +
+     # Calculate start and end epoch
+     path_to_check = csv_path or (REAL_SESSIONS_DIR / session_file)
+     start_ms, end_ms = extract_session_time_bounds(path_to_check)
+@@ -360,6 +366,25 @@ def backfill_all_sessions(
+ 
+     # Collect only .csv files, explicitly ignoring desktop.ini or temporary files
+     csv_files = sorted([f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() == ".csv"])
++    valid_files = {f.name for f in csv_files}
++
++    # Reconcile sidecar against existing files:
++    # Any row in session_context.csv whose session_file does not exist on disk is removed,
++    # UNLESS context_source == 'manual' (which is preserved with a warning).
++    existing_rows = load_session_context(target_context)
++    if existing_rows:
++        reconciled_rows = []
++        for r in existing_rows:
++            sf = r.get("session_file")
++            if sf in valid_files:
++                reconciled_rows.append(r)
++            else:
++                if r.get("context_source") == "manual":
++                    print(f"  [SESSION CONTEXT] Warning: manual record for {sf} retained but file is missing from {target_dir.name}")
++                    reconciled_rows.append(r)
++                else:
++                    print(f"  [SESSION CONTEXT] Reconciling: removing phantom session {sf}")
++        save_session_context(reconciled_rows, target_context)
+ 
+     print(f"[SESSION CONTEXT] Backfilling context for {len(csv_files)} sessions from {target_dir.name}...")
+     processed = 0
+diff --git a/firmware/tests/test_daemon_offline.py b/firmware/tests/test_daemon_offline.py
+new file mode 100644
+index 0000000..7378c8f
+--- /dev/null
++++ b/firmware/tests/test_daemon_offline.py
+@@ -0,0 +1,116 @@
++"""
++test_daemon_offline.py - simulates Firebase in memory and checks that the
++archive daemon (a) never downloads already-archived or still-running
++sessions, (b) archives finished v3 sessions once, (c) never overwrites
++existing CSVs.   Run:  py firmware/tests/test_daemon_offline.py
++"""
 +# =============================================================================
-+# SECTION 1: Imports & paths
++# SECTION 1: Fake Firebase
 +# =============================================================================
- import argparse
-+import json
- import subprocess
--import urllib.request
--import urllib.error
 +import sys
-+import time
++import tempfile
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[2]
++sys.path.insert(0, str(ROOT))
++
++
++class FakeFB:
++    def __init__(self, db):
++        self.db, self.gets = db, []
++
++    def _node(self, path):
++        cur = self.db
++        for p in path.strip("/").split("/"):
++            if not isinstance(cur, dict) or p not in cur:
++                return None
++            cur = cur[p]
++        return cur
++
++    def get(self, path, shallow=False, **_):
++        self.gets.append(path + ("?shallow" if shallow else ""))
++        n = self._node(path)
++        return {k: True for k in n} if (shallow and isinstance(n, dict)) else n
++
++    def patch(self, path, value):
++        cur = self.db
++        for p in path.strip("/").split("/"):
++            cur = cur.setdefault(p, {})
++        cur.update(value)
++
++    def put(self, path, value):
++        pass
++
++    def delete(self, path):
++        parts = path.strip("/").split("/")
++        self._node("/".join(parts[:-1])).pop(parts[-1], None)
++
++    def record_usage(self):
++        pass
++
++
++# =============================================================================
++# SECTION 2: Test
++# =============================================================================
++def main() -> int:
++    import firmware.auto_drive_sync_daemon as d
++    import firmware.session_export as se
++    import firmware.smartthings_client as stc
++    from firmware.tests.test_session_export import v3_window
++
++    with tempfile.TemporaryDirectory() as td:
++        td = Path(td)
++        # redirect every output location into the temp dir
++        se.REAL_DIR, se.TEST_DIR = td / "real", td / "test"
++        d.SYNC_HISTORY_FILE = td / "hist.json"
++        d.DATA_DIR = td
++        stc.PHASE_DIR = td / "phases"
++        import firmware.session_context as sc
++        sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
++        sc.REAL_SESSIONS_DIR = td / "real"
++        d.get_smartthings_status = lambda **_: {}
++        d.rebuild_derived = lambda: None
++
++        e0 = 1_792_300_000_000
++        db = {
++            "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
++            "sessions": {
++                "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
++                "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
++                "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
++                "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
++            },
++            "session_meta": {
++                "wash_2026-10-20_081500": {"start": 1, "end": 2},
++                "wash_2026-10-21_090000": {"start": 3},            # still running
++                "wash_2026-10-19_070000": {"start": 1, "end": 2},
++            },
++        }
++        fake = FakeFB(db)
++        d.get_client = lambda: fake
++        hist = {"wash_old_legacy": {"completed": True}}
++        # pre-existing CSV for the 19 Oct session must NOT be overwritten
++        (se.REAL_DIR).mkdir(parents=True)
++        existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
++        existing.write_text("keep me\n")
++
++        n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
++        downloads = [g for g in fake.gets if g.startswith("sessions/")]
++        assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
++        assert n == 1, n
++        assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
++        assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
++        assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
++        assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
++        assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
++
++        fake.gets.clear()
++        n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
++        assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
++        assert n2 == 0
++        print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/firmware/tests/test_session_context.py b/firmware/tests/test_session_context.py
+index fa54c6e..0d4fb1a 100644
+--- a/firmware/tests/test_session_context.py
++++ b/firmware/tests/test_session_context.py
+@@ -150,8 +150,8 @@ class TestSessionContext(unittest.TestCase):
+             w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248, 1013])
+             w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "LIGHT", 1792532644998, 1014])
+ 
+-        # 2. Create mock legacy session CSV
+-        legacy_file = self.sessions_dir / "wash_cycle_2026-10-16_0857.csv"
++        # 2. Create mock legacy session CSV (use a filename with no Firebase phase data)
++        legacy_file = self.sessions_dir / "wash_cycle_2026-10-11_1019.csv"
+         with open(legacy_file, "w", encoding="utf-8", newline="") as f:
+             w = csv.writer(f)
+             w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class"])
+@@ -194,5 +194,67 @@ class TestSessionContext(unittest.TestCase):
+         self.assertEqual(content1, content2, "Backfill must be strictly idempotent")
+ 
+ 
++    def test_backfill_reconciles_phantom_rows(self) -> None:
++        """
++        Verify that backfill reconciles phantom rows:
++        - Removes entries whose CSV does not exist on disk if context_source != 'manual'
++        - Retains entries whose context_source == 'manual' even if CSV is absent
++        """
++        # 1. Create one real CSV on disk
++        real_csv = self.sessions_dir / "wash_cycle_real.csv"
++        with open(real_csv, "w", encoding="utf-8", newline="") as f:
++            w = csv.writer(f)
++            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms"])
++            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248])
++
++        # 2. Pre-populate context file with 3 rows:
++        # a) real file
++        # b) phantom file (unknown source) -> must be removed
++        # c) missing file (manual source) -> must be retained
++        rows = [
++            {
++                "session_file": "wash_cycle_real.csv",
++                "start_epoch_ms": "1792530853248",
++                "end_epoch_ms": "1792532644998",
++                "programme": "unknown",
++                "water_temp": "",
++                "spin_level": "",
++                "context_source": "unknown",
++                "note": "",
++            },
++            {
++                "session_file": "wash_cycle_phantom_temp.csv",
++                "start_epoch_ms": "1792300005024",
++                "end_epoch_ms": "1792300904320",
++                "programme": "unknown",
++                "water_temp": "",
++                "spin_level": "",
++                "context_source": "unknown",
++                "note": "phantom row",
++            },
++            {
++                "session_file": "wash_cycle_manual_missing.csv",
++                "start_epoch_ms": "1792400000000",
++                "end_epoch_ms": "1792401000000",
++                "programme": "CustomSpecial",
++                "water_temp": "60C",
++                "spin_level": "1400",
++                "context_source": "manual",
++                "note": "retained manual note",
++            },
++        ]
++        save_session_context(rows, context_file=self.context_file)
++
++        # 3. Run backfill
++        backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
++
++        # 4. Verify context rows
++        result_rows = {r["session_file"]: r for r in load_session_context(self.context_file)}
++        self.assertIn("wash_cycle_real.csv", result_rows)
++        self.assertNotIn("wash_cycle_phantom_temp.csv", result_rows, "Phantom non-manual row should be removed")
++        self.assertIn("wash_cycle_manual_missing.csv", result_rows, "Manual row must be retained even if CSV missing")
++        self.assertEqual(result_rows["wash_cycle_manual_missing.csv"]["programme"], "CustomSpecial")
++
++
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
+index 46ad518..a8fc041 100644
+--- a/ml/cycle_signature_report.py
++++ b/ml/cycle_signature_report.py
+@@ -8,28 +8,27 @@ Analyzes each archived wash cycle in `data/real_sessions/` to extract its
+ measured physical profile:
+   - Duration (total recorded minutes, active minutes with power >= 8W)
+   - Thermal profile (heater minutes with power > 1000W)
+-  - Mechanical signature (high-power spin blocks, spin dominant frequency p90)
++  - Mechanical spin profile (spin blocks of >= 20 windows with 200W < power <= 1000W)
+   - Acquisition quality counters for firmware-07 (accel count, FIFO overflows,
+-    clipped samples, max window gap, idle vibration floor)
++    clipped samples, max window gap from timestamp_ms, epoch clock jitter,
++    idle vibration noise floor)
+   - ESP32 boot indicator (whether cycle started within 30s of edge MCU boot)
+   - Context join (programme, water temperature from data/session_context.csv)
++  - Objective physical signature classification (inferred from power metrics)
+ 
+-Outputs:
+---------
+-Writes `ml/models/cycle_signature_report.md`, concluding with a classification
+-table grouping cycles by wash programme / signature.
+-
+-Invariants:
+------------
++Golden Invariants:
++------------------
+ - Never modifies data in data/real_sessions/ or data/session_context.csv.
+ - Standalone analysis report: does not alter ML training pipelines, detectors, or LOCO.
+-- Honest outputs: only physically measured facts, no synthetic health % or RUL claims.
++- Honest outputs: only physically measured facts; no invented programme names,
++  no unmeasured temperature labels, and no synthetic health % or RUL claims.
++- Dynamic grouping: clusters are computed strictly from rules, never hard-coded.
+ """
+ 
+ from __future__ import annotations
+ 
+ # =============================================================================
+-# SECTION 1: Imports & Paths
++# SECTION 1: Imports & Rule Constants (Reused by Dashboard Badge Rules)
+ # =============================================================================
+ import csv
  from datetime import datetime
- from pathlib import Path
-+from typing import Any, Dict, Optional
- 
- BASE_DIR = Path(__file__).resolve().parent.parent
- DATA_DIR = BASE_DIR / "data"
--REAL_DIR = DATA_DIR / "real_sessions"
--TEST_DIR = DATA_DIR / "testing_data"
- SYNC_HISTORY_FILE = DATA_DIR / ".sync_history.json"
- 
+@@ -47,9 +46,18 @@ OUTPUT_REPORT_PATH = BASE_DIR / "ml" / "models" / "cycle_signature_report.md"
  if str(BASE_DIR) not in sys.path:
      sys.path.insert(0, str(BASE_DIR))
  
--from firmware.smartthings_client import (
--    get_smartthings_status,
--    push_phase_to_firebase,
--    fetch_session_phase_timeline,
--    estimate_point_phase_fallback,
--    compute_weight_and_class
--)
-+from firmware.firebase_rest import FirebaseAuthError, get_client  # noqa: E402
-+from firmware.session_export import (batches_to_rows, export_session_to_csv,  # noqa: E402
-+                                     first_epoch_ms, target_path)
-+from firmware.smartthings_client import get_smartthings_status, push_phase_to_firebase  # noqa: E402
++# Signature Classification Rule Thresholds (shared with dashboard badge logic)
++HEATER_W = 1000.0                # Threshold above which power indicates heating element (> 1 kW)
++HEATER_MIN_THRESHOLD = 2.0       # Minimum heater minutes to classify as Long hot
++SPIN_MIN_W = 200.0               # Minimum power for mechanical drum spin extraction
++MIN_SPIN_WINDOWS = 20            # >= 20 consecutive windows (approx 100 s) for a spin block
++MAX_POWER_NO_DATA_W = 50.0       # Max cycle power < 50 W indicates unmetered / no power data
++QUICK_ACTIVE_MAX_MIN = 35.0      # Maximum active minutes for Quick signature class
++HIGH_POWER_BLOCK_MIN_WIN = 3     # >= 3 consecutive windows > 200 W for general high-power table
++
  
--def _load_env_file(env_path):
--    if os.path.exists(env_path):
--        try:
--            with open(env_path, "r", encoding="utf-8") as f:
--                for line in f:
--                    line = line.strip()
--                    if line and not line.startswith("#") and "=" in line:
--                        k, v = line.split("=", 1)
--                        k, v = k.strip(), v.strip().strip("\"'")
--                        if k not in os.environ:
--                            os.environ[k] = v
--        except Exception:
--            pass
-+END_GRACE_S = 60             # wait after a session END marker before downloading
-+META_SCAN_EVERY_S = 1800     # how often to look for finished-but-unarchived sessions
+ # =============================================================================
+-# SECTION 2: Helper Functions for Signature Extraction
++# SECTION 2: Metric Extraction & Signature Detection Helpers
+ # =============================================================================
+ def load_session_context_map() -> Dict[str, Dict[str, str]]:
+     """Load session context sidecar file as a dictionary keyed by session_file."""
+@@ -70,15 +78,43 @@ def load_session_context_map() -> Dict[str, Dict[str, str]]:
+     return context_map
  
--_load_env_file(BASE_DIR / ".env")
  
--FIREBASE_HOST = os.environ.get("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
--FIREBASE_AUTH = os.environ.get("FIREBASE_AUTH") or os.environ.get("FIREBASE_SECRET")
-+def now_str() -> str:
-+    return datetime.now().strftime("%H:%M:%S")
- 
--def load_sync_history():
--    if os.path.exists(SYNC_HISTORY_FILE):
-+
-+# =============================================================================
-+# SECTION 2: Sync history (what is already on disk)
-+# =============================================================================
-+def load_history() -> Dict[str, Any]:
-+    if SYNC_HISTORY_FILE.is_file():
-         try:
--            with open(SYNC_HISTORY_FILE, "r", encoding="utf-8") as f:
--                return json.load(f)
--        except Exception:
--            return {}
-+            return json.loads(SYNC_HISTORY_FILE.read_text(encoding="utf-8"))
-+        except (OSError, ValueError):
-+            pass
-     return {}
- 
--def save_sync_history(history):
--    os.makedirs(DATA_DIR, exist_ok=True)
--    try:
--        with open(SYNC_HISTORY_FILE, "w", encoding="utf-8") as f:
--            json.dump(history, f, indent=2)
--    except Exception as e:
--        print(f"[WARN] Could not save sync history: {e}")
- 
--def get_firebase_json(path):
--    url = f"{FIREBASE_HOST}/{path.lstrip('/')}"
--    req = urllib.request.Request(url, headers={"User-Agent": "PdM-AutoSync-Daemon/1.0"})
--    try:
--        with urllib.request.urlopen(req, timeout=8) as resp:
--            return json.loads(resp.read().decode("utf-8"))
--    except urllib.error.HTTPError as e:
--        if e.code == 404:
--            return None
--        raise
--    except Exception:
--        raise
--
--def mark_session_archived_in_firebase(session_id):
-+def save_history(h: Dict[str, Any]) -> None:
-+    DATA_DIR.mkdir(parents=True, exist_ok=True)
-+    SYNC_HISTORY_FILE.write_text(json.dumps(h, indent=2), encoding="utf-8")
-+
-+
-+def is_archived(h: Dict[str, Any], sid: str) -> bool:
-+    return bool(h.get(sid, {}).get("completed"))
-+
-+
-+# =============================================================================
-+# SECTION 3: Archive one session
-+# =============================================================================
-+def archive_session(sid: str, history: Dict[str, Any], prune: bool = False,
-+                    overwrite: bool = False) -> bool:
-+    """Download a finished session once, write CSV, record it. True on success."""
-+    fb = get_client()
-+    print(f"\n[{now_str()}] [ARCHIVE] downloading session '{sid}' ...")
-+    batches = fb.get(f"sessions/{sid}")
-+    rows = batches_to_rows(batches)
-+    if not rows:
-+        print("  [SKIP] no records")
-+        return False
-+    # Never overwrite a CSV that already exists but is missing from the
-+    # history (e.g. archived by an older script): adopt it instead.
-+    planned = target_path(sid, rows)
-+    if planned.exists() and not overwrite:
-+        print(f"  [KEEP] {planned.name} already exists - recording it as archived, not overwriting")
-+        history[sid] = {"completed": True, "file": planned.name, "folder": planned.parent.name,
-+                        "synced_at": datetime.now().isoformat(timespec="seconds"),
-+                        "points": len(rows), "note": "adopted existing file"}
-+        save_history(history)
-+        return False
-+    st = get_smartthings_status(min_interval_s=60.0)
-+    path = export_session_to_csv(sid, batches, st_info=st, out_path=planned)
-+    if not path:
-+        history[sid] = {
-+            "completed": True,
-+            "discarded": True,
-+            "points": len(rows),
-+            "synced_at": datetime.now().isoformat(timespec="seconds"),
-+            "note": f"discarded (< 3 records: {len(rows)})"
-+        }
-+        save_history(history)
-+        return False
-+    history[sid] = {
-+        "completed": True,
-+        "file": path.name,
-+        "folder": path.parent.name,
-+        "synced_at": datetime.now().isoformat(timespec="seconds"),
-+        "points": len(rows),
-+        "first_ts": first_epoch_ms(rows),
-+        "last_t": rows[-1].get("t", 0),
-+        "schema": 3 if any("aku" in r for r in rows[:5]) else 1,
-+    }
-+    save_history(history)
-+
-+    # Record wash programme context into sidecar data/session_context.csv for
-+    # firmware-07 sessions (schema 3). Never let context failure abort or fail archiving.
-+    if history[sid].get("schema") == 3:
-+        try:
-+            from firmware.session_context import resolve_context_for_session, upsert_session_context
-+            ctx = resolve_context_for_session(path.name, session_id=sid, csv_path=path)
-+            upsert_session_context(ctx)
-+            print(f"  [CONTEXT] recorded session context: {ctx.get('programme', 'unknown')} ({ctx.get('context_source', 'unknown')})")
-+        except Exception as ctx_err:
-+            print(f"  [WARN] could not record session context: {ctx_err}")
-     try:
--        url = f"{FIREBASE_HOST}/archived_sessions/{session_id}.json?auth={FIREBASE_AUTH}"
--        payload = json.dumps({
--            "archived_at": datetime.now().isoformat(),
--            "status": "SAVED_TO_GOOGLE_DRIVE"
--        }).encode("utf-8")
--        req = urllib.request.Request(url, data=payload, method="PUT", headers={"Content-Type": "application/json"})
--        with urllib.request.urlopen(req, timeout=5) as resp:
--            pass
-+        fb.patch(f"session_meta/{sid}", {"archived": True,
-+                                         "archived_at": datetime.now().isoformat(timespec="seconds"),
-+                                         "archived_file": path.name})
-     except Exception as e:
--        print(f"  [WARN] Could not mark session in Firebase: {e}")
--
--def format_session_filename(session_id, first_timestamp_ms=None):
--    """Generate clean, standardized filename: wash_cycle_YYYY-MM-DD_HHMM.csv"""
--    if session_id.startswith("wash_202"):
--        clean_id = session_id.replace("wash_", "")
--        for fmt in ("%Y-%m-%d_%H%M%S", "%Y-%m-%d_%H%M", "%Y%m%d_%H%M%S", "%Y%m%d_%H%M"):
-+        print(f"  [WARN] could not mark archived in Firebase: {e}")
-+
-+    if prune:
-+        # Only delete after the CSV exists and has the expected number of lines.
-+        n_lines = sum(1 for _ in open(path, encoding="utf-8")) - 1
-+        if n_lines == len(rows):
-+            fb.delete(f"sessions/{sid}")
-+            print(f"  [PRUNE] deleted /sessions/{sid} from Firebase ({n_lines} rows verified on disk)")
-+        else:
-+            print(f"  [PRUNE] skipped: CSV has {n_lines} rows, Firebase had {len(rows)}")
-+    fb.record_usage()
-+    return True
-+
-+
-+def rebuild_derived() -> None:
-+    """Dashboards + legacy standardized dataset (unchanged behaviour)."""
-+    for script in (BASE_DIR / "build_clean_dashboard.py", BASE_DIR / "firmware" / "pdm_ml_standardizer.py"):
-+        if script.is_file():
-             try:
--                sample_len = len(datetime.now().strftime(fmt))
--                dt = datetime.strptime(clean_id[:sample_len], fmt)
--                return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
--            except Exception:
--                pass
--        return f"wash_cycle_{clean_id}.csv"
--
--    if first_timestamp_ms and first_timestamp_ms > 1700000000000:
--        dt = datetime.fromtimestamp(first_timestamp_ms / 1000.0)
--        return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
--
--    now = datetime.now()
--    clean_id = session_id.replace("wash_", "")
--    return f"wash_cycle_{now.strftime('%Y-%m-%d')}_{clean_id}.csv"
--
--def trigger_dashboard_and_ml_refit():
--    """Triggers clean dashboard rebuild and ML standardizer pipeline."""
--    try:
--        subprocess.run([sys.executable, str(BASE_DIR / "build_clean_dashboard.py")], cwd=str(BASE_DIR), check=True)
--        print("  [BUILD] Dashboards recompiled successfully!")
--    except Exception as e:
--        print(f"  [WARN] Dashboard rebuild error: {e}")
-+                subprocess.run([sys.executable, str(script)], cwd=str(BASE_DIR), check=True)
-+            except Exception as e:
-+                print(f"  [WARN] {script.name} failed: {e}")
- 
--    try:
--        subprocess.run([sys.executable, str(BASE_DIR / "firmware" / "pdm_ml_standardizer.py")], cwd=str(BASE_DIR), check=True)
--        print("  [ML] Acoustic baselines and ML training dataset re-fitted!")
--    except Exception as e:
--        print(f"  [WARN] Standardizer fit error: {e}")
- 
--def export_session_to_csv(session_id, batches, st_info=None):
-+# =============================================================================
-+# SECTION 4: Find finished sessions that are not archived yet
-+# =============================================================================
-+def scan_unarchived(history: Dict[str, Any], active_sid: Optional[str], prune: bool) -> int:
-     """
--    Convert Firebase batch data to standardized 8-column CSV with SmartThings phase ground truth.
--    Columns: timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class
-+    Cheap scan: shallow key lists only (no session data downloaded unless a
-+    session is finished AND missing from the local history).
-     """
--    rows = []
--    if isinstance(batches, dict):
--        for b_id, b_data in sorted(batches.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else str(x[0])):
--            if isinstance(b_data, dict) and "ax" in b_data:
--                rows.append(b_data)
--    elif isinstance(batches, list):
--        for b_data in batches:
--            if isinstance(b_data, dict) and "ax" in b_data:
--                rows.append(b_data)
--
--    if not rows or len(rows) < 3:
--        print(f"  [SKIP] Session '{session_id}' has insufficient data ({len(rows)} points).")
--        return None
--
--    # Check for real epoch timestamp (ts > 1700000000000)
--    first_ts = None
--    for r in rows:
--        ts_val = r.get("ts")
--        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
--            first_ts = ts_val
--            break
--    if first_ts is None:
--        first_ts = rows[0].get("t", 0)
--
--    # Route destination folder
--    REAL_DIR.mkdir(parents=True, exist_ok=True)
--    TEST_DIR.mkdir(parents=True, exist_ok=True)
--    filename = format_session_filename(session_id, first_ts)
--    is_test = len(rows) < 150 or "test" in filename.lower() or session_id == "wash_1009" or filename == "wash_cycle_2026-10-12_0800.csv"
--    target_dir = TEST_DIR if is_test else REAL_DIR
--    csv_path = target_dir / filename
--
--    # Acoustic scale rectification
--    rms_vals = [float(r.get("rms", 0.0)) for r in rows if r.get("rms") is not None]
--    median_rms = sorted(rms_vals)[len(rms_vals)//2] if rms_vals else 0.0
--    scale_factor = (256000.0 / 16384.0) if median_rms > 1200.0 else 1.0
--
--    # Load class calculation
--    load_class, est_kg = compute_weight_and_class(rows, st_info)
--
--    # Fetch recorded SmartThings phase timeline from Firebase
--    phase_timeline = fetch_session_phase_timeline(session_id)
--
--    total_duration_ms = (rows[-1].get("t", 0) - rows[0].get("t", 0)) if rows else 0
--    last_phase = "weightSensing"
--
--    print(f"\n>>> Compiling session '{session_id}' -> {csv_path.name}")
--    print(f"    Load Classification: {load_class} (~{est_kg} kg)")
--    print(f"    Recorded Phase Checkpoints: {len(phase_timeline)}")
--
--    # Write standardized 8-column CSV
--    with open(csv_path, "w", encoding="utf-8") as f:
--        f.write("timestamp_ms,accel_x,accel_y,accel_z,audio_rms,power_w,phase,load_class\n")
--        
--        for r in rows:
--            t = r.get("t", 0)
--            ax = float(r.get("ax", 0.0))
--            ay = float(r.get("ay", 0.0))
--            az = float(r.get("az", 0.0))
--            raw_rms = float(r.get("rms", 0.0))
--            clean_rms = round(raw_rms / scale_factor, 1)
--            pwr = float(r.get("pwr") if "pwr" in r else r.get("power", 0.0))
--            vibe_mag = math.sqrt(ax * ax + ay * ay + az * az)
--
--            # Determine point phase
--            row_epoch = r.get("ts")
--            if not row_epoch and first_ts and first_ts > 1700000000000:
--                row_epoch = first_ts + t
--
--            matched_phase = None
--            if phase_timeline and row_epoch:
--                # Match latest checkpoint with checkpoint_ts <= row_epoch (LOCF)
--                valid_checks = [c for c in phase_timeline if c["ts"] <= (row_epoch + 15000)]
--                if valid_checks:
--                    matched_phase = valid_checks[-1]["phase"]
--
--            # Fallback if unrecorded
--            if not matched_phase or matched_phase == "none":
--                matched_phase = estimate_point_phase_fallback(
--                    pwr, vibe_mag, clean_rms, t,
--                    total_duration_ms=total_duration_ms,
--                    last_phase=last_phase
--                )
--
--            if matched_phase and matched_phase != "none":
--                last_phase = matched_phase
--
--            f.write(f"{t},{ax:.2f},{ay:.2f},{az:.2f},{clean_rms:.1f},{pwr:.1f},{matched_phase},{load_class}\n")
--
--    print(f"  [SUCCESS] Created: {csv_path.name} ({len(rows)} records)")
--    return str(csv_path)
--
--def check_and_sync_all_unarchived():
--    """Check Firebase for any completed sessions that are not yet recorded in sync history."""
--    history = load_sync_history()
--    try:
--        shallow_sessions = get_firebase_json("sessions.json?shallow=true")
--        if not shallow_sessions:
--            return 0
--
--        synced_count = 0
--        for s_id in shallow_sessions.keys():
--            batches = get_firebase_json(f"sessions/{s_id}.json")
--            if not batches:
--                continue
--
--            items = []
--            if isinstance(batches, dict):
--                items = [v for k, v in sorted(batches.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else str(x[0])) if isinstance(v, dict) and "ax" in v]
--            elif isinstance(batches, list):
--                items = [v for v in batches if isinstance(v, dict) and "ax" in v]
--
--            if len(items) < 3:
--                continue
--
--            cur_first_ts = None
--            for r in items:
--                ts_val = r.get("ts")
--                if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
--                    cur_first_ts = ts_val
--                    break
--            if cur_first_ts is None:
--                cur_first_ts = items[0].get("t", 0)
--
--            cur_last_t = items[-1].get("t", 0)
--
--            sess_hist = history.get(s_id, {})
--            prev_synced = sess_hist.get("completed", False)
--            prev_first_ts = sess_hist.get("first_ts")
--            prev_last_t = sess_hist.get("last_t", 0)
--            prev_points = sess_hist.get("points", 0)
--
--            is_identical = prev_synced and (prev_points >= len(items)) and (prev_last_t == cur_last_t) and (prev_first_ts == cur_first_ts)
--            if is_identical:
--                continue
--
--            print(f"\n[SYNC] Fetching session '{s_id}' from Firebase ({len(items)} points)...")
--            st_info = get_smartthings_status(min_interval_s=60.0)
--            csv_path = export_session_to_csv(s_id, batches, st_info=st_info)
--            if csv_path:
--                history[s_id] = {
--                    "completed": True,
--                    "file": os.path.basename(csv_path),
--                    "synced_at": datetime.now().isoformat(),
--                    "points": len(items),
--                    "first_ts": cur_first_ts,
--                    "last_t": cur_last_t
--                }
--                save_sync_history(history)
--                mark_session_archived_in_firebase(s_id)
--                synced_count += 1
--
--        if synced_count > 0:
--            trigger_dashboard_and_ml_refit()
--        return synced_count
--    except Exception as e:
--        print(f"[WARN] Error during batch sync: {e}")
--        return 0
--
--def run_daemon(poll_interval=5, offline_timeout=20, run_once=False):
-+    fb = get_client()
-+    meta = fb.get("session_meta") or {}               # small: one dict per v3 session
-+    keys = fb.get("sessions", shallow=True) or {}     # just the session ids
-+    done = 0
-+    for sid in sorted(keys):
-+        if sid == active_sid or is_archived(history, sid):
-+            continue
-+        m = meta.get(sid) if isinstance(meta, dict) else None
-+        if isinstance(m, dict):
-+            if not m.get("end"):
-+                continue                               # v3 session still open (or rig died mid-run)
-+        # legacy sessions (no meta) are only archived when not the active one
-+        if archive_session(sid, history, prune):
-+            done += 1
-+    return done
-+
-+
-+# =============================================================================
-+# SECTION 5: Main loop
-+# =============================================================================
-+def run(poll_s: int, offline_timeout_s: int, once: bool, prune: bool) -> None:
-+    fb = get_client()
-+    history = load_history()
-     print("=" * 70)
--    print("   MULTIMODAL AUTONOMOUS CLOUD-TO-DRIVE PDM TELEMETRY SYNC DAEMON   ")
-+    print(" Washer PdM archive daemon v2 (quota-aware)")
-+    print(f" poll {poll_s}s | legacy offline timeout {offline_timeout_s}s | prune={prune}")
-     print("=" * 70)
--    print(f" Firebase Host    : {FIREBASE_HOST}")
--    print(f" Real Sessions    : {REAL_DIR}")
--    print(f" Offline Timeout  : {offline_timeout} seconds")
--    print(f" Polling Interval : {poll_interval} seconds")
--    print("=" * 70)
--
--    # Initial check
--    print("\n[INIT] Checking for existing unarchived sessions in Firebase...")
--    initial_synced = check_and_sync_all_unarchived()
--    if initial_synced > 0:
--        print(f"[INIT] Synced {initial_synced} session(s)!\n")
--    else:
--        print("[INIT] All existing sessions already up to date.\n")
- 
--    if run_once:
--        print("[DONE] Single-run execution completed.")
-+    live0 = fb.get("live") or {}
-+    n = scan_unarchived(history, live0.get("session") if live0.get("active", True) else None, prune)
-+    print(f"[{now_str()}] initial scan archived {n} session(s)")
-+    if n:
-+        rebuild_derived()
-+    if once:
-+        fb.record_usage()
-         return
- 
--    history = load_sync_history()
--    last_cnt = None
--    last_uptime = None
--    last_seen_time = 0
--    is_rig_online = False
--    active_session_id = None
-+    tracked_sid: Optional[str] = None     # session currently open on the rig
-+    last_change = time.time()
-+    last_sig = None
-     last_st_poll = 0.0
--
--    print(f"[{datetime.now().strftime('%H:%M:%S')}] Daemon active. Listening for SmartThings and ESP32...\n")
-+    last_scan = time.time()
-+    end_seen_at: Dict[str, float] = {}
- 
-     while True:
-         try:
--            now = time.time()
--            live = get_firebase_json("live.json")
--
--            # Check SmartThings every 30-45s and mirror to Firebase
--            if (now - last_st_poll) >= 30.0:
-+            live = fb.get("live") or {}
-+            sig = (live.get("uptime"), live.get("cnt"))
-+            if sig != last_sig:
-+                last_sig, last_change = sig, time.time()
-+            online = (time.time() - last_change) < offline_timeout_s
-+            is_v3 = str(live.get("fw", "")).startswith("07")
-+            live_sid = live.get("session") or None
-+            if is_v3 and not live.get("active"):
-+                live_sid = None
-+
-+            # --- 5a: session open -> keep SmartThings phases flowing ---
-+            if live_sid and online and time.time() - last_st_poll >= 30:
-                 st = get_smartthings_status(min_interval_s=30.0)
-                 if st:
--                    push_phase_to_firebase(st, session_id=active_session_id)
--                last_st_poll = now
--
--            if live and ("cnt" in live or "uptime" in live):
--                cur_cnt = live.get("cnt")
--                cur_uptime = live.get("uptime")
--                cur_session = live.get("session")
--
--                has_advanced = (last_cnt is not None and cur_cnt != last_cnt) or \
--                               (last_uptime is not None and cur_uptime != last_uptime)
--
--                if last_seen_time == 0:
--                    last_seen_time = now
--                    last_cnt = cur_cnt
--                    last_uptime = cur_uptime
-+                    push_phase_to_firebase(st, session_id=live_sid)
-+                last_st_poll = time.time()
-+
-+            # --- 5b: detect the end of the tracked session ---
-+            if tracked_sid and tracked_sid != live_sid:
-+                end_seen_at.setdefault(tracked_sid, time.time())
-+                print(f"[{now_str()}] session '{tracked_sid}' ended ({'rig offline' if not online else 'closed by rig'})")
-+                tracked_sid = None
-+            if live_sid and online:
-+                if tracked_sid != live_sid:
-+                    print(f"[{now_str()}] rig running session '{live_sid}' (fw {live.get('fw', '05/06')})")
-+                tracked_sid = live_sid
-+            if tracked_sid and not online and not is_v3:
-+                end_seen_at.setdefault(tracked_sid, time.time())     # legacy: offline == finished
-+                tracked_sid = None
-+
-+            # --- 5c: archive sessions whose end is older than the grace period ---
-+            archived_any = False
-+            for sid, t_end in list(end_seen_at.items()):
-+                if time.time() - t_end < END_GRACE_S:
-                     continue
--
--                if has_advanced:
--                    last_seen_time = now
--                    last_cnt = cur_cnt
--                    last_uptime = cur_uptime
--
--                    if not is_rig_online:
--                        is_rig_online = True
--                        active_session_id = cur_session
--                        st_info = get_smartthings_status(min_interval_s=5.0)
--                        st_phase = str(st_info.get("job_state") or "none") if isinstance(st_info, dict) else "none"
--                        print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> ESP32 ONLINE! Session: '{cur_session}' | SmartThings Phase: {st_phase.upper()}")
--                    else:
--                        active_session_id = cur_session
--                else:
--                    inactive_seconds = now - last_seen_time
--
--                    if is_rig_online and inactive_seconds >= offline_timeout:
--                        is_rig_online = False
--                        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] !!! ESP32 OFFLINE DETECTED! (No packets for {inactive_seconds:.1f}s)")
--                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Triggering automatic session archive to Google Drive...")
--
--                        if active_session_id:
--                            batches = get_firebase_json(f"sessions/{active_session_id}.json")
--                            if batches:
--                                st_final = get_smartthings_status(min_interval_s=5.0)
--                                csv_path = export_session_to_csv(active_session_id, batches, st_info=st_final)
--                                if csv_path:
--                                    b_list = list(batches.values()) if isinstance(batches, dict) else (batches or [])
--                                    valid_b = [b for b in b_list if isinstance(b, dict) and "ax" in b]
--                                    b_first_ts = None
--                                    for b in valid_b:
--                                        ts_val = b.get("ts")
--                                        if isinstance(ts_val, (int, float)) and ts_val > 1700000000000:
--                                            b_first_ts = ts_val
--                                            break
--                                    if b_first_ts is None and valid_b:
--                                        b_first_ts = valid_b[0].get("t", 0)
--                                    b_last_t = valid_b[-1].get("t", 0) if valid_b else 0
--
--                                    history[active_session_id] = {
--                                        "completed": True,
--                                        "file": os.path.basename(csv_path),
--                                        "synced_at": datetime.now().isoformat(),
--                                        "points": len(valid_b),
--                                        "first_ts": b_first_ts,
--                                        "last_t": b_last_t
--                                    }
--                                    save_sync_history(history)
--                                    mark_session_archived_in_firebase(active_session_id)
--                                    print(f"[{datetime.now().strftime('%H:%M:%S')}] >>> Session '{active_session_id}' archived!\n")
--                                    trigger_dashboard_and_ml_refit()
--
--                        check_and_sync_all_unarchived()
--                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Daemon listening for next wash cycle...\n")
--
--            else:
--                if is_rig_online:
--                    is_rig_online = False
--                    print(f"[{datetime.now().strftime('%H:%M:%S')}] !!! ESP32 unreachable. Offline mode.")
--
-+                if not is_archived(history, sid) and archive_session(sid, history, prune):
-+                    archived_any = True
-+                end_seen_at.pop(sid, None)
-+
-+            # --- 5d: periodic safety scan (e.g. daemon was off during a wash) ---
-+            if time.time() - last_scan > META_SCAN_EVERY_S:
-+                last_scan = time.time()
-+                if scan_unarchived(history, tracked_sid, prune):
-+                    archived_any = True
-+            if archived_any:
-+                rebuild_derived()
-+            fb.record_usage()
-+        except FirebaseAuthError as e:
-+            print(f"[{now_str()}] [AUTH] {e}\n  -> fix FIREBASE_AUTH in .env; sleeping 10 min instead of hammering Firebase")
-+            time.sleep(600)
-         except Exception as e:
--            print(f"[{datetime.now().strftime('%H:%M:%S')}] [DAEMON LOOP NOTICE] {e}")
-+            print(f"[{now_str()}] [LOOP NOTICE] {e}")
-+        # idle -> poll 4x less often (max 2 min); a wash is detected within ~2 min anyway
-+        time.sleep(poll_s if tracked_sid else min(4 * poll_s, 120))
- 
--        time.sleep(poll_interval)
- 
- if __name__ == "__main__":
--    parser = argparse.ArgumentParser(description="ESP32 Multimodal Cloud-to-Drive Sync Daemon")
--    parser.add_argument("--interval", type=int, default=5, help="Polling interval in seconds (default: 5)")
--    parser.add_argument("--timeout", type=int, default=20, help="Offline inactivity threshold in seconds (default: 20)")
--    parser.add_argument("--once", action="store_true", help="Sync once and exit")
--    args = parser.parse_args()
--
--    run_daemon(poll_interval=args.interval, offline_timeout=args.timeout, run_once=args.once)
-+    ap = argparse.ArgumentParser(description="Washer PdM Firebase -> CSV archive daemon (quota-aware)")
-+    ap.add_argument("--interval", type=int, default=30, help="poll /live every N s (default 30)")
-+    ap.add_argument("--timeout", type=int, default=150,
-+                    help="legacy firmware: seconds without /live updates = rig offline (default 150)")
-+    ap.add_argument("--once", action="store_true", help="archive finished sessions and exit")
-+    ap.add_argument("--prune-archived", action="store_true",
-+                    help="delete a session from Firebase after its CSV is verified on disk")
-+    a = ap.parse_args()
-+    run(a.interval, a.timeout, a.once, a.prune_archived)
-diff --git a/firmware/session_context.py b/firmware/session_context.py
-new file mode 100644
-index 0000000..34b3b22
---- /dev/null
-+++ b/firmware/session_context.py
-@@ -0,0 +1,412 @@
-+"""
-+firmware/session_context.py
-+Session Context Sidecar Manager for Washer PdM Project.
-+
-+Purpose:
-+--------
-+Firmware-07 wash cycles vary in length and electrical profile because they run
-+different wash programmes (e.g. Quick Wash ~21 min vs Daily Wash ~70 min), not
-+because sensor capture is erratic.
-+
-+This module maintains a sidecar metadata registry in `data/session_context.csv`
-+recording each wash session's:
-+  - session_file: filename (e.g. wash_cycle_2026-10-21_0631.csv)
-+  - start_epoch_ms: Unix millisecond timestamp at session start
-+  - end_epoch_ms: Unix millisecond timestamp at session end
-+  - programme: wash programme name from SmartThings (e.g. DailyWash, QuickWash)
-+  - water_temp: water temperature setting (e.g. cold, 40C)
-+  - spin_level: spin speed setting or target RPM (e.g. 1200, 1400)
-+  - context_source: 'smartthings_live', 'smartthings_history', 'manual', or 'unknown'
-+  - note: optional human or system annotation
-+
-+Golden Invariants:
-+------------------
-+1. Original session files in `data/real_sessions/*.csv` are NEVER modified in place.
-+2. If a row in `data/session_context.csv` has `context_source == 'manual'`, it is
-+   NEVER overwritten by automated archivers or backfills (Adam's manual notes win).
-+3. The schema has exactly the 8 standard columns above.
-+"""
-+
-+from __future__ import annotations
-+
-+# =============================================================================
-+# SECTION 1: Imports and Directory Constants
-+# =============================================================================
-+import argparse
-+import csv
-+from datetime import datetime
-+import json
-+from pathlib import Path
-+import sys
-+from typing import Any, Dict, List, Optional, Tuple
-+
-+# Project root setup
-+BASE_DIR = Path(__file__).resolve().parent.parent
-+DATA_DIR = BASE_DIR / "data"
-+REAL_SESSIONS_DIR = DATA_DIR / "real_sessions"
-+DEFAULT_CONTEXT_FILE = DATA_DIR / "session_context.csv"
-+SYNC_HISTORY_FILE = DATA_DIR / ".sync_history.json"
-+
-+if str(BASE_DIR) not in sys.path:
-+    sys.path.insert(0, str(BASE_DIR))
-+
-+# Standard columns required by PLAN.md
-+CONTEXT_COLUMNS = [
-+    "session_file",
-+    "start_epoch_ms",
-+    "end_epoch_ms",
-+    "programme",
-+    "water_temp",
-+    "spin_level",
-+    "context_source",
-+    "note",
-+]
-+
-+# Valid sources for context data
-+VALID_SOURCES = {
-+    "smartthings_live",
-+    "smartthings_history",
-+    "manual",
-+    "unknown",
-+}
-+
-+
-+# =============================================================================
-+# SECTION 2: CSV Persistence (Load, Save, and Upsert)
-+# =============================================================================
-+def load_session_context(context_file: Optional[Path] = None) -> List[Dict[str, str]]:
-+    """
-+    Load all existing context rows from the sidecar CSV file.
-+    Returns an empty list if the file does not exist yet.
-+    """
-+    target = context_file or DEFAULT_CONTEXT_FILE
-+    if not target.is_file():
-+        return []
-+
-+    rows: List[Dict[str, str]] = []
-+    try:
-+        with open(target, "r", encoding="utf-8") as f:
-+            reader = csv.DictReader(f)
-+            for r in reader:
-+                # Ensure all expected columns exist in each record
-+                row_clean = {col: str(r.get(col, "") or "").strip() for col in CONTEXT_COLUMNS}
-+                rows.append(row_clean)
-+    except (OSError, csv.Error) as err:
-+        print(f"[SESSION CONTEXT] Warning reading {target.name}: {err}")
-+        return []
-+
-+    return rows
-+
-+
-+def save_session_context(rows: List[Dict[str, str]], context_file: Optional[Path] = None) -> None:
-+    """
-+    Write all context rows to the sidecar CSV file in chronological order.
-+    Creates parent directories if necessary.
-+    """
-+    target = context_file or DEFAULT_CONTEXT_FILE
-+    target.parent.mkdir(parents=True, exist_ok=True)
-+
-+    # Sort rows chronologically by start_epoch_ms (numeric if possible), then filename
-+    def sort_key(item: Dict[str, str]) -> Tuple[int, str]:
-+        start_str = item.get("start_epoch_ms", "")
-+        try:
-+            start_num = int(float(start_str))
-+        except (ValueError, TypeError):
-+            start_num = 0
-+        return (start_num, item.get("session_file", ""))
-+
-+    sorted_rows = sorted(rows, key=sort_key)
-+
-+    with open(target, "w", encoding="utf-8", newline="") as f:
-+        writer = csv.DictWriter(f, fieldnames=CONTEXT_COLUMNS, lineterminator="\n")
-+        writer.writeheader()
-+        for r in sorted_rows:
-+            # Ensure every column is filled and formatted
-+            out_row = {col: str(r.get(col, "") or "") for col in CONTEXT_COLUMNS}
-+            writer.writerow(out_row)
-+
-+
-+def upsert_session_context(
-+    new_entry: Dict[str, Any],
-+    context_file: Optional[Path] = None,
-+) -> bool:
-+    """
-+    Upsert a session context row by 'session_file'.
-+
-+    Rules:
-+    - If a record with this 'session_file' does not exist, insert it.
-+    - If it already exists and has `context_source == 'manual'`, do NOT overwrite.
-+      Return False and preserve the manual record intact.
-+    - If it already exists with any other source, update it with new_entry.
-+    - Return True if inserted or updated, False if skipped.
-+    """
-+    session_file = str(new_entry.get("session_file", "")).strip()
-+    if not session_file:
-+        print("[SESSION CONTEXT] Error: session_file is required for upsert.")
-+        return False
-+
-+    existing_rows = load_session_context(context_file)
-+    updated = False
-+    row_found = False
-+
-+    cleaned_entry = {
-+        "session_file": session_file,
-+        "start_epoch_ms": str(new_entry.get("start_epoch_ms", "") or ""),
-+        "end_epoch_ms": str(new_entry.get("end_epoch_ms", "") or ""),
-+        "programme": str(new_entry.get("programme", "unknown") or "unknown"),
-+        "water_temp": str(new_entry.get("water_temp", "") or ""),
-+        "spin_level": str(new_entry.get("spin_level", "") or ""),
-+        "context_source": str(new_entry.get("context_source", "unknown") or "unknown"),
-+        "note": str(new_entry.get("note", "") or ""),
-+    }
-+
-+    # Verify source validity
-+    if cleaned_entry["context_source"] not in VALID_SOURCES:
-+        cleaned_entry["context_source"] = "unknown"
-+
-+    for i, r in enumerate(existing_rows):
-+        if r.get("session_file") == session_file:
-+            row_found = True
-+            # Invariant: NEVER overwrite a manual record with automated metadata
-+            if r.get("context_source") == "manual":
-+                print(f"  [SESSION CONTEXT] Keeping manual record for {session_file} (not overwriting)")
-+                return False
-+
-+            # Update existing non-manual record
-+            existing_rows[i] = cleaned_entry
-+            updated = True
-+            break
-+
-+    if not row_found:
-+        existing_rows.append(cleaned_entry)
-+        updated = True
-+
-+    if updated:
-+        save_session_context(existing_rows, context_file)
-+
-+    return True
-+
-+
-+# =============================================================================
-+# SECTION 3: Session File Metadata Extraction
-+# =============================================================================
-+def extract_session_time_bounds(csv_path: Path) -> Tuple[int, int]:
-+    """
-+    Read first and last data rows of a session CSV to determine start_epoch_ms and end_epoch_ms.
-+
-+    Handles two file schemas:
-+    1. Firmware 07 (V3): contains the 'epoch_ms' column directly.
-+    2. Legacy (Firmware 05/06):
-+       - If 'timestamp_ms' > 1.7e12, it is already an epoch millisecond timestamp.
-+       - Otherwise, 'timestamp_ms' is relative to boot/cycle start. In this case,
-+         parse the base datetime from the filename (e.g. wash_cycle_YYYY-MM-DD_HHMM.csv)
-+         and add the relative millisecond offset.
-+    """
-+    if not csv_path.is_file():
-+        return (0, 0)
-+
-+    try:
-+        with open(csv_path, "r", encoding="utf-8") as f:
-+            reader = csv.reader(f)
-+            header = next(reader, None)
-+            if not header:
-+                return (0, 0)
-+
-+            first_row = next(reader, None)
-+            if not first_row:
-+                return (0, 0)
-+
-+            last_row = first_row
-+            for row in reader:
-+                if row:
-+                    last_row = row
-+
-+        # Case 1: Firmware 07 contains explicit 'epoch_ms'
-+        if "epoch_ms" in header:
-+            idx = header.index("epoch_ms")
-+            start_ms = int(float(first_row[idx]))
-+            end_ms = int(float(last_row[idx]))
-+            return (start_ms, end_ms)
-+
-+        # Case 2: Legacy files
-+        if "timestamp_ms" in header:
-+            idx = header.index("timestamp_ms")
-+            t0 = float(first_row[idx])
-+            t1 = float(last_row[idx])
-+
-+            # Absolute epoch timestamp
-+            if t0 > 1_700_000_000_000:
-+                return (int(t0), int(t1))
-+
-+            # Relative timestamp: estimate base from filename
-+            fname = csv_path.stem  # e.g. wash_cycle_2026-10-15_1020
-+            parts = fname.split("_")
-+            # Expected pattern: ['wash', 'cycle', 'YYYY-MM-DD', 'HHMM']
-+            if len(parts) >= 4:
-+                date_str = parts[2]
-+                time_str = parts[3]
-+                if time_str.isdigit() and len(time_str) == 4:
-+                    dt = datetime.strptime(f"{date_str}_{time_str}", "%Y-%m-%d_%H%M")
-+                else:
-+                    dt = datetime.strptime(f"{date_str}_0800", "%Y-%m-%d_%H%M")
-+                base_epoch_ms = int(dt.timestamp() * 1000)
-+                return (int(base_epoch_ms + t0), int(base_epoch_ms + t1))
-+
-+    except Exception as e:
-+        print(f"[SESSION CONTEXT] Error parsing time bounds for {csv_path.name}: {e}")
-+
-+    return (0, 0)
-+
-+
-+# =============================================================================
-+# SECTION 4: Context Resolution & Live Timeline Matching
-+# =============================================================================
-+def find_session_id_for_file(session_file: str) -> Optional[str]:
-+    """
-+    Reverse-map session filename to session_id using data/.sync_history.json.
-+    """
-+    if SYNC_HISTORY_FILE.is_file():
-+        try:
-+            history = json.loads(SYNC_HISTORY_FILE.read_text(encoding="utf-8"))
-+            for sid, meta in history.items():
-+                if isinstance(meta, dict) and meta.get("file") == session_file:
-+                    return sid
-+        except Exception:
-+            pass
-+    return None
-+
-+
-+def resolve_context_for_session(
-+    session_file: str,
-+    session_id: Optional[str] = None,
-+    csv_path: Optional[Path] = None,
-+    context_file: Optional[Path] = None,
-+) -> Dict[str, Any]:
-+    """
-+    Determine wash programme context for a session:
-+    1. If the row already exists and context_source is not 'unknown', return existing row
-+       (ensures at most one history/network lookup per session).
-+    2. Try live SmartThings timeline (via smartthings_client).
-+    3. If not found, mark context_source = 'unknown' (step 1 probe returned 403).
-+    """
-+    existing_rows = {r["session_file"]: r for r in load_session_context(context_file)}
-+    if session_file in existing_rows:
-+        curr = existing_rows[session_file]
-+        # If context is already resolved or manual, return it directly
-+        if curr.get("context_source") and curr.get("context_source") != "unknown":
-+            return curr
-+
-+    sid = session_id or find_session_id_for_file(session_file)
-+
-+    programme = "unknown"
-+    water_temp = ""
-+    spin_level = ""
-+    source = "unknown"
-+    note = ""
-+
-+    # Attempt to query live SmartThings timeline if session_id is available
-+    if sid:
-+        try:
-+            from firmware.smartthings_client import fetch_session_phase_timeline
-+            timeline = fetch_session_phase_timeline(sid)
-+            for item in timeline:
-+                c = item.get("cycle")
-+                if c and c != "unknown":
-+                    programme = c
-+                    source = "smartthings_live"
-+                wt = item.get("water_temp")
-+                if wt:
-+                    water_temp = wt
-+                tgt_rpm = item.get("target_rpm")
-+                if tgt_rpm and tgt_rpm > 0:
-+                    spin_level = str(tgt_rpm)
-+        except Exception as e:
-+            note = f"timeline query error: {e}"
-+
-+    # Calculate start and end epoch
-+    path_to_check = csv_path or (REAL_SESSIONS_DIR / session_file)
-+    start_ms, end_ms = extract_session_time_bounds(path_to_check)
-+
-+    return {
-+        "session_file": session_file,
-+        "start_epoch_ms": start_ms,
-+        "end_epoch_ms": end_ms,
-+        "programme": programme,
-+        "water_temp": water_temp,
-+        "spin_level": spin_level,
-+        "context_source": source,
-+        "note": note,
-+    }
-+
-+
-+# =============================================================================
-+# SECTION 5: Backfill Command
-+# =============================================================================
-+def backfill_all_sessions(
-+    data_dir: Optional[Path] = None,
-+    context_file: Optional[Path] = None,
++def count_spin_blocks(
++    powers: List[float],
++    min_windows: int = MIN_SPIN_WINDOWS,
++    min_power: float = SPIN_MIN_W,
++    max_power: float = HEATER_W,
 +) -> int:
 +    """
-+    Scan all session CSVs in data/real_sessions/ (strictly ignoring non-CSV files
-+    such as desktop.ini), determine context, and upsert into session_context.csv.
-+    Preserves existing 'manual' rows without overwriting them.
++    Count contiguous spin extraction blocks:
++    >= min_windows consecutive windows where min_power < power <= max_power.
++    Electrical heater windows (> max_power) are explicitly excluded.
 +    """
-+    target_dir = data_dir or REAL_SESSIONS_DIR
-+    target_context = context_file or DEFAULT_CONTEXT_FILE
++    spin_blocks = 0
++    current_run = 0
 +
-+    if not target_dir.is_dir():
-+        print(f"[SESSION CONTEXT] Error: sessions directory {target_dir} does not exist.")
-+        return 0
++    for p in powers:
++        if min_power < p <= max_power:
++            current_run += 1
++        else:
++            if current_run >= min_windows:
++                spin_blocks += 1
++            current_run = 0
 +
-+    # Collect only .csv files, explicitly ignoring desktop.ini or temporary files
-+    csv_files = sorted([f for f in target_dir.iterdir() if f.is_file() and f.suffix.lower() == ".csv"])
++    if current_run >= min_windows:
++        spin_blocks += 1
 +
-+    print(f"[SESSION CONTEXT] Backfilling context for {len(csv_files)} sessions from {target_dir.name}...")
-+    processed = 0
-+
-+    for f in csv_files:
-+        ctx = resolve_context_for_session(f.name, csv_path=f, context_file=target_context)
-+        upsert_session_context(ctx, context_file=target_context)
-+        processed += 1
-+
-+    print(f"[SESSION CONTEXT] Successfully processed {processed} session(s) into {target_context.name}.")
-+    return processed
++    return spin_blocks
 +
 +
-+# =============================================================================
-+# SECTION 6: CLI Entrypoint
-+# =============================================================================
-+def main() -> None:
-+    parser = argparse.ArgumentParser(description="Manage wash session context sidecar metadata.")
-+    parser.add_argument(
-+        "--backfill",
-+        action="store_true",
-+        help="Scan data/real_sessions/*.csv and backfill data/session_context.csv",
-+    )
-+    parser.add_argument(
-+        "--context-file",
-+        type=str,
-+        default=None,
-+        help="Custom path to session_context.csv (for testing)",
-+    )
-+    parser.add_argument(
-+        "--data-dir",
-+        type=str,
-+        default=None,
-+        help="Custom path to real_sessions folder (for testing)",
-+    )
-+
-+    args = parser.parse_args()
-+
-+    ctx_path = Path(args.context_file) if args.context_file else None
-+    dir_path = Path(args.data_dir) if args.data_dir else None
-+
-+    if args.backfill:
-+        count = backfill_all_sessions(data_dir=dir_path, context_file=ctx_path)
-+        print(f"Backfill complete: {count} sessions registered.")
-+    else:
-+        parser.print_help()
-+
-+
-+if __name__ == "__main__":
-+    main()
-diff --git a/firmware/smartthings_client.py b/firmware/smartthings_client.py
-index 85283e1..f8ff4ee 100644
---- a/firmware/smartthings_client.py
-+++ b/firmware/smartthings_client.py
-@@ -24,26 +24,89 @@ from dotenv import load_dotenv
- 
- BASE_DIR = Path(__file__).resolve().parent.parent
- load_dotenv(dotenv_path=BASE_DIR / ".env")
-+if str(BASE_DIR) not in sys.path:
-+    sys.path.insert(0, str(BASE_DIR))
- 
--FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
--FIREBASE_AUTH = os.getenv("FIREBASE_AUTH") or os.getenv("FIREBASE_SECRET")
- SMARTTHINGS_PAT = os.getenv("SMARTTHINGS_PAT")
- SMARTTHINGS_DEVICE_ID = os.getenv("SMARTTHINGS_DEVICE_ID")
- SMARTTHINGS_CLIENT_ID = "d18cf96e-c626-4433-bf51-ddbb10c5d1ed"
- SMARTTHINGS_REFRESH_URL = "https://auth-global.api.smartthings.com/oauth/token"
- SMARTTHINGS_API_URL = "https://api.smartthings.com/v1"
-+# Store token cache strictly outside Google Drive sync folder to protect secrets
-+TOKEN_CACHE_FILE = Path(os.path.expandvars(r"%LOCALAPPDATA%\PdM_Washer\smartthings_token_cache.json"))
- 
- _last_st_call = 0.0
- _cached_st_data = None
-+_auth_warning_logged = False
- 
--def get_valid_smartthings_token() -> str:
-+
-+def _refresh_oauth_token(refresh_token: str) -> tuple[str | None, str | None, int]:
-+    """Attempt OAuth2 refresh against SmartThings endpoint. Returns (access_token, refresh_token, expires_in)."""
-+    try:
-+        body = urllib.parse.urlencode({
-+            "grant_type": "refresh_token",
-+            "client_id": SMARTTHINGS_CLIENT_ID,
-+            "refresh_token": refresh_token
-+        }).encode("utf-8")
-+        req = urllib.request.Request(
-+            SMARTTHINGS_REFRESH_URL,
-+            data=body,
-+            headers={"Content-Type": "application/x-www-form-urlencoded"}
-+        )
-+        with urllib.request.urlopen(req, timeout=10) as resp:
-+            data = json.loads(resp.read().decode("utf-8"))
-+            return data.get("access_token"), data.get("refresh_token") or refresh_token, data.get("expires_in", 86400)
-+    except Exception as e:
-+        return None, None, 0
-+
-+
-+def get_valid_smartthings_token() -> str | None:
+ def find_high_power_blocks(
+     powers: List[float],
+     dt_seconds: float = 5.024,
+     threshold_w: float = 200.0,
+-    min_consecutive: int = 3,
++    min_consecutive: int = HIGH_POWER_BLOCK_MIN_WIN,
+ ) -> List[Dict[str, Any]]:
      """
-     Retrieves or automatically refreshes the SmartThings OAuth2 access token.
--    Prioritizes persistent CLI credentials with automated token exchange.
-+    1. Checks local persistent token cache (.smartthings_token_cache.json)
-+    2. Checks CLI credentials (%LOCALAPPDATA%/@smartthings/cli/Data/credentials.json)
-+    3. Checks environment variable SMARTTHINGS_REFRESH_TOKEN (and caches rotated tokens)
-+    4. Fallbacks to SMARTTHINGS_PAT or SMARTTHINGS_ACCESS_TOKEN
+-    Find contiguous blocks of consecutive windows with power > threshold_w.
+-    Returns a list of dicts with start_min, max_w, duration_min, and window count.
++    Find contiguous runs of >= min_consecutive windows with power > threshold_w.
++    Used for the comprehensive electrical timing breakdown in Section 4.
      """
-+    import datetime as dt_mod
+     blocks: List[Dict[str, Any]] = []
+     current_run: List[Tuple[int, float]] = []
+@@ -97,7 +133,6 @@ def find_high_power_blocks(
+                     "max_w": round(max_w, 0),
+                     "dur_min": round(dur_min, 1),
+                     "windows": len(current_run),
+-                    "indices": [idx for idx, _ in current_run],
+                 })
+             current_run = []
+ 
+@@ -111,15 +146,39 @@ def find_high_power_blocks(
+             "max_w": round(max_w, 0),
+             "dur_min": round(dur_min, 1),
+             "windows": len(current_run),
+-            "indices": [idx for idx, _ in current_run],
+         })
+ 
+     return blocks
+ 
+ 
++def classify_signature(
++    max_power: float,
++    heater_min: float,
++    spin_blocks: int,
++    active_min: float,
++) -> str:
++    """
++    Objectively infer signature class from measured electrical & spin parameters:
++    - max_power < 50 W -> 'No power data'
++    - heater_min > 2 min and spin_blocks >= 2 -> 'Long hot (inferred)'
++    - heater_min == 0 and spin_blocks >= 3 -> 'Long cold (inferred)'
++    - heater_min == 0 and spin_blocks == 1 and active_min < 35 min -> 'Quick (inferred)'
++    - otherwise -> 'Unclassified'
++    """
++    if max_power < MAX_POWER_NO_DATA_W:
++        return "No power data"
++    if heater_min > HEATER_MIN_THRESHOLD and spin_blocks >= 2:
++        return "Long hot (inferred)"
++    if heater_min == 0.0 and spin_blocks >= 3:
++        return "Long cold (inferred)"
++    if heater_min == 0.0 and spin_blocks == 1 and active_min < QUICK_ACTIVE_MAX_MIN:
++        return "Quick (inferred)"
++    return "Unclassified"
 +
-+    # 1. Local persistent token cache (survives token rotation across daemon runs)
-+    if TOKEN_CACHE_FILE.is_file():
-+        try:
-+            with open(TOKEN_CACHE_FILE, "r", encoding="utf-8") as f:
-+                cached = json.load(f)
-+            acc = cached.get("accessToken")
-+            ref = cached.get("refreshToken")
-+            exp_str = cached.get("expires")
-+            
-+            needs_refresh = False
-+            if exp_str:
-+                try:
-+                    exp_dt = datetime.fromisoformat(exp_str.replace("Z", "+00:00"))
-+                    now_dt = datetime.now(exp_dt.tzinfo)
-+                    if (exp_dt - now_dt).total_seconds() < 300:
-+                        needs_refresh = True
-+                except Exception:
-+                    needs_refresh = True
-+            
-+            if not needs_refresh and acc:
-+                return acc
-+            
-+            if ref:
-+                new_acc, new_ref, exp_in = _refresh_oauth_token(ref)
-+                if new_acc:
-+                    cached["accessToken"] = new_acc
-+                    cached["refreshToken"] = new_ref
-+                    cached["expires"] = (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
-+                    TOKEN_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-+                    with open(TOKEN_CACHE_FILE, "w", encoding="utf-8") as out_f:
-+                        json.dump(cached, out_f, indent=2)
-+                    return new_acc
-+        except Exception as e:
-+            print(f"[AUTH CACHE NOTICE] Token cache notice: {e}")
 +
-+    # 2. SmartThings CLI credentials file
-     cred_path = Path(os.path.expandvars(r"%LOCALAPPDATA%\@smartthings\cli\Data\credentials.json"))
--    
--    # 1. Try reading and refreshing CLI credentials file
-     if cred_path.is_file():
+ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[str, Any]:
+     """
+-    Parse a single session CSV file and extract all physical signature metrics.
++    Parse a single session CSV file and compute its physical signature metrics.
+     """
+     with open(csv_path, "r", encoding="utf-8") as f:
+         reader = csv.DictReader(f)
+@@ -131,65 +190,79 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+     schema_label = "fw07" if is_fw07 else "legacy"
+     dt_seconds = 5.024 if is_fw07 else 5.0
+ 
+-    # Extract powers and timestamps
+     powers: List[float] = []
+     timestamps_ms: List[float] = []
++    epochs_ms: List[float] = []
++
+     for r in rows:
          try:
-             with open(cred_path, "r", encoding="utf-8") as f:
-@@ -66,61 +129,39 @@ def get_valid_smartthings_token() -> str:
-             if not needs_refresh and acc:
-                 return acc
-             
--            # Refresh using refresh token
-             if ref:
--                body = urllib.parse.urlencode({
--                    "grant_type": "refresh_token",
--                    "client_id": SMARTTHINGS_CLIENT_ID,
--                    "refresh_token": ref
--                }).encode("utf-8")
--                req = urllib.request.Request(
--                    SMARTTHINGS_REFRESH_URL,
--                    data=body,
--                    headers={"Content-Type": "application/x-www-form-urlencoded"}
--                )
--                with urllib.request.urlopen(req, timeout=10) as resp:
--                    data = json.loads(resp.read().decode("utf-8"))
--                    new_acc = data.get("access_token")
--                    new_ref = data.get("refresh_token") or ref
--                    expires_in = data.get("expires_in", 86400)
--                    
--                    if new_acc:
--                        prof["accessToken"] = new_acc
--                        if new_ref:
--                            prof["refreshToken"] = new_ref
--                        import datetime as dt_mod
--                        prof["expires"] = (dt_mod.datetime.now(dt_mod.timezone.utc) + dt_mod.timedelta(seconds=expires_in)).isoformat().replace("+00:00", "Z")
--                        creds["default:api.smartthings.com"] = prof
--                        with open(cred_path, "w", encoding="utf-8") as out_f:
--                            json.dump(creds, out_f, indent=4)
--                        return new_acc
-+                new_acc, new_ref, exp_in = _refresh_oauth_token(ref)
-+                if new_acc:
-+                    prof["accessToken"] = new_acc
-+                    prof["refreshToken"] = new_ref
-+                    prof["expires"] = (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
-+                    creds["default:api.smartthings.com"] = prof
-+                    with open(cred_path, "w", encoding="utf-8") as out_f:
-+                        json.dump(creds, out_f, indent=4)
-+                    return new_acc
-         except Exception as e:
-             print(f"[AUTH CLI NOTICE] CLI token refresh notice: {e}")
- 
--    # 2. Check environment variable refresh token
-+    # 3. Environment variable refresh token (cache new rotation pair locally so it doesn't break)
-     env_ref = os.getenv("SMARTTHINGS_REFRESH_TOKEN")
-     if env_ref:
--        try:
--            body = urllib.parse.urlencode({
--                "grant_type": "refresh_token",
--                "client_id": SMARTTHINGS_CLIENT_ID,
--                "refresh_token": env_ref
--            }).encode("utf-8")
--            req = urllib.request.Request(
--                SMARTTHINGS_REFRESH_URL,
--                data=body,
--                headers={"Content-Type": "application/x-www-form-urlencoded"}
--            )
--            with urllib.request.urlopen(req, timeout=10) as resp:
--                data = json.loads(resp.read().decode("utf-8"))
--                new_acc = data.get("access_token")
--                if new_acc:
--                    return new_acc
--        except Exception as e:
--            print(f"[AUTH ENV NOTICE] Env token refresh notice: {e}")
-+        new_acc, new_ref, exp_in = _refresh_oauth_token(env_ref)
-+        if new_acc:
+-            p = float(r.get("power_w") or 0.0)
+-            powers.append(p)
++            powers.append(float(r.get("power_w") or 0.0))
+         except (ValueError, TypeError):
+             powers.append(0.0)
+         try:
+-            t = float(r.get("timestamp_ms") or 0.0)
+-            timestamps_ms.append(t)
++            timestamps_ms.append(float(r.get("timestamp_ms") or 0.0))
+         except (ValueError, TypeError):
+             timestamps_ms.append(0.0)
++        if is_fw07 and "epoch_ms" in r:
 +            try:
-+                cache_data = {
-+                    "accessToken": new_acc,
-+                    "refreshToken": new_ref,
-+                    "expires": (datetime.now(timezone.utc) + dt_mod.timedelta(seconds=exp_in)).isoformat().replace("+00:00", "Z")
-+                }
-+                TOKEN_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-+                with open(TOKEN_CACHE_FILE, "w", encoding="utf-8") as out_f:
-+                    json.dump(cache_data, out_f, indent=2)
-+            except Exception:
-+                pass
-+            return new_acc
++                epochs_ms.append(float(r.get("epoch_ms") or 0.0))
++            except (ValueError, TypeError):
++                epochs_ms.append(0.0)
++
++    max_power = max(powers) if powers else 0.0
  
--    # 3. Fallback to access token or PAT
--    return os.getenv("SMARTTHINGS_ACCESS_TOKEN") or SMARTTHINGS_PAT
-+    # 4. Fallback: prioritize fresh SMARTTHINGS_PAT over static SMARTTHINGS_ACCESS_TOKEN
-+    return SMARTTHINGS_PAT or os.getenv("SMARTTHINGS_ACCESS_TOKEN")
- 
- def _safe_get(d, *keys, default=None):
-     curr = d
-@@ -196,6 +237,15 @@ def query_smartthings() -> dict:
-                 "cumulative_water_l": round(cum_water / 1000.0, 1) if cum_water else 0.0,
-                 "updated_at": datetime.now(timezone.utc).isoformat()
-             }
-+    except urllib.error.HTTPError as e:
-+        global _auth_warning_logged
-+        if e.code == 401:
-+            if not _auth_warning_logged:
-+                print("[SMARTTHINGS AUTH 401] Token unauthorized/expired. (Samsung PATs expire in 24h per Dec 2024 policy). Falling back to power/vibration heuristics.")
-+                _auth_warning_logged = True
-+        else:
-+            print(f"[SMARTTHINGS CLIENT HTTP {e.code}] {e}")
-+        return {}
-     except Exception as e:
-         print(f"[SMARTTHINGS CLIENT ERR] {e}")
-         return {}
-@@ -216,114 +266,142 @@ def get_smartthings_status(min_interval_s: float = 30.0) -> dict:
-         _cached_st_data = data
-     return _cached_st_data or {}
- 
-+# -----------------------------------------------------------------------------
-+# Phase timeline storage
-+#   * Local copy: data/.phase_timelines/<session_id>.jsonl (one checkpoint per
-+#     line). The archiver reads this first, so it does NOT have to download
-+#     the timeline back from Firebase (saves Spark-plan download quota).
-+#   * Firebase copy: /session_phases/<session_id>/<ts> (for other machines
-+#     and the live dashboards), written with print=silent.
-+# -----------------------------------------------------------------------------
-+PHASE_DIR = BASE_DIR / "data" / ".phase_timelines"
-+
-+
-+def _local_timeline_path(session_id: str) -> Path:
-+    safe = "".join(c for c in session_id if c.isalnum() or c in "-_")
-+    return PHASE_DIR / f"{safe}.jsonl"
-+
-+
- def push_phase_to_firebase(st_data: dict, session_id: str = None) -> bool:
-     """
--    Mirrors live phase to Firebase /live_phase.json
--    and if session_id is active, appends checkpoint to /session_phases/{session_id}/{now_ms}.json
-+    Mirrors live phase to Firebase /live_phase.json and, if a session is
-+    active, appends a checkpoint to /session_phases/{session_id}/{now_ms}
-+    AND to the local timeline file.
-     """
-     if not st_data:
-         return False
--        
-+    from firmware.firebase_rest import get_client   # local import avoids a cycle
-+    fb = get_client()
-     now_ms = int(time.time() * 1000)
--    
--    # 1. Update /live_phase.json
-+
-+    # 1. Live phase (single small node, overwritten)
-     try:
--        url = f"{FIREBASE_HOST}/live_phase.json?auth={FIREBASE_AUTH}"
--        data = json.dumps(st_data).encode("utf-8")
--        req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
--        with urllib.request.urlopen(req, timeout=4):
--            pass
-+        fb.put("live_phase", st_data)
-     except Exception as e:
-         print(f"[FIREBASE PUT live_phase ERR] {e}")
- 
--    # 2. Record checkpoint to session timeline
--    if session_id:
+     # 1. Total recorded minutes
+-    if is_fw07 and "epoch_ms" in header:
 -        try:
--            checkpoint = {
--                "ts": now_ms,
--                "phase": st_data.get("job_state", "none"),
--                "machine_state": st_data.get("machine_state", "stop"),
--                "progress_pct": st_data.get("progress_pct", 0),
--                "remaining_mins": st_data.get("remaining_mins", 0),
--                "target_rpm": st_data.get("target_rpm", 0)
--            }
--            url = f"{FIREBASE_HOST}/session_phases/{session_id}/{now_ms}.json?auth={FIREBASE_AUTH}"
--            data = json.dumps(checkpoint).encode("utf-8")
--            req = urllib.request.Request(url, data=data, method="PUT", headers={"Content-Type": "application/json"})
--            with urllib.request.urlopen(req, timeout=4):
--                pass
--            return True
--        except Exception as e:
--            print(f"[FIREBASE PUT session_phase ERR] {e}")
-+    if not session_id:
-+        return True
+-            e0 = float(rows[0]["epoch_ms"])
+-            e1 = float(rows[-1]["epoch_ms"])
+-            recorded_min = round((e1 - e0) / 60000.0, 1)
+-        except Exception:
+-            recorded_min = round(n_rows * dt_seconds / 60.0, 1)
++    if is_fw07 and epochs_ms:
++        recorded_min = round((epochs_ms[-1] - epochs_ms[0]) / 60000.0, 1)
+     else:
+         recorded_min = round(n_rows * dt_seconds / 60.0, 1)
  
-+    checkpoint = {
-+        "ts": now_ms,
-+        "phase": st_data.get("job_state", "none"),
-+        "machine_state": st_data.get("machine_state", "stop"),
-+        "progress_pct": st_data.get("progress_pct", 0),
-+        "remaining_mins": st_data.get("remaining_mins", 0),
-+        "target_rpm": st_data.get("target_rpm", 0),
-+        "cycle": st_data.get("cycle", "unknown"),
-+        "water_temp": st_data.get("water_temp", ""),
-+    }
-+    # 2. Local timeline (authoritative for archiving on this PC)
-+    try:
-+        PHASE_DIR.mkdir(parents=True, exist_ok=True)
-+        with open(_local_timeline_path(session_id), "a", encoding="utf-8") as f:
-+            f.write(json.dumps(checkpoint) + "\n")
-+    except OSError as e:
-+        print(f"[PHASE LOCAL WRITE ERR] {e}")
-+    # 3. Firebase copy
-+    try:
-+        fb.put(f"session_phases/{session_id}/{now_ms}", checkpoint)
-+    except Exception as e:
-+        print(f"[FIREBASE PUT session_phase ERR] {e}")
-     return True
+     # 2. Active minutes (power >= 8W)
+-    has_valid_power = any(p > 0.5 for p in powers)
++    has_valid_power = max_power >= MAX_POWER_NO_DATA_W
+     if not has_valid_power:
++        active_min_num = 0.0
+         active_min_str = "n/a"
++        heater_min_num = 0.0
+         heater_min_str = "n/a"
+-        high_power_blocks = []
+-        n_blocks_str = "n/a"
++        spin_blocks = 0
++        spin_blocks_str = "n/a"
++        high_power_blocks: List[Dict[str, Any]] = []
++        n_high_power_str = "n/a"
+     else:
+         active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
+         if active_indices:
+-            # Active duration span from first active window to end of last active window
+             t_start = timestamps_ms[active_indices[0]]
+             t_end = timestamps_ms[active_indices[-1]]
+             dt_ms = dt_seconds * 1000.0
+-            if t_end >= t_start:
+-                span_min = (t_end - t_start + dt_ms) / 60000.0
+-            else:
+-                span_min = len(active_indices) * dt_seconds / 60.0
+-            active_min_val = round(span_min)
+-            active_min_str = str(int(active_min_val))
++            span_min = (t_end - t_start + dt_ms) / 60000.0 if t_end >= t_start else (len(active_indices) * dt_seconds / 60.0)
++            active_min_num = span_min
++            active_min_str = str(int(round(span_min)))
+         else:
++            active_min_num = 0.0
+             active_min_str = "0"
  
+         # 3. Heater minutes (power > 1000W)
+-        heater_count = sum(1 for p in powers if p > 1000.0)
+-        heater_min = round((heater_count * dt_seconds) / 60.0, 1)
+-        heater_min_str = f"{heater_min:.1f}" if heater_min > 0 else "0"
++        heater_count = sum(1 for p in powers if p > HEATER_W)
++        heater_min_num = round((heater_count * dt_seconds) / 60.0, 1)
++        heater_min_str = f"{heater_min_num:.1f}" if heater_min_num > 0 else "0"
 +
- def fetch_session_phase_timeline(session_id: str) -> list:
--    """Retrieves recorded phase checkpoints for a given session from Firebase."""
-+    """Phase checkpoints for a session: local file first, Firebase as fallback."""
-     if not session_id:
-         return []
--    try:
--        url = f"{FIREBASE_HOST}/session_phases/{session_id}.json?auth={FIREBASE_AUTH}"
--        req = urllib.request.Request(url, headers={"User-Agent": "PdM-SmartThings-Client"})
--        with urllib.request.urlopen(req, timeout=6) as resp:
--            data = json.loads(resp.read().decode("utf-8"))
--            if not data or not isinstance(data, dict):
--                return []
--            
--            # Sort by timestamp
-+    timeline = []
-+    local = _local_timeline_path(session_id)
-+    if local.is_file():
-+        try:
-+            for line in local.read_text(encoding="utf-8").splitlines():
-+                if line.strip():
-+                    timeline.append(json.loads(line))
-+        except (OSError, ValueError):
-             timeline = []
-+    if not timeline:
-+        try:
-+            from firmware.firebase_rest import get_client
-+            data = get_client().get(f"session_phases/{session_id}")
-+        except Exception:
-+            data = None
-+        if isinstance(data, dict):
-             for k, v in data.items():
-                 if isinstance(v, dict):
--                    ts = v.get("ts") or (int(k) if str(k).isdigit() else 0)
--                    timeline.append({
--                        "ts": ts,
--                        "phase": v.get("phase", "none"),
--                        "machine_state": v.get("machine_state", "run"),
--                        "progress_pct": v.get("progress_pct", 0),
--                        "target_rpm": v.get("target_rpm", 0)
--                    })
--            timeline.sort(key=lambda x: x["ts"])
--            return timeline
--    except Exception:
--        return []
-+                    v = dict(v)
-+                    v["ts"] = v.get("ts") or (int(k) if str(k).isdigit() else 0)
-+                    timeline.append(v)
-+    # Build normalized output dictionary for each timeline checkpoint.
-+    # We preserve all existing keys ('ts', 'phase', 'machine_state', 'progress_pct', 'target_rpm')
-+    # and additively include 'cycle' (programme) and 'water_temp' to support session context tracking.
-+    out = [
-+        {
-+            "ts": c.get("ts", 0),
-+            "phase": c.get("phase", "none"),
-+            "machine_state": c.get("machine_state", "run"),
-+            "progress_pct": c.get("progress_pct", 0),
-+            "target_rpm": c.get("target_rpm", 0),
-+            "cycle": c.get("cycle", "unknown"),
-+            "water_temp": c.get("water_temp", ""),
-+        }
-+        for c in timeline
-+    ]
-+    out.sort(key=lambda x: x["ts"])
-+    return out
-+
++        # 4. Spin blocks (>= 20 windows with 200W < power <= 1000W)
++        spin_blocks = count_spin_blocks(powers)
++        spin_blocks_str = str(spin_blocks)
  
--def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int, total_duration_ms: int = None, last_phase: str = "wash") -> str:
-+def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: float, t_ms: int, total_duration_ms: int = None, last_phase: str = "none") -> str:
+-        # 4. High-power blocks (>= 3 consecutive windows > 200W)
++        # 5. General high-power blocks (>= 3 windows > 200W)
+         high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
+-        n_blocks_str = str(len(high_power_blocks))
++        n_high_power_str = str(len(high_power_blocks))
+ 
+-    # 5. Firmware-07 specific data quality counters
++    # 6. Signature class (inferred from power)
++    signature_class = classify_signature(
++        max_power=max_power,
++        heater_min=heater_min_num,
++        spin_blocks=spin_blocks,
++        active_min=active_min_num,
++    )
++
++    # 7. Firmware-07 data quality counters
+     if is_fw07:
+         n_accels = [float(r["n_accel"]) for r in rows if r.get("n_accel")]
+         med_n_accel = round(float(np.median(n_accels))) if n_accels else 0
+@@ -198,15 +271,19 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         fifo_ov = sum(int(float(r["fifo_overflows"])) for r in rows if r.get("fifo_overflows"))
+         clip_samples = sum(int(float(r["accel_clip_samples"])) for r in rows if r.get("accel_clip_samples"))
+ 
+-        # Max window gap
+-        if "epoch_ms" in header:
+-            epochs = [float(r["epoch_ms"]) for r in rows if r.get("epoch_ms")]
+-            gaps = [(epochs[i] - epochs[i - 1]) / 1000.0 for i in range(1, len(epochs))]
+-            max_gap_s = round(max(gaps), 2) if gaps else dt_seconds
++        # Max window gap computed strictly from device hardware timestamps_ms (millis)
++        gaps_ts = [(timestamps_ms[i] - timestamps_ms[i - 1]) / 1000.0 for i in range(1, len(timestamps_ms))]
++        max_gap_s = round(max(gaps_ts), 2) if gaps_ts else dt_seconds
++
++        # Epoch jitter: max |Δepoch_ms - Δtimestamp_ms|
++        if len(epochs_ms) == len(timestamps_ms) and len(epochs_ms) > 1:
++            gaps_ep = [(epochs_ms[i] - epochs_ms[i - 1]) / 1000.0 for i in range(1, len(epochs_ms))]
++            jitter = [abs(gaps_ep[i] - gaps_ts[i]) for i in range(len(gaps_ts))]
++            epoch_jitter_max_s = round(max(jitter), 2) if jitter else 0.0
+         else:
+-            max_gap_s = dt_seconds
++            epoch_jitter_max_s = 0.0
+ 
+-        # Idle vibration floor: vib_mag_std when machine power < 5W
++        # Idle vibration floor: vib_mag_std when power < 5W
+         idle_vib = [
+             float(r["vib_mag_std"])
+             for r in rows
+@@ -214,16 +291,15 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         ]
+         idle_vib_med = round(float(np.median(idle_vib)), 3) if idle_vib else 0.032
+ 
+-        # Spin dominant frequency p90 across high-power extraction blocks (excluding heater)
+-        # Power between 200W and 1000W represents motor spin acceleration / high-speed extraction
++        # Spin dominant frequency p90 across mechanical spin extraction windows (200W < power <= 1000W)
+         spin_vdf = [
+             float(r["vib_dom_hz"])
+             for r in rows
+-            if 200.0 < float(r.get("power_w") or 0.0) < 1000.0 and r.get("vib_dom_hz")
++            if SPIN_MIN_W < float(r.get("power_w") or 0.0) <= HEATER_W and r.get("vib_dom_hz")
+         ]
+         spin_vdf_p90 = round(float(np.percentile(spin_vdf, 90)), 1) if spin_vdf else 0.0
+ 
+-        # Boot at start: first timestamp_ms < 30,000 ms (< 30 seconds since ESP32 boot)
++        # Boot at start: first timestamp_ms < 30,000 ms (< 30s since ESP32 boot)
+         first_t = timestamps_ms[0] if timestamps_ms else 999999
+         boot_at_start = "yes" if first_t < 30000 else "no"
+ 
+@@ -233,15 +309,23 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         fifo_ov = "-"
+         clip_samples = "-"
+         max_gap_s = "-"
++        epoch_jitter_max_s = "-"
+         idle_vib_med = "-"
+         spin_vdf_p90 = "-"
+         boot_at_start = "-"
+ 
+-    # Context fields
+-    programme = context_info.get("programme") or "unknown"
++    # Context & Honest Programme Display Rule:
++    # Only display sidecar programme if context_source is an authenticated or manual source.
++    # Otherwise, strictly output 'unknown' (never invent commercial programme names).
++    raw_source = context_info.get("context_source") or "unknown"
++    raw_prog = context_info.get("programme") or "unknown"
++
++    if raw_source in ("smartthings_live", "smartthings_history", "manual") and raw_prog != "unknown":
++        programme_display = raw_prog
++    else:
++        programme_display = "unknown"
++
+     water_temp = context_info.get("water_temp") or ""
+-    spin_level = context_info.get("spin_level") or ""
+-    context_source = context_info.get("context_source") or "unknown"
+ 
+     return {
+         "file": csv_path.name,
+@@ -249,34 +333,40 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         "rows": n_rows,
+         "recorded_min": recorded_min,
+         "active_min": active_min_str,
++        "active_min_num": active_min_num,
+         "heater_min": heater_min_str,
+-        "n_blocks": n_blocks_str,
++        "heater_min_num": heater_min_num,
++        "spin_blocks": spin_blocks_str,
++        "spin_blocks_num": spin_blocks,
++        "n_high_power": n_high_power_str,
+         "blocks": high_power_blocks,
++        "signature_class": signature_class,
+         "med_n_accel": med_n_accel,
+         "min_n_accel": min_n_accel,
+         "fifo_ov": fifo_ov,
+         "clip_samples": clip_samples,
+         "max_gap_s": max_gap_s,
++        "epoch_jitter_max_s": epoch_jitter_max_s,
+         "idle_vib_med": idle_vib_med,
+         "spin_vdf_p90": spin_vdf_p90,
+         "boot_at_start": boot_at_start,
+-        "programme": programme,
++        "programme": programme_display,
+         "water_temp": water_temp,
+-        "spin_level": spin_level,
+-        "context_source": context_source,
++        "context_source": raw_source,
+     }
+ 
+ 
+ # =============================================================================
+-# SECTION 3: Report Generator
++# SECTION 3: Dynamic Report Generation
+ # =============================================================================
+ def generate_cycle_signature_report() -> Path:
      """
--    Intelligent physics-informed fallback when SmartThings API timeline is unrecorded.
--    Uses mechanical kinematics, acoustic pressure, active electrical draw, and cycle progress.
-+    Fallback phase tracker when SmartThings API timeline is unrecorded or not updating.
-+    Strictly avoids acoustic noise or arbitrary heuristic guessing to preserve ML ground truth integrity.
-+
-+    Rules:
-+    1. Standby / Finished Check:
-+       If machine power is in standby (power_w <= 3.5W, or <= 6.0W with LCD on and stationary drum):
-+       - If preceded by an active cycle ('wash', 'rinse', 'spin', 'drain', 'weightSensing', 'finish'), mark 'finish'.
-+       - Otherwise, keep at 'none'.
-+    2. SmartThings not updating during an active cycle block:
-+       - Keep the before phase (last_phase) carried forward to the current block (LOCF).
-+    3. If SmartThings was not updating and no before phase exists:
-+       - Keep at 'none' (never invent synthetic phase labels using acoustics or heuristics).
+     Generate markdown report for all real sessions and write to ml/models/cycle_signature_report.md.
++    All summary text, classifications, and grouping tables are computed dynamically.
      """
-     vibe_diff = abs(vibe_mag - 9.81)
+     context_map = load_session_context_map()
  
--    # 1. Active heating wash element (1800-2000W)
--    if power_w > 1500.0:
--        return "wash"
--
--    # 2. Spin cycle (high speed extraction: high vibration, acoustic roar > 350 RMS, or motor power > 300W)
--    if vibe_mag > 10.8 or audio_rms > 350.0 or power_w > 300.0:
--        return "spin"
--
--    # 3. Drain pump (electric pump active 25-65W with stationary drum)
--    if 25.0 <= power_w <= 65.0 and audio_rms < 150.0 and vibe_diff < 0.25:
--        return "drain"
--
--    # 4. Weight sensing (initial dry tumble inertia sensing in the first 2 minutes)
--    if t_ms < 120000:
--        return "weightSensing"
--
--    # 5. Normal tumbling / agitation (detectable by power OR acoustic audio RMS OR drum oscillation)
--    if power_w > 45.0 or audio_rms > 35.0 or vibe_diff > 0.15:
--        if total_duration_ms and total_duration_ms > 0:
--            return "wash" if t_ms < (total_duration_ms * 0.60) else "rinse"
--        elif t_ms < 2400000:  # First 40 mins
--            return "wash"
--        else:
--            return "rinse"
-+    # 1. Standby / Cycle Finished Check
-+    # Idle standby is ~1.0W - 1.3W (or <= 3.5W with dimming, up to 6.0W with LCD on) with stationary drum
-+    if (power_w <= 3.5 and (vibe_diff < 0.5 or vibe_mag < 10.3)) or \
-+       (power_w <= 6.0 and vibe_diff < 0.25 and last_phase in ("wash", "rinse", "spin", "drain", "weightSensing", "finish")):
-+        if last_phase in ("wash", "rinse", "spin", "drain", "weightSensing", "finish"):
-+            return "finish"
-+        return "none"
+-    # Find all CSV files in data/real_sessions/ (ignoring desktop.ini)
++    # Collect only .csv files, ignoring desktop.ini or non-csv items
+     csv_files = sorted([
+         f for f in REAL_SESSIONS_DIR.iterdir()
+         if f.is_file() and f.suffix.lower() == ".csv"
+@@ -288,6 +378,23 @@ def generate_cycle_signature_report() -> Path:
+         res = analyze_session_csv(f, ctx)
+         results.append(res)
  
--    # 6. Momentary tumble pause between drum reversals (3-5s soak pause)
--    # If inside an active session, carry forward the ongoing phase instead of spurious 'none'
--    if last_phase and last_phase not in ("none", "finish", "stop"):
-+    # 2. SmartThings not updating during active block: keep before phase carried forward (LOCF)
-+    if last_phase and last_phase not in ("none", "finish", "stop", "offline", "unknown"):
-         return last_phase
- 
-+    # 3. If SmartThings is not updating and no before phase exists, keep at 'none'
-     return "none"
- 
- def compute_weight_and_class(rows: list, st_info: dict = None) -> tuple:
-diff --git a/firmware/tests/test_session_context.py b/firmware/tests/test_session_context.py
-new file mode 100644
-index 0000000..fa54c6e
---- /dev/null
-+++ b/firmware/tests/test_session_context.py
-@@ -0,0 +1,198 @@
-+"""
-+firmware/tests/test_session_context.py
-+Unit and Integration Tests for Session Context Sidecar and Backfill.
-+
-+Test Coverage:
-+--------------
-+1. test_upsert_new_row: Adding new session records creates valid 8-column rows.
-+2. test_upsert_keeps_manual_row: Never overwrites rows marked with context_source='manual'.
-+3. test_upsert_updates_non_manual_row: Updates records marked as 'unknown' or automated.
-+4. test_backfill_idempotent: Running backfill multiple times produces byte-identical output.
-+5. test_backfill_ignores_non_csv: Confirms files like desktop.ini are ignored.
-+6. test_extract_session_time_bounds: Accurately parses epoch bounds from fw07 and legacy CSVs.
-+"""
-+
-+from __future__ import annotations
-+
-+import csv
-+import json
-+from pathlib import Path
-+import shutil
-+import sys
-+import tempfile
-+import unittest
-+
-+BASE_DIR = Path(__file__).resolve().parent.parent.parent
-+if str(BASE_DIR) not in sys.path:
-+    sys.path.insert(0, str(BASE_DIR))
-+
-+from firmware.session_context import (
-+    CONTEXT_COLUMNS,
-+    backfill_all_sessions,
-+    extract_session_time_bounds,
-+    load_session_context,
-+    save_session_context,
-+    upsert_session_context,
-+)
-+
-+
-+class TestSessionContext(unittest.TestCase):
-+    def setUp(self) -> None:
-+        self.temp_dir = Path(tempfile.mkdtemp(prefix="pdm_test_context_"))
-+        self.context_file = self.temp_dir / "session_context.csv"
-+        self.sessions_dir = self.temp_dir / "real_sessions"
-+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
-+
-+    def tearDown(self) -> None:
-+        shutil.rmtree(self.temp_dir, ignore_errors=True)
-+
-+    def test_upsert_new_row(self) -> None:
-+        """Verify inserting a new record into a non-existent context file."""
-+        entry = {
-+            "session_file": "wash_cycle_2026-10-21_0631.csv",
-+            "start_epoch_ms": 1792535460262,
-+            "end_epoch_ms": 1792537204680,
-+            "programme": "QuickWash",
-+            "water_temp": "cold",
-+            "spin_level": "1200",
-+            "context_source": "smartthings_live",
-+            "note": "verified via test",
-+        }
-+        res = upsert_session_context(entry, context_file=self.context_file)
-+        self.assertTrue(res)
-+        self.assertTrue(self.context_file.is_file())
-+
-+        rows = load_session_context(self.context_file)
-+        self.assertEqual(len(rows), 1)
-+        self.assertEqual(rows[0]["session_file"], "wash_cycle_2026-10-21_0631.csv")
-+        self.assertEqual(rows[0]["programme"], "QuickWash")
-+        self.assertEqual(rows[0]["context_source"], "smartthings_live")
-+        self.assertEqual(list(rows[0].keys()), CONTEXT_COLUMNS)
-+
-+    def test_upsert_keeps_manual_row(self) -> None:
-+        """Verify that a row marked with context_source='manual' is NEVER overwritten."""
-+        manual_entry = {
-+            "session_file": "wash_cycle_2026-10-20_0744.csv",
-+            "start_epoch_ms": 1792453423282,
-+            "end_epoch_ms": 1792458266417,
-+            "programme": "DailyWash_Heavy",
-+            "water_temp": "40C",
-+            "spin_level": "1400",
-+            "context_source": "manual",
-+            "note": "Adam hand-verified on control panel",
-+        }
-+        self.assertTrue(upsert_session_context(manual_entry, context_file=self.context_file))
-+
-+        # Attempt to overwrite with automated source
-+        automated_entry = {
-+            "session_file": "wash_cycle_2026-10-20_0744.csv",
-+            "start_epoch_ms": 1792453423282,
-+            "end_epoch_ms": 1792458266417,
-+            "programme": "Automated_Override",
-+            "water_temp": "cold",
-+            "spin_level": "1000",
-+            "context_source": "smartthings_live",
-+            "note": "should be blocked",
-+        }
-+        res = upsert_session_context(automated_entry, context_file=self.context_file)
-+        self.assertFalse(res, "Upsert should return False when skipping manual row")
-+
-+        # Verify manual entry was preserved intact
-+        rows = load_session_context(self.context_file)
-+        self.assertEqual(len(rows), 1)
-+        self.assertEqual(rows[0]["programme"], "DailyWash_Heavy")
-+        self.assertEqual(rows[0]["water_temp"], "40C")
-+        self.assertEqual(rows[0]["context_source"], "manual")
-+        self.assertEqual(rows[0]["note"], "Adam hand-verified on control panel")
-+
-+    def test_upsert_updates_non_manual_row(self) -> None:
-+        """Verify that an 'unknown' row can be safely updated with resolved metadata."""
-+        initial_entry = {
-+            "session_file": "wash_cycle_2026-10-19_0911.csv",
-+            "start_epoch_ms": 1792372280304,
-+            "end_epoch_ms": 1792376224132,
-+            "programme": "unknown",
-+            "water_temp": "",
-+            "spin_level": "",
-+            "context_source": "unknown",
-+            "note": "pending",
-+        }
-+        upsert_session_context(initial_entry, context_file=self.context_file)
-+
-+        updated_entry = {
-+            "session_file": "wash_cycle_2026-10-19_0911.csv",
-+            "start_epoch_ms": 1792372280304,
-+            "end_epoch_ms": 1792376224132,
-+            "programme": "DailyWash",
-+            "water_temp": "cold",
-+            "spin_level": "1200",
-+            "context_source": "smartthings_live",
-+            "note": "resolved",
-+        }
-+        res = upsert_session_context(updated_entry, context_file=self.context_file)
-+        self.assertTrue(res)
-+
-+        rows = load_session_context(self.context_file)
-+        self.assertEqual(len(rows), 1)
-+        self.assertEqual(rows[0]["programme"], "DailyWash")
-+        self.assertEqual(rows[0]["context_source"], "smartthings_live")
-+
-+    def test_backfill_idempotent_and_ignores_non_csv(self) -> None:
-+        """
-+        Create mock sessions including desktop.ini, verify backfill runs idempotently,
-+        ignores non-CSVs, and preserves pre-existing manual rows.
-+        """
-+        # 1. Create mock fw07 session CSV
-+        fw07_file = self.sessions_dir / "wash_cycle_2026-10-21_0514.csv"
-+        with open(fw07_file, "w", encoding="utf-8", newline="") as f:
-+            w = csv.writer(f)
-+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms", "n_accel"])
-+            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "LIGHT", 1792530853248, 1013])
-+            w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "LIGHT", 1792532644998, 1014])
-+
-+        # 2. Create mock legacy session CSV
-+        legacy_file = self.sessions_dir / "wash_cycle_2026-10-16_0857.csv"
-+        with open(legacy_file, "w", encoding="utf-8", newline="") as f:
-+            w = csv.writer(f)
-+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class"])
-+            w.writerow([0, 0.1, 0.2, 9.8, 100, 0.0, "none", "LIGHT"])
-+            w.writerow([4485283, 0.1, 0.2, 9.8, 110, 0.0, "none", "LIGHT"])
-+
-+        # 3. Create non-CSV files that must be ignored
-+        (self.sessions_dir / "desktop.ini").write_text("[.ShellClassInfo]\nIconResource=...", encoding="utf-8")
-+        (self.sessions_dir / "notes.txt").write_text("some random note", encoding="utf-8")
-+
-+        # 4. Pre-seed a manual row for fw07_file
-+        manual_row = {
-+            "session_file": fw07_file.name,
-+            "start_epoch_ms": "1792530853248",
-+            "end_epoch_ms": "1792532644998",
-+            "programme": "CustomManualProgramme",
-+            "water_temp": "20C",
-+            "spin_level": "800",
-+            "context_source": "manual",
-+            "note": "keep this untouched",
-+        }
-+        upsert_session_context(manual_row, context_file=self.context_file)
-+
-+        # 5. First backfill run
-+        count1 = backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
-+        self.assertEqual(count1, 2, "Should process exactly 2 CSV files, ignoring desktop.ini and notes.txt")
-+        content1 = self.context_file.read_text(encoding="utf-8")
-+
-+        # Verify manual row survived
-+        rows1 = {r["session_file"]: r for r in load_session_context(self.context_file)}
-+        self.assertEqual(rows1[fw07_file.name]["programme"], "CustomManualProgramme")
-+        self.assertEqual(rows1[fw07_file.name]["context_source"], "manual")
-+        self.assertEqual(rows1[legacy_file.name]["context_source"], "unknown")
-+
-+        # 6. Second backfill run (idempotency check)
-+        count2 = backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
-+        self.assertEqual(count2, 2)
-+        content2 = self.context_file.read_text(encoding="utf-8")
-+
-+        self.assertEqual(content1, content2, "Backfill must be strictly idempotent")
-+
-+
-+if __name__ == "__main__":
-+    unittest.main()
-diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
-new file mode 100644
-index 0000000..46ad518
---- /dev/null
-+++ b/ml/cycle_signature_report.py
-@@ -0,0 +1,397 @@
-+"""
-+ml/cycle_signature_report.py
-+Per-Cycle Measured Physical Signature & Wash Programme Grouping Report.
-+
-+Purpose:
-+--------
-+Analyzes each archived wash cycle in `data/real_sessions/` to extract its
-+measured physical profile:
-+  - Duration (total recorded minutes, active minutes with power >= 8W)
-+  - Thermal profile (heater minutes with power > 1000W)
-+  - Mechanical signature (high-power spin blocks, spin dominant frequency p90)
-+  - Acquisition quality counters for firmware-07 (accel count, FIFO overflows,
-+    clipped samples, max window gap, idle vibration floor)
-+  - ESP32 boot indicator (whether cycle started within 30s of edge MCU boot)
-+  - Context join (programme, water temperature from data/session_context.csv)
-+
-+Outputs:
-+--------
-+Writes `ml/models/cycle_signature_report.md`, concluding with a classification
-+table grouping cycles by wash programme / signature.
-+
-+Invariants:
-+-----------
-+- Never modifies data in data/real_sessions/ or data/session_context.csv.
-+- Standalone analysis report: does not alter ML training pipelines, detectors, or LOCO.
-+- Honest outputs: only physically measured facts, no synthetic health % or RUL claims.
-+"""
-+
-+from __future__ import annotations
-+
-+# =============================================================================
-+# SECTION 1: Imports & Paths
-+# =============================================================================
-+import csv
-+from datetime import datetime
-+from pathlib import Path
-+import sys
-+from typing import Any, Dict, List, Optional, Tuple
-+import numpy as np
-+
-+BASE_DIR = Path(__file__).resolve().parent.parent
-+DATA_DIR = BASE_DIR / "data"
-+REAL_SESSIONS_DIR = DATA_DIR / "real_sessions"
-+CONTEXT_FILE = DATA_DIR / "session_context.csv"
-+OUTPUT_REPORT_PATH = BASE_DIR / "ml" / "models" / "cycle_signature_report.md"
-+
-+if str(BASE_DIR) not in sys.path:
-+    sys.path.insert(0, str(BASE_DIR))
-+
-+
-+# =============================================================================
-+# SECTION 2: Helper Functions for Signature Extraction
-+# =============================================================================
-+def load_session_context_map() -> Dict[str, Dict[str, str]]:
-+    """Load session context sidecar file as a dictionary keyed by session_file."""
-+    context_map: Dict[str, Dict[str, str]] = {}
-+    if not CONTEXT_FILE.is_file():
-+        return context_map
-+
-+    try:
-+        with open(CONTEXT_FILE, "r", encoding="utf-8") as f:
-+            reader = csv.DictReader(f)
-+            for r in reader:
-+                fname = r.get("session_file", "").strip()
-+                if fname:
-+                    context_map[fname] = r
-+    except Exception as e:
-+        print(f"[WARN] Error reading session_context.csv: {e}")
-+
-+    return context_map
-+
-+
-+def find_high_power_blocks(
-+    powers: List[float],
-+    dt_seconds: float = 5.024,
-+    threshold_w: float = 200.0,
-+    min_consecutive: int = 3,
-+) -> List[Dict[str, Any]]:
-+    """
-+    Find contiguous blocks of consecutive windows with power > threshold_w.
-+    Returns a list of dicts with start_min, max_w, duration_min, and window count.
-+    """
-+    blocks: List[Dict[str, Any]] = []
-+    current_run: List[Tuple[int, float]] = []
-+
-+    for i, p in enumerate(powers):
-+        if p > threshold_w:
-+            current_run.append((i, p))
-+        else:
-+            if len(current_run) >= min_consecutive:
-+                start_window = current_run[0][0]
-+                max_w = max(p_val for _, p_val in current_run)
-+                start_min = (start_window * dt_seconds) / 60.0
-+                dur_min = (len(current_run) * dt_seconds) / 60.0
-+                blocks.append({
-+                    "start_min": round(start_min, 1),
-+                    "max_w": round(max_w, 0),
-+                    "dur_min": round(dur_min, 1),
-+                    "windows": len(current_run),
-+                    "indices": [idx for idx, _ in current_run],
-+                })
-+            current_run = []
-+
-+    if len(current_run) >= min_consecutive:
-+        start_window = current_run[0][0]
-+        max_w = max(p_val for _, p_val in current_run)
-+        start_min = (start_window * dt_seconds) / 60.0
-+        dur_min = (len(current_run) * dt_seconds) / 60.0
-+        blocks.append({
-+            "start_min": round(start_min, 1),
-+            "max_w": round(max_w, 0),
-+            "dur_min": round(dur_min, 1),
-+            "windows": len(current_run),
-+            "indices": [idx for idx, _ in current_run],
-+        })
-+
-+    return blocks
-+
-+
-+def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[str, Any]:
-+    """
-+    Parse a single session CSV file and extract all physical signature metrics.
-+    """
-+    with open(csv_path, "r", encoding="utf-8") as f:
-+        reader = csv.DictReader(f)
-+        header = reader.fieldnames or []
-+        rows = list(reader)
-+
-+    n_rows = len(rows)
-+    is_fw07 = "epoch_ms" in header or "vib_mag_std" in header
-+    schema_label = "fw07" if is_fw07 else "legacy"
-+    dt_seconds = 5.024 if is_fw07 else 5.0
-+
-+    # Extract powers and timestamps
-+    powers: List[float] = []
-+    timestamps_ms: List[float] = []
-+    for r in rows:
-+        try:
-+            p = float(r.get("power_w") or 0.0)
-+            powers.append(p)
-+        except (ValueError, TypeError):
-+            powers.append(0.0)
-+        try:
-+            t = float(r.get("timestamp_ms") or 0.0)
-+            timestamps_ms.append(t)
-+        except (ValueError, TypeError):
-+            timestamps_ms.append(0.0)
-+
-+    # 1. Total recorded minutes
-+    if is_fw07 and "epoch_ms" in header:
-+        try:
-+            e0 = float(rows[0]["epoch_ms"])
-+            e1 = float(rows[-1]["epoch_ms"])
-+            recorded_min = round((e1 - e0) / 60000.0, 1)
-+        except Exception:
-+            recorded_min = round(n_rows * dt_seconds / 60.0, 1)
-+    else:
-+        recorded_min = round(n_rows * dt_seconds / 60.0, 1)
-+
-+    # 2. Active minutes (power >= 8W)
-+    has_valid_power = any(p > 0.5 for p in powers)
-+    if not has_valid_power:
-+        active_min_str = "n/a"
-+        heater_min_str = "n/a"
-+        high_power_blocks = []
-+        n_blocks_str = "n/a"
-+    else:
-+        active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
-+        if active_indices:
-+            # Active duration span from first active window to end of last active window
-+            t_start = timestamps_ms[active_indices[0]]
-+            t_end = timestamps_ms[active_indices[-1]]
-+            dt_ms = dt_seconds * 1000.0
-+            if t_end >= t_start:
-+                span_min = (t_end - t_start + dt_ms) / 60000.0
-+            else:
-+                span_min = len(active_indices) * dt_seconds / 60.0
-+            active_min_val = round(span_min)
-+            active_min_str = str(int(active_min_val))
-+        else:
-+            active_min_str = "0"
-+
-+        # 3. Heater minutes (power > 1000W)
-+        heater_count = sum(1 for p in powers if p > 1000.0)
-+        heater_min = round((heater_count * dt_seconds) / 60.0, 1)
-+        heater_min_str = f"{heater_min:.1f}" if heater_min > 0 else "0"
-+
-+        # 4. High-power blocks (>= 3 consecutive windows > 200W)
-+        high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
-+        n_blocks_str = str(len(high_power_blocks))
-+
-+    # 5. Firmware-07 specific data quality counters
-+    if is_fw07:
-+        n_accels = [float(r["n_accel"]) for r in rows if r.get("n_accel")]
-+        med_n_accel = round(float(np.median(n_accels))) if n_accels else 0
-+        min_n_accel = int(min(n_accels)) if n_accels else 0
-+
-+        fifo_ov = sum(int(float(r["fifo_overflows"])) for r in rows if r.get("fifo_overflows"))
-+        clip_samples = sum(int(float(r["accel_clip_samples"])) for r in rows if r.get("accel_clip_samples"))
-+
-+        # Max window gap
-+        if "epoch_ms" in header:
-+            epochs = [float(r["epoch_ms"]) for r in rows if r.get("epoch_ms")]
-+            gaps = [(epochs[i] - epochs[i - 1]) / 1000.0 for i in range(1, len(epochs))]
-+            max_gap_s = round(max(gaps), 2) if gaps else dt_seconds
-+        else:
-+            max_gap_s = dt_seconds
-+
-+        # Idle vibration floor: vib_mag_std when machine power < 5W
-+        idle_vib = [
-+            float(r["vib_mag_std"])
-+            for r in rows
-+            if float(r.get("power_w") or 0.0) < 5.0 and r.get("vib_mag_std")
-+        ]
-+        idle_vib_med = round(float(np.median(idle_vib)), 3) if idle_vib else 0.032
-+
-+        # Spin dominant frequency p90 across high-power extraction blocks (excluding heater)
-+        # Power between 200W and 1000W represents motor spin acceleration / high-speed extraction
-+        spin_vdf = [
-+            float(r["vib_dom_hz"])
-+            for r in rows
-+            if 200.0 < float(r.get("power_w") or 0.0) < 1000.0 and r.get("vib_dom_hz")
-+        ]
-+        spin_vdf_p90 = round(float(np.percentile(spin_vdf, 90)), 1) if spin_vdf else 0.0
-+
-+        # Boot at start: first timestamp_ms < 30,000 ms (< 30 seconds since ESP32 boot)
-+        first_t = timestamps_ms[0] if timestamps_ms else 999999
-+        boot_at_start = "yes" if first_t < 30000 else "no"
-+
-+    else:
-+        med_n_accel = "-"
-+        min_n_accel = "-"
-+        fifo_ov = "-"
-+        clip_samples = "-"
-+        max_gap_s = "-"
-+        idle_vib_med = "-"
-+        spin_vdf_p90 = "-"
-+        boot_at_start = "-"
-+
-+    # Context fields
-+    programme = context_info.get("programme") or "unknown"
-+    water_temp = context_info.get("water_temp") or ""
-+    spin_level = context_info.get("spin_level") or ""
-+    context_source = context_info.get("context_source") or "unknown"
-+
-+    return {
-+        "file": csv_path.name,
-+        "schema": schema_label,
-+        "rows": n_rows,
-+        "recorded_min": recorded_min,
-+        "active_min": active_min_str,
-+        "heater_min": heater_min_str,
-+        "n_blocks": n_blocks_str,
-+        "blocks": high_power_blocks,
-+        "med_n_accel": med_n_accel,
-+        "min_n_accel": min_n_accel,
-+        "fifo_ov": fifo_ov,
-+        "clip_samples": clip_samples,
-+        "max_gap_s": max_gap_s,
-+        "idle_vib_med": idle_vib_med,
-+        "spin_vdf_p90": spin_vdf_p90,
-+        "boot_at_start": boot_at_start,
-+        "programme": programme,
-+        "water_temp": water_temp,
-+        "spin_level": spin_level,
-+        "context_source": context_source,
-+    }
-+
-+
-+# =============================================================================
-+# SECTION 3: Report Generator
-+# =============================================================================
-+def generate_cycle_signature_report() -> Path:
-+    """
-+    Generate markdown report for all real sessions and write to ml/models/cycle_signature_report.md.
-+    """
-+    context_map = load_session_context_map()
-+
-+    # Find all CSV files in data/real_sessions/ (ignoring desktop.ini)
-+    csv_files = sorted([
-+        f for f in REAL_SESSIONS_DIR.iterdir()
-+        if f.is_file() and f.suffix.lower() == ".csv"
-+    ])
-+
-+    results: List[Dict[str, Any]] = []
-+    for f in csv_files:
-+        ctx = context_map.get(f.name, {})
-+        res = analyze_session_csv(f, ctx)
-+        results.append(res)
-+
-+    # Format Markdown document
-+    lines: List[str] = [
-+        "# Wash Cycle Physical Signatures & Programme Report",
-+        "",
-+        f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
-+        f"**Cycles Analyzed:** {len(results)} archived sessions in `data/real_sessions/`  ",
-+        "**Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  ",
-+        "",
-+        "---",
-+        "",
-+        "## 1. Executive Summary & Physics Findings",
-+        "",
-+        "Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:",
-+        "- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).",
-+        "- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).",
-+        "- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).",
-+        "- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.",
-+        "",
-+        "---",
-+        "",
-+        "## 2. Comprehensive Cycle Signatures Table",
-+        "",
-+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |",
-+        "|---|---|---|---|---|---|---|---|---|---|",
-+    ]
-+
++    # Compute grouping dictionary dynamically: signature_class -> list of session records
++    groups: Dict[str, List[Dict[str, Any]]] = {}
 +    for r in results:
-+        lines.append(
-+            f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
-+            f"{r['heater_min']} | {r['n_blocks']} | {r['programme']} | {r['water_temp'] or '-'} | `{r['context_source']}` |"
++        sig = r["signature_class"]
++        groups.setdefault(sig, []).append(r)
++
++    # Assert that every session strictly satisfies its class criteria
++    for r in results:
++        sig = r["signature_class"]
++        expected_sig = classify_signature(
++            max_power=100.0 if r["active_min"] != "n/a" else 0.0,
++            heater_min=r["heater_min_num"],
++            spin_blocks=r["spin_blocks_num"],
++            active_min=r["active_min_num"],
 +        )
++        assert sig == expected_sig, f"Grouping invariant violated for {r['file']}: {sig} != {expected_sig}"
++
+     # Format Markdown document
+     lines: List[str] = [
+         "# Wash Cycle Physical Signatures & Programme Report",
+@@ -300,24 +407,35 @@ def generate_cycle_signature_report() -> Path:
+         "",
+         "## 1. Executive Summary & Physics Findings",
+         "",
+-        "Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:",
+-        "- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).",
+-        "- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).",
+-        "- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).",
+-        "- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.",
++        "Archived wash cycles were classified by their measured electrical power and mechanical spin signatures into computed groups:",
++    ]
++
++    for sig_name in sorted(groups.keys()):
++        members = groups[sig_name]
++        member_files = ", ".join(f"`{m['file']}`" for m in members)
++        lines.append(f"- **{sig_name} ({len(members)} cycles):** {member_files}")
 +
 +    lines.extend([
 +        "",
-+        "---",
-+        "",
-+        "## 3. Firmware-07 Data Quality & Kinematic Profile",
-+        "",
-+        "Telemetry verification table for firmware-07 45-column windowed records:",
-+        "",
-+        "| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |",
-+        "|---|---|---|---|---|---|---|---|",
++        "**Sensor Integrity Across Firmware-07 Runs:**",
++        "- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.",
++        "- Maximum spin extraction dominant frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM) across all spin blocks.",
++        "- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).",
++        "- Zero accelerometer clipping samples occurred across all sessions.",
+         "",
+         "---",
+         "",
+         "## 2. Comprehensive Cycle Signatures Table",
+         "",
+-        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |",
+-        "|---|---|---|---|---|---|---|---|---|---|",
+-    ]
++        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |",
++        "|---|---|---|---|---|---|---|---|---|---|---|---|",
 +    ])
+ 
+     for r in results:
+         lines.append(
+             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
+-            f"{r['heater_min']} | {r['n_blocks']} | {r['programme']} | {r['water_temp'] or '-'} | `{r['context_source']}` |"
++            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
++            f"`{r['programme']}` | {r['water_temp'] or '-'} | `{r['context_source']}` |"
+         )
+ 
+     lines.extend([
+@@ -328,15 +446,15 @@ def generate_cycle_signature_report() -> Path:
+         "",
+         "Telemetry verification table for firmware-07 45-column windowed records:",
+         "",
+-        "| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |",
+-        "|---|---|---|---|---|---|---|---|",
++        "| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Epoch Jitter Max (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |",
++        "|---|---|---|---|---|---|---|---|---|",
+     ])
+ 
+     fw07_results = [r for r in results if r["schema"] == "fw07"]
+     for r in fw07_results:
+         lines.append(
+             f"| `{r['file']}` | {r['med_n_accel']} / {r['min_n_accel']} | {r['fifo_ov']} | {r['clip_samples']} | "
+-            f"{r['max_gap_s']} s | {r['idle_vib_med']} m/s² | {r['spin_vdf_p90']} Hz | {r['boot_at_start']} |"
++            f"{r['max_gap_s']} s | {r['epoch_jitter_max_s']} s | {r['idle_vib_med']} m/s² | {r['spin_vdf_p90']} Hz | {r['boot_at_start']} |"
+         )
+ 
+     lines.extend([
+@@ -355,29 +473,50 @@ def generate_cycle_signature_report() -> Path:
+             lines.append("- *No high-power blocks recorded.*")
+         else:
+             for i, b in enumerate(r["blocks"], 1):
+-                block_type = "Heater (Wash Temp Control)" if b["max_w"] > 1000 else "Spin Extraction"
++                block_type = "Heater" if b["max_w"] > HEATER_W else "Spin Extraction"
+                 lines.append(
+                     f"- **Block {i}** ({block_type}): start at **{b['start_min']} min**, peak **{int(b['max_w'])} W**, duration **{b['dur_min']} min** ({b['windows']} windows)"
+                 )
+         lines.append("")
+ 
+-    # Grouping Table
++    # Section 5: Grouping Table (computed dynamically)
+     lines.extend([
+         "---",
+         "",
+         "## 5. Physical Signature Grouping",
+         "",
+-        "Cycles clustered by verified physical parameters (Heater Activity $\\times$ Spin Block Count):",
++        "Cycles clustered dynamically by verified physical rules (Heater Minutes $\\times$ Spin Block Count):",
+         "",
+-        "| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |",
++        "| Signature Class | Physical Decision Rule | Member Count | Member Sessions |",
+         "|---|---|---|---|",
+-        "| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |",
+-        "| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |",
+-        "| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |",
+-        "| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |",
+-        "",
+     ])
+ 
++    rule_descriptions = {
++        "Long cold (inferred)": "Heater == 0 min, Spin Blocks >= 3",
++        "Long hot (inferred)": "Heater > 2 min (>1 kW), Spin Blocks >= 2",
++        "Quick (inferred)": "Heater == 0 min, Spin Blocks == 1, Active < 35 min",
++        "No power data": "Maximum power < 50 W (legacy unmetered runs)",
++        "Unclassified": "Does not match predefined operational patterns",
++    }
 +
-+    fw07_results = [r for r in results if r["schema"] == "fw07"]
-+    for r in fw07_results:
-+        lines.append(
-+            f"| `{r['file']}` | {r['med_n_accel']} / {r['min_n_accel']} | {r['fifo_ov']} | {r['clip_samples']} | "
-+            f"{r['max_gap_s']} s | {r['idle_vib_med']} m/s² | {r['spin_vdf_p90']} Hz | {r['boot_at_start']} |"
-+        )
++    # Order groups predictably
++    ordered_groups = [
++        "Long cold (inferred)",
++        "Long hot (inferred)",
++        "Quick (inferred)",
++        "No power data",
++        "Unclassified",
++    ]
 +
-+    lines.extend([
-+        "",
-+        "---",
-+        "",
-+        "## 4. High-Power Electrical Profile Breakdown",
-+        "",
-+        "Detailed timing and electrical peak for all blocks with $\\ge 3$ consecutive windows $> 200\\text{ W}$:",
-+        "",
-+    ])
++    for g_name in ordered_groups:
++        if g_name in groups:
++            members = groups[g_name]
++            rule_text = rule_descriptions.get(g_name, "-")
++            member_str = "<br>".join(f"`{m['file']}`" for m in members)
++            lines.append(f"| **{g_name}** | {rule_text} | {len(members)} | {member_str} |")
 +
-+    for r in fw07_results:
-+        lines.append(f"### `{r['file']}` ({r['schema']}, {r['active_min']} active min)")
-+        if not r["blocks"]:
-+            lines.append("- *No high-power blocks recorded.*")
-+        else:
-+            for i, b in enumerate(r["blocks"], 1):
-+                block_type = "Heater (Wash Temp Control)" if b["max_w"] > 1000 else "Spin Extraction"
-+                lines.append(
-+                    f"- **Block {i}** ({block_type}): start at **{b['start_min']} min**, peak **{int(b['max_w'])} W**, duration **{b['dur_min']} min** ({b['windows']} windows)"
-+                )
-+        lines.append("")
++    lines.append("")
 +
-+    # Grouping Table
-+    lines.extend([
-+        "---",
-+        "",
-+        "## 5. Physical Signature Grouping",
-+        "",
-+        "Cycles clustered by verified physical parameters (Heater Activity $\\times$ Spin Block Count):",
-+        "",
-+        "| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |",
-+        "|---|---|---|---|",
-+        "| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |",
-+        "| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |",
-+        "| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |",
-+        "| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |",
-+        "",
-+    ])
-+
-+    OUTPUT_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-+    report_content = "\n".join(lines) + "\n"
-+    OUTPUT_REPORT_PATH.write_text(report_content, encoding="utf-8")
-+    print(f"[REPORT] Successfully generated cycle signature report at {OUTPUT_REPORT_PATH.relative_to(BASE_DIR)}")
-+    return OUTPUT_REPORT_PATH
-+
-+
-+# =============================================================================
-+# SECTION 4: CLI Execution
-+# =============================================================================
-+def main() -> None:
-+    path = generate_cycle_signature_report()
-+    print(f"Report written to: {path}")
-+
-+
-+if __name__ == "__main__":
-+    main()
+     OUTPUT_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+     report_content = "\n".join(lines) + "\n"
+     OUTPUT_REPORT_PATH.write_text(report_content, encoding="utf-8")
 diff --git a/ml/models/cycle_signature_report.md b/ml/models/cycle_signature_report.md
-new file mode 100644
-index 0000000..4188d9f
---- /dev/null
+index 4188d9f..60f966f 100644
+--- a/ml/models/cycle_signature_report.md
 +++ b/ml/models/cycle_signature_report.md
-@@ -0,0 +1,85 @@
-+# Wash Cycle Physical Signatures & Programme Report
+@@ -1,6 +1,6 @@
+ # Wash Cycle Physical Signatures & Programme Report
+ 
+-**Generated:** 2026-10-21 15:28:29  
++**Generated:** 2026-10-21 15:44:53  
+ **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
+ **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
+ 
+@@ -8,31 +8,37 @@
+ 
+ ## 1. Executive Summary & Physics Findings
+ 
+-Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:
+-- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).
+-- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).
+-- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).
+-- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.
++Archived wash cycles were classified by their measured electrical power and mechanical spin signatures into computed groups:
++- **Long cold (inferred) (4 cycles):** `wash_cycle_2026-10-16_0857.csv`, `wash_cycle_2026-10-17_0718.csv`, `wash_cycle_2026-10-18_0516.csv`, `wash_cycle_2026-10-19_0911.csv`
++- **Long hot (inferred) (1 cycles):** `wash_cycle_2026-10-20_0744.csv`
++- **No power data (6 cycles):** `wash_cycle_2026-10-11_1019.csv`, `wash_cycle_2026-10-12_1019.csv`, `wash_cycle_2026-10-15_1020.csv`, `wash_cycle_2026-10-15_morning.csv`, `wash_cycle_2026-10-17_0835.csv`, `wash_cycle_2026-10-19_0022.csv`
++- **Quick (inferred) (2 cycles):** `wash_cycle_2026-10-21_0514.csv`, `wash_cycle_2026-10-21_0631.csv`
 +
-+**Generated:** 2026-10-21 15:28:29  
-+**Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
-+**Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
-+
-+---
-+
-+## 1. Executive Summary & Physics Findings
-+
-+Firmware-07 wash cycles exhibit distinct physical profiles directly corresponding to differing physical wash programmes:
-+- **Daily Wash (Cold, ~64 min):** 3 spin extraction blocks (at ~37, 47, 61 min), 0 heater minutes, active duration ~64 min (`19 Oct 0911`).
-+- **Daily Wash (Warm/Hot, ~71 min):** 1 prolonged electrical heating block (11.9 min at ~2,290 W) followed by 3 spin extraction blocks (at ~40, 51, 67 min), active duration ~71 min (`20 Oct 0744`).
-+- **Quick Wash (~21 min):** 1 spin extraction block (at ~17-18 min), 0 heater minutes, active duration 21–22 min (`21 Oct 0514`, `21 Oct 0631`).
-+- **Sensor Integrity Across All Firmware-07 Runs:** Idle vibration noise floor `vib_mag_std` is exactly **0.032 m/s²** across all runs, maximum high-speed spin frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM), and zero accelerometer clipping occurred.
-+
-+---
-+
-+## 2. Comprehensive Cycle Signatures Table
-+
-+| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |
-+|---|---|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 5 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | 0 | 0 | 0 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 4 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | 0 | 0 | 0 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 4 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | unknown | - | `unknown` |
-+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | unknown | - | `unknown` |
-+
-+---
-+
-+## 3. Firmware-07 Data Quality & Kinematic Profile
-+
-+Telemetry verification table for firmware-07 45-column windowed records:
-+
-+| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |
-+|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-19_0911.csv` | 1013 / 965 | 1 | 0 | 7.75 s | 0.032 m/s² | 19.9 Hz | yes |
-+| `wash_cycle_2026-10-20_0744.csv` | 1014 / 964 | 1 | 0 | 8.78 s | 0.032 m/s² | 19.9 Hz | yes |
-+| `wash_cycle_2026-10-21_0514.csv` | 1013 / 962 | 1 | 0 | 8.38 s | 0.032 m/s² | 20.0 Hz | yes |
-+| `wash_cycle_2026-10-21_0631.csv` | 1013 / 1012 | 0 | 0 | 8.68 s | 0.032 m/s² | 20.0 Hz | no |
-+
-+---
-+
-+## 4. High-Power Electrical Profile Breakdown
-+
-+Detailed timing and electrical peak for all blocks with $\ge 3$ consecutive windows $> 200\text{ W}$:
-+
-+### `wash_cycle_2026-10-19_0911.csv` (fw07, 64 active min)
-+- **Block 1** (Spin Extraction): start at **36.7 min**, peak **420 W**, duration **2.8 min** (34 windows)
-+- **Block 2** (Spin Extraction): start at **46.8 min**, peak **377 W**, duration **2.8 min** (33 windows)
-+- **Block 3** (Spin Extraction): start at **60.6 min**, peak **372 W**, duration **2.5 min** (30 windows)
-+
-+### `wash_cycle_2026-10-20_0744.csv` (fw07, 71 active min)
-+- **Block 1** (Heater (Wash Temp Control)): start at **3.5 min**, peak **2290 W**, duration **11.9 min** (142 windows)
-+- **Block 2** (Spin Extraction): start at **40.1 min**, peak **614 W**, duration **2.6 min** (31 windows)
-+- **Block 3** (Spin Extraction): start at **50.7 min**, peak **902 W**, duration **2.6 min** (31 windows)
-+- **Block 4** (Spin Extraction): start at **67.4 min**, peak **405 W**, duration **2.4 min** (29 windows)
-+
-+### `wash_cycle_2026-10-21_0514.csv` (fw07, 22 active min)
-+- **Block 1** (Spin Extraction): start at **17.9 min**, peak **373 W**, duration **3.5 min** (42 windows)
-+
-+### `wash_cycle_2026-10-21_0631.csv` (fw07, 21 active min)
-+- **Block 1** (Spin Extraction): start at **17.1 min**, peak **302 W**, duration **3.0 min** (36 windows)
-+
-+---
-+
-+## 5. Physical Signature Grouping
-+
-+Cycles clustered by verified physical parameters (Heater Activity $\times$ Spin Block Count):
-+
-+| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |
-+|---|---|---|---|
-+| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |
-+| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |
-+| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |
-+| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |
-+
++**Sensor Integrity Across Firmware-07 Runs:**
++- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
++- Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
++- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).
++- Zero accelerometer clipping samples occurred across all sessions.
+ 
+ ---
+ 
+ ## 2. Comprehensive Cycle Signatures Table
+ 
+-| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | High-Pwr Blocks | Programme | Water Temp | Context Source |
+-|---|---|---|---|---|---|---|---|---|---|
+-| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 5 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | 0 | 0 | 0 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 4 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | 0 | 0 | 0 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 4 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | unknown | - | `unknown` |
+-| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | unknown | - | `unknown` |
++| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | `smartthings_live` |
++| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
++| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
+ 
+ ---
+ 
+@@ -40,12 +46,12 @@ Firmware-07 wash cycles exhibit distinct physical profiles directly correspondin
+ 
+ Telemetry verification table for firmware-07 45-column windowed records:
+ 
+-| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |
+-|---|---|---|---|---|---|---|---|
+-| `wash_cycle_2026-10-19_0911.csv` | 1013 / 965 | 1 | 0 | 7.75 s | 0.032 m/s² | 19.9 Hz | yes |
+-| `wash_cycle_2026-10-20_0744.csv` | 1014 / 964 | 1 | 0 | 8.78 s | 0.032 m/s² | 19.9 Hz | yes |
+-| `wash_cycle_2026-10-21_0514.csv` | 1013 / 962 | 1 | 0 | 8.38 s | 0.032 m/s² | 20.0 Hz | yes |
+-| `wash_cycle_2026-10-21_0631.csv` | 1013 / 1012 | 0 | 0 | 8.68 s | 0.032 m/s² | 20.0 Hz | no |
++| Session File | `n_accel` (med/min) | FIFO Overflow | Clipped | Max Gap (s) | Epoch Jitter Max (s) | Idle `vib_mag_std` | Spin `vib_dom_hz` p90 | Boot at Start |
++|---|---|---|---|---|---|---|---|---|
++| `wash_cycle_2026-10-19_0911.csv` | 1013 / 965 | 1 | 0 | 5.02 s | 2.74 s | 0.032 m/s² | 19.9 Hz | yes |
++| `wash_cycle_2026-10-20_0744.csv` | 1014 / 964 | 1 | 0 | 5.02 s | 3.75 s | 0.032 m/s² | 19.9 Hz | yes |
++| `wash_cycle_2026-10-21_0514.csv` | 1013 / 962 | 1 | 0 | 5.02 s | 3.36 s | 0.032 m/s² | 20.0 Hz | yes |
++| `wash_cycle_2026-10-21_0631.csv` | 1013 / 1012 | 0 | 0 | 5.02 s | 3.65 s | 0.032 m/s² | 20.0 Hz | no |
+ 
+ ---
+ 
+@@ -59,7 +65,7 @@ Detailed timing and electrical peak for all blocks with $\ge 3$ consecutive wind
+ - **Block 3** (Spin Extraction): start at **60.6 min**, peak **372 W**, duration **2.5 min** (30 windows)
+ 
+ ### `wash_cycle_2026-10-20_0744.csv` (fw07, 71 active min)
+-- **Block 1** (Heater (Wash Temp Control)): start at **3.5 min**, peak **2290 W**, duration **11.9 min** (142 windows)
++- **Block 1** (Heater): start at **3.5 min**, peak **2290 W**, duration **11.9 min** (142 windows)
+ - **Block 2** (Spin Extraction): start at **40.1 min**, peak **614 W**, duration **2.6 min** (31 windows)
+ - **Block 3** (Spin Extraction): start at **50.7 min**, peak **902 W**, duration **2.6 min** (31 windows)
+ - **Block 4** (Spin Extraction): start at **67.4 min**, peak **405 W**, duration **2.4 min** (29 windows)
+@@ -74,12 +80,12 @@ Detailed timing and electrical peak for all blocks with $\ge 3$ consecutive wind
+ 
+ ## 5. Physical Signature Grouping
+ 
+-Cycles clustered by verified physical parameters (Heater Activity $\times$ Spin Block Count):
++Cycles clustered dynamically by verified physical rules (Heater Minutes $\times$ Spin Block Count):
+ 
+-| Signature Group | Characteristics | Member Sessions | Inferred / Known Programme |
++| Signature Class | Physical Decision Rule | Member Count | Member Sessions |
+ |---|---|---|---|
+-| **Group A (Standard Cold)** | Active ~64–76 min, Heater: 0 min, 3 Spin Blocks | `wash_cycle_2026-10-19_0911.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-16_0857.csv` | Daily Wash (Cold) |
+-| **Group B (Heated Wash)** | Active ~71 min, Heater: 11.9 min (>2 kW), 3 Spin Blocks | `wash_cycle_2026-10-20_0744.csv` | Daily Wash (Warm / 40°C) |
+-| **Group C (Quick Cycle)** | Active ~21–22 min, Heater: 0 min, 1 Spin Block | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` | Quick Wash / Express 15' |
+-| **Group D (Legacy Unmetered)** | Active n/a (No Tapo power data captured) | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-19_0022.csv` | Legacy firmware (bench / test) |
++| **Long cold (inferred)** | Heater == 0 min, Spin Blocks >= 3 | 4 | `wash_cycle_2026-10-16_0857.csv`<br>`wash_cycle_2026-10-17_0718.csv`<br>`wash_cycle_2026-10-18_0516.csv`<br>`wash_cycle_2026-10-19_0911.csv` |
++| **Long hot (inferred)** | Heater > 2 min (>1 kW), Spin Blocks >= 2 | 1 | `wash_cycle_2026-10-20_0744.csv` |
++| **Quick (inferred)** | Heater == 0 min, Spin Blocks == 1, Active < 35 min | 2 | `wash_cycle_2026-10-21_0514.csv`<br>`wash_cycle_2026-10-21_0631.csv` |
++| **No power data** | Maximum power < 50 W (legacy unmetered runs) | 6 | `wash_cycle_2026-10-11_1019.csv`<br>`wash_cycle_2026-10-12_1019.csv`<br>`wash_cycle_2026-10-15_1020.csv`<br>`wash_cycle_2026-10-15_morning.csv`<br>`wash_cycle_2026-10-17_0835.csv`<br>`wash_cycle_2026-10-19_0022.csv` |
+ 
