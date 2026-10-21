@@ -1,83 +1,92 @@
 # Handoff to Claude (Architect)
 
-**Plan:** Stop writing a guessed load class; record real load (kg) in the session context file
-**Date:** 2026-10-21 17:15, Asia/Kuala_Lumpur
+**Plan:** Fix misleading health-index descriptions in the feature dictionary (follow-up to load_class)
+**Date:** 2026-10-21 17:30, Asia/Kuala_Lumpur
 **Status:** COMPLETE
 **Diff Patch:** [last_diff.patch](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/last_diff.patch)
 
 ## Commits
-- `bb8aca3` docs: plan load_class retirement (Step 0)
-- `020e93e` fix(data): stop exporting guessed load_class; add load_kg to session context
+- `14b43bf` docs: plan dictionary honesty fix (Step 0)
+- `7a9ad79` fix(data): dictionary health fields are legacy, not measured
+- Pending: `docs(handoff): complete dictionary honesty fix`
 - **Branch:** main (pushed to origin/main)
 
 ## What Changed
 - **Step 0 (Plan Commitment):**
-  - Committed `docs/handoffs/PLAN.md` immediately (`bb8aca3`) before executing any code changes to guarantee plan persistence against accidental rollback.
-- **Step 1 (Retire Guessed `load_class` Export):**
-  - In `firmware/session_export.py`, stopped calling the uncalibrated `compute_weight_and_class(rows, st_info)` function. All newly exported sessions write `load_class = "unknown"` on every row, preserving the 8-column legacy and 45-column v3 CSV schema while eliminating uncalibrated guesswork.
-  - In `firmware/smartthings_client.py`, added a prominent docstring warning to `compute_weight_and_class()`: "WARNING: UNCALIBRATED heuristic, not used for exported data since 2026-10-21. Retained for backward compatibility with legacy scripts."
-- **Step 2 (Session Context Sidecar Extension):**
-  - In `data/session_context.csv`, added two new columns at the end: `load_kg` and `load_source`. All 13 existing sessions have empty values `,,`.
-  - In `firmware/session_context.py`:
-    - Updated `CONTEXT_COLUMNS` to 10 standard columns: `session_file,start_epoch_ms,end_epoch_ms,programme,water_temp,spin_level,context_source,note,load_kg,load_source`.
-    - Added `VALID_LOAD_SOURCES = {"manual", "smartthings", ""}`.
-    - Updated `upsert_session_context()` to preserve existing `load_kg` and `load_source` when `load_source == "manual"` or when incoming records have empty load fields.
-    - Updated `resolve_context_for_session()` to preserve existing sidecar load fields rather than guessing.
-    - Verified that running `backfill_all_sessions()` twice produces byte-identical output (strictly idempotent).
-- **Step 3 (Feature Dictionary Clarification):**
-  - In `data/pdm_feature_dictionary.json`, updated the description of `estimated_load_kg` and `load_class` to state: "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown."
-- **Step 4 (Physical Cycle Signature Report Update):**
-  - In `ml/cycle_signature_report.py`, added `Load (kg)` to the cycle analysis table read from the sidecar (displays `-` when empty).
-  - Regenerated `ml/models/cycle_signature_report.md` with the new column.
-  - Dashboard was left untouched (no load added to dashboard) to protect the 800 KB page budget.
-- **Step 5 (Live Capture Script Annotation):**
-  - In `firmware/capture_pdm_dataset.py`, appended `(load estimate is an uncalibrated heuristic)` to the live console summary line: `Estimated Load Mass : {kg} ({class}) (load estimate is an uncalibrated heuristic)`.
-  - Updated embedded `save_feature_dictionary()` schema descriptions to match `pdm_feature_dictionary.json`.
-- **Step 6 (Test Coverage):**
-  - Extended `firmware/tests/test_session_context.py` with:
-    - Verification of 10-column schema including `load_kg` and `load_source`.
-    - Verification that pre-seeded manual `load_kg="4.5"` and `load_source="manual"` survive backfill and remain idempotent.
-    - Added dedicated test `test_manual_load_kg_survives_backfill_and_upsert()`.
-  - Extended `firmware/tests/test_session_export.py` with:
-    - Assertions that all rows exported for v3 have `load_class == "unknown"`.
-    - Assertions that all rows exported for legacy have `load_class == "unknown"`.
+  - Committed `docs/handoffs/PLAN.md` immediately (`14b43bf`) before modifying any code.
+- **Step 1 (Honest Descriptions in Feature Dictionary):**
+  - In `data/pdm_feature_dictionary.json`, updated the description of all five legacy fields (`parasitic_drag_w`, `parasitic_drag_pct`, `bearing_health_index`, `damper_health_index`, and `machine_health_index`) to strictly state:
+    `"LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."`
+  - Preserved their existing types and units.
+  - Kept the previous uncalibrated heuristic wording for `load_class` and `estimated_load_kg`.
+  - Removed all occurrences of `Measured`, `Nyquist`, and `CUSUM` from the dictionary (`grep -E -n "Measured|Nyquist|CUSUM" data/pdm_feature_dictionary.json` returns 0 hits).
+- **Step 2 (Synchronized Embedded Schema in Capture Script):**
+  - In `firmware/capture_pdm_dataset.py`, updated `save_feature_dictionary()` schema definition to match `data/pdm_feature_dictionary.json` byte-for-byte.
+  - Handled directory path reporting safely if written outside `BASE_DIR`.
+  - Zero maths or capture logic changes in `capture_pdm_dataset.py`.
+- **Step 3 (Search for "50 Hz MPU" / "Nyquist limit"):**
+  - Scanned the entire repository outside `archive/`. Zero hits for "Nyquist limit" outside of `PLAN.md` and `last_diff.patch`. Hits for "50 Hz MPU" located in legacy proposal files are documented under "Suggestions for Claude" below.
+- **Step 4 (Schema Verification):**
+  - Verified that `save_feature_dictionary()` executed via Python generates a JSON file byte-identical to `data/pdm_feature_dictionary.json`.
+  - Verified `py firmware/capture_pdm_dataset.py --help` runs cleanly without invoking live capture.
 
 ## Files Changed
-- `firmware/session_export.py`: stopped calling `compute_weight_and_class`, set `load_class = "unknown"` on all exports.
-- `firmware/smartthings_client.py`: added uncalibrated heuristic warning docstring to `compute_weight_and_class`.
-- `firmware/session_context.py`: added `load_kg` and `load_source` to schema, load/save, upsert, and resolve; ensured manual load preservation.
-- `data/session_context.csv`: added `load_kg,load_source` columns to header and 13 rows.
-- `data/pdm_feature_dictionary.json`: clarified `estimated_load_kg` and `load_class` descriptions as uncalibrated heuristics.
-- `ml/cycle_signature_report.py`: added `Load (kg)` column to cycle signatures table.
-- `ml/models/cycle_signature_report.md`: regenerated signature report with `Load (kg)` column.
-- `firmware/capture_pdm_dataset.py`: added uncalibrated heuristic note to print output and schema.
-- `firmware/tests/test_session_context.py`: added tests for new columns, manual load preservation, and backfill idempotency.
-- `firmware/tests/test_session_export.py`: added assertions for `load_class == "unknown"`.
-- `docs/handoffs/PLAN.md`: marked `Status: DONE` and checked all acceptance criteria.
-- `docs/handoffs/PLAN_DONE_2026-10-21_load_class.md`: archived copy of completed plan.
-- `docs/handoffs/HANDOFF.md`: handoff documentation.
-- `docs/handoffs/last_diff.patch`: clean UTF-8 diff patch.
+- `data/pdm_feature_dictionary.json`: updated descriptions for `parasitic_drag_w`, `parasitic_drag_pct`, `bearing_health_index`, `damper_health_index`, and `machine_health_index`.
+- `firmware/capture_pdm_dataset.py`: updated embedded schema in `save_feature_dictionary()` to produce the identical JSON.
+- `docs/handoffs/PLAN.md`: marked `Status: DONE` with all acceptance criteria checked.
+- `docs/handoffs/PLAN_DONE_2026-10-21_dictionary_honesty.md`: archived copy of completed plan.
+- `docs/handoffs/last_diff.patch`: 15.6 KB clean UTF-8 patch of code and data changes.
+- `docs/handoffs/HANDOFF.md`: updated handoff documentation.
 
-## Verification Results
-- `py -m py_compile firmware/session_export.py firmware/smartthings_client.py firmware/session_context.py firmware/capture_pdm_dataset.py ml/cycle_signature_report.py firmware/tests/test_session_context.py firmware/tests/test_session_export.py`: PASS (0 errors).
-- `py firmware/tests/test_session_context.py`: PASS (6/6 tests OK in 0.039s).
-- `py firmware/tests/test_session_export.py`: PASS (v3 200 rows + legacy 19 rows all have `load_class == unknown`).
-- `py firmware/tests/test_daemon_offline.py`: PASS (downloads finished unarchived sessions, never overwrites, prune verified).
-- `py ml/tests/test_pipeline_synthetic.py`: PASS (6 healthy cycles, 4,536 windows, 0 false alarms, detection verified).
-- Idempotency check: `backfill_all_sessions()` executed twice on real `data/session_context.csv` yields identical 14 lines (header + 13 rows).
+## Excluded from Patch
+- `docs/handoffs/PLAN.md` (excluded per workflow rule 6; read directly by Claude)
+- `docs/handoffs/HANDOFF.md` (excluded per workflow rule 6; read directly by Claude)
+- `docs/handoffs/last_diff.patch` (self-referential)
 
-## Regressions Checked
-- **Raw Session CSVs Untouched:** No files in `data/real_sessions/` or `data/testing_data/` were rewritten or modified.
-- **CSV Schema Compatibility:** The 8th column `load_class` remains present in all exported CSVs with value `"unknown"`, preserving dashboard and legacy script compatibility.
-- **Dashboard Integrity:** No edits to `build_clean_dashboard.py` or generated HTML files; page sizes remain strictly within the 800 KB ceiling.
-- **Secrets:** No secrets added, printed, or committed (`.env` and `secrets.h` untouched).
+## Acceptance Criteria
+- [x] PLAN.md committed first — verified in `14b43bf`.
+- [x] `grep -n "Measured\|Nyquist\|CUSUM" data/pdm_feature_dictionary.json` → no hits — verified (exit code 1, zero matches).
+- [x] The five legacy fields carry the LEGACY CONTRACT FIELD wording in both the JSON and `capture_pdm_dataset.py`; generated JSON equals the committed file — verified via python equality assertion.
+- [x] HANDOFF follows the full template, with the carried-forward UNVERIFIED list — verified.
+- [x] `py -m py_compile firmware/capture_pdm_dataset.py`; `py firmware/tests/test_session_export.py` passes; no secrets; pushed — verified.
 
-## Open UNVERIFIED Items
-- Real weighed laundry mass entry in `data/session_context.csv` (requires Adam to weigh a load and enter values).
+## Tests Run
+- `py -m py_compile firmware/capture_pdm_dataset.py` — PASS (0 errors).
+- `py firmware/tests/test_session_export.py` — PASS (all rows have `load_class == "unknown"`).
+- `py firmware/tests/test_session_context.py` — PASS (6/6 tests OK).
+- `py firmware/capture_pdm_dataset.py --help` — PASS.
+- JSON byte-identity assertion — PASS (`save_feature_dictionary()` output == `data/pdm_feature_dictionary.json`).
+- Grep honesty check (`grep -E "Measured|Nyquist|CUSUM" data/pdm_feature_dictionary.json`) — PASS (0 hits).
+
+## Invariants Check
+- INVARIANTS §1 (Honest reporting): Confirmed. No RUL, health-index percentages, or parasitic drag claims are presented as measured facts or model outputs.
+- INVARIANTS §3 (Dashboard): Untouched.
+- INVARIANTS §4 (Data & ML): Originals in `data/real_sessions/` untouched; `load_class` column preserved.
+- INVARIANTS §5 (Secrets): Verified no secrets in git (`.env` and `secrets.h` clean).
+
+## Blocked / Questions
+- None.
 
 ## Suggestions for Claude
-- **Retire or Refactor `firmware/capture_pdm_dataset.py`:**
-  This script is an early prototype from Phase 1. It still computes `estimated_load_kg`, `load_class`, `parasitic_drag_w`, `parasitic_drag_pct`, and synthetic health indices based on uncalibrated rules. Since `auto_drive_sync_daemon.py` and `session_export.py` are the authoritative archivers, `capture_pdm_dataset.py` should be formally deprecated or retired to prevent confusion.
+1. **Hits for "50 Hz MPU" in Proposal Documents (Step 3 Search Results):**
+   The phrase `"50 Hz MPU"` appears in several proposal files that were drafted during earlier stages of the project (firmware 05/06) before firmware 07 upgraded to 200 Hz FIFO burst acquisition with a 44 Hz anti-alias DLPF:
+   - `docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.md` (lines 180, 516)
+   - `docs/proposals/generate_proposal_pdf.py` (lines 535, 896)
+   - `docs/proposals/proposal_presentation.html` (lines 511, 872)
+   *Recommendation:* When Claude plans Queue Item 4 (*Docs: track is now PLANET · 03 Energy Efficiency*), these technical descriptions can be updated to reference "200 Hz MPU-6050 FIFO burst reading with 44 Hz DLPF".
+2. **Retirement of `firmware/capture_pdm_dataset.py`:**
+   Carried forward from previous handoff: consider formal deprecation/retirement since `auto_drive_sync_daemon.py` and `session_export.py` handle all production archiving.
+
+## Open UNVERIFIED Items (carried forward)
+1. Apps Script trigger (legacy sync mechanism).
+2. Workflow run with GitHub secrets (Tapo / Firebase secrets rotation pending).
+3. Real-wash session start / END marker / archive on hardware.
+4. Active-wash adaptive polling verification during a live wash.
+5. Session-change reset in web dashboard during live wash transition.
+6. `historical.html` visual check in browser (done headlessly on 2026-10-21 16:38, live user confirmation pending).
+7. DevTools network check (no excessive polling or Firebase quota consumption).
+8. `/window.json` and `WHO_AM_I` 0x75 register read quirk on hardware.
+9. Real weighed laundry load entry in `data/session_context.csv` (requires Adam to weigh a load and record values).
 
 ## Ready for Next Plan
 - [x] Antigravity is stopped and waiting for the next plan in `docs/handoffs/PLAN.md`.

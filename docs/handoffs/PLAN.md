@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Fix misleading health-index descriptions in the feature dictionary (follow-up to load_class)
 **Date:** 2026-10-21
 
@@ -29,11 +29,11 @@ Notes (no action): `firmware/session_export.py` and `firmware/tests/test_session
 Everything else; no code logic changes.
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed first.
-- [ ] `grep -n "Measured\|Nyquist\|CUSUM" data/pdm_feature_dictionary.json` → no hits.
-- [ ] The five legacy fields carry the LEGACY CONTRACT FIELD wording in both the JSON and `capture_pdm_dataset.py`; generated JSON equals the committed file.
-- [ ] HANDOFF follows the full template, with the carried-forward UNVERIFIED list.
-- [ ] `py -m py_compile firmware/capture_pdm_dataset.py`; `py firmware/tests/test_session_export.py` passes; no secrets; pushed.
+- [x] PLAN.md committed first.
+- [x] `grep -n "Measured\|Nyquist\|CUSUM" data/pdm_feature_dictionary.json` → no hits.
+- [x] The five legacy fields carry the LEGACY CONTRACT FIELD wording in both the JSON and `capture_pdm_dataset.py`; generated JSON equals the committed file.
+- [x] HANDOFF follows the full template, with the carried-forward UNVERIFIED list.
+- [x] `py -m py_compile firmware/capture_pdm_dataset.py`; `py firmware/tests/test_session_export.py` passes; no secrets; pushed.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.

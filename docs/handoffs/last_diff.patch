@@ -1,842 +1,258 @@
 diff --git a/data/pdm_feature_dictionary.json b/data/pdm_feature_dictionary.json
-index 3e3d131..71bbe7f 100644
+index 71bbe7f..6a9e5e6 100644
 --- a/data/pdm_feature_dictionary.json
 +++ b/data/pdm_feature_dictionary.json
-@@ -67,12 +67,27 @@
-     "audio_rms": {
-       "type": "float",
-       "unit": "Canonical RMS",
--      "canonical_range": [0.0, 1200.0],
-+      "canonical_range": [
-+        0.0,
-+        1200.0
-+      ],
-       "baseline_by_phase": {
--        "none_or_stop": [10.0, 150.0],
--        "wash": [150.0, 350.0],
--        "rinse": [180.0, 450.0],
--        "spin": [600.0, 1100.0]
-+        "none_or_stop": [
-+          10.0,
-+          150.0
-+        ],
-+        "wash": [
-+          150.0,
-+          350.0
-+        ],
-+        "rinse": [
-+          180.0,
-+          450.0
-+        ],
-+        "spin": [
-+          600.0,
-+          1100.0
-+        ]
-       },
-       "firmware_formula": "INMP441 I2S DMA: (sample >> 8), sqrt(mean(s^2)) / 1000.0 (Divisor: 256,000)",
-       "ml_standardization": "Phase-conditioned Z-score or log1p scaling to eliminate spin false alarms",
-@@ -127,11 +142,11 @@
-     "estimated_load_kg": {
-       "type": "float",
-       "unit": "kg",
--      "desc": "AI estimated dry laundry mass from motor tumble inertia"
-+      "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"
-     },
-     "load_class": {
-       "type": "categorical",
--      "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"
-+      "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"
-     },
+@@ -151,27 +151,27 @@
      "parasitic_drag_w": {
        "type": "float",
-@@ -146,17 +161,17 @@
+       "unit": "W",
+-      "desc": "Mechanical friction energy waste above baseline"
++      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+     },
+     "parasitic_drag_pct": {
+       "type": "float",
+       "unit": "%",
+-      "desc": "Percentage excess energy waste caused by friction"
++      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
+     },
      "bearing_health_index": {
        "type": "float",
        "unit": "%",
--      "desc": "Continuous tub bearing health (100 = new, <40 = fail)"
-+      "desc": "Indicative tub bearing health indicator (100 = nominal baseline, <40 = elevated risk). Measured primarily via 16 kHz INMP441 acoustic friction/harmonics, as 50 Hz MPU-6050 Nyquist limit (25 Hz) cannot resolve high-frequency bearing defect orders (BPFO/BPFI > 50 Hz)."
+-      "desc": "Indicative tub bearing health indicator (100 = nominal baseline, <40 = elevated risk). Measured primarily via 16 kHz INMP441 acoustic friction/harmonics, as 50 Hz MPU-6050 Nyquist limit (25 Hz) cannot resolve high-frequency bearing defect orders (BPFO/BPFI > 50 Hz)."
++      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
      },
      "damper_health_index": {
        "type": "float",
        "unit": "%",
--      "desc": "Continuous suspension damper health"
-+      "desc": "Indicative suspension damper health indicator (100 = nominal, <40 = high sway). Measured via low-frequency MPU-6050 vertical shock acceleration (ay) and dynamic rocking kinematics."
+-      "desc": "Indicative suspension damper health indicator (100 = nominal, <40 = high sway). Measured via low-frequency MPU-6050 vertical shock acceleration (ay) and dynamic rocking kinematics."
++      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
      },
      "machine_health_index": {
        "type": "float",
        "unit": "%",
--      "desc": "Composite overall Machine Health Index (0-100%)"
-+      "desc": "Composite Machine Health Index relative to pristine baseline distribution (0-100%). Smoothed via EWMA/CUSUM at the cycle level to represent persistent mechanical states rather than transient spikes."
+-      "desc": "Composite Machine Health Index relative to pristine baseline distribution (0-100%). Smoothed via EWMA/CUSUM at the cycle level to represent persistent mechanical states rather than transient spikes."
++      "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
      }
    }
--}
-\ No newline at end of file
-+}
-diff --git a/data/session_context.csv b/data/session_context.csv
-index 2815946..cd00bec 100644
---- a/data/session_context.csv
-+++ b/data/session_context.csv
-@@ -1,14 +1,14 @@
--session_file,start_epoch_ms,end_epoch_ms,programme,water_temp,spin_level,context_source,note
--wash_cycle_2026-10-11_1019.csv,1791685145021,1791687300308,unknown,,,unknown,
--wash_cycle_2026-10-12_1019.csv,1791771549751,1791777720259,unknown,,,unknown,
--wash_cycle_2026-10-15_morning.csv,1792022405723,1792028580259,unknown,,,unknown,
--wash_cycle_2026-10-15_1020.csv,1792030810025,1792032204872,unknown,,,unknown,
--wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,smartthings_live,partial: no programme
--wash_cycle_2026-10-17_0718.csv,1792192690725,1792197231489,unknown,,,unknown,
--wash_cycle_2026-10-17_0835.csv,1792197311032,1792201529674,unknown,,,unknown,
--wash_cycle_2026-10-18_0516.csv,1792271770304,1792276055018,unknown,,,unknown,
--wash_cycle_2026-10-19_0022.csv,1792340526198,1792341381249,unknown,,,unknown,
--wash_cycle_2026-10-19_0911.csv,1792372280304,1792376224132,unknown,,,unknown,
--wash_cycle_2026-10-20_0744.csv,1792453423282,1792458266417,unknown,,,unknown,
--wash_cycle_2026-10-21_0514.csv,1792530853248,1792532793526,unknown,,,unknown,
--wash_cycle_2026-10-21_0631.csv,1792535460262,1792537204680,unknown,,,unknown,
-+session_file,start_epoch_ms,end_epoch_ms,programme,water_temp,spin_level,context_source,note,load_kg,load_source
-+wash_cycle_2026-10-11_1019.csv,1791685145021,1791687300308,unknown,,,unknown,,,
-+wash_cycle_2026-10-12_1019.csv,1791771549751,1791777720259,unknown,,,unknown,,,
-+wash_cycle_2026-10-15_morning.csv,1792022405723,1792028580259,unknown,,,unknown,,,
-+wash_cycle_2026-10-15_1020.csv,1792030810025,1792032204872,unknown,,,unknown,,,
-+wash_cycle_2026-10-16_0857.csv,1792112230398,1792116715681,unknown,,1200,smartthings_live,partial: no programme,,
-+wash_cycle_2026-10-17_0718.csv,1792192690725,1792197231489,unknown,,,unknown,,,
-+wash_cycle_2026-10-17_0835.csv,1792197311032,1792201529674,unknown,,,unknown,,,
-+wash_cycle_2026-10-18_0516.csv,1792271770304,1792276055018,unknown,,,unknown,,,
-+wash_cycle_2026-10-19_0022.csv,1792340526198,1792341381249,unknown,,,unknown,,,
-+wash_cycle_2026-10-19_0911.csv,1792372280304,1792376224132,unknown,,,unknown,,,
-+wash_cycle_2026-10-20_0744.csv,1792453423282,1792458266417,unknown,,,unknown,,,
-+wash_cycle_2026-10-21_0514.csv,1792530853248,1792532793526,unknown,,,unknown,,,
-+wash_cycle_2026-10-21_0631.csv,1792535460262,1792537204680,unknown,,,unknown,,,
-diff --git a/docs/handoffs/PLAN.md b/docs/handoffs/PLAN.md
-index 3376053..60e46a4 100644
---- a/docs/handoffs/PLAN.md
-+++ b/docs/handoffs/PLAN.md
-@@ -1,6 +1,6 @@
- # Plan for Antigravity
- 
--**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
- **Title:** Stop writing a guessed load class; record real load (kg) in the session context file
- **Date:** 2026-10-21
- 
-@@ -39,12 +39,12 @@ Adam asked (21 Oct) why every cycle says `load_class = MEDIUM`. It is a guess: `
- - Building a new load estimator (needs weighed loads first).
- 
- ## Acceptance Criteria
--- [ ] PLAN.md committed first (hash in HANDOFF).
--- [ ] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
--- [ ] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
--- [ ] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
--- [ ] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
--- [ ] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
-+- [x] PLAN.md committed first (hash in HANDOFF).
-+- [x] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
-+- [x] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
-+- [x] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
-+- [x] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
-+- [x] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
- 
- ## Queue (Claude will plan these next; do not start)
- 1. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot (rig reboots as the washer switches on). Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE); consider fixing `epochMs()` jitter (2.7–3.8 s) in the same task. Needs a flash, so Adam confirms first.
-diff --git a/docs/handoffs/PLAN_DONE_2026-10-21_load_class.md b/docs/handoffs/PLAN_DONE_2026-10-21_load_class.md
-new file mode 100644
-index 0000000..60e46a4
---- /dev/null
-+++ b/docs/handoffs/PLAN_DONE_2026-10-21_load_class.md
-@@ -0,0 +1,52 @@
-+# Plan for Antigravity
-+
-+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
-+**Title:** Stop writing a guessed load class; record real load (kg) in the session context file
-+**Date:** 2026-10-21
-+
-+## Step 0 (do first, every task from now on)
-+Commit this PLAN.md before any other change: `docs: plan load_class retirement`. On 21 Oct a pull rolled PLAN.md back to an older committed copy and the task was lost; committing it first prevents that.
-+
-+## Review verdict that produced this plan
-+APPROVED: `c597e60`, `03a883e` (dashboard wash-type badge, summary line, block shading, cursor vs run badges, review notes). Previous plan archived as `PLAN_DONE_2026-10-21_dashboard_badge.md`.
-+
-+Checked by Claude: badges for all 13 sessions match the report; summary lines match (64/71/22/21 active min, 11.9 min heater on 20 Oct); screenshots show 1 heater + 3 spin shadings on 20 Oct and 1 spin on 21 Oct 0514, with "(inferred from power)"; "(at cursor)" labels and run-median row present; `maxAgeMs` line unchanged; `node --check` passes on all four pages (re-run by Claude); no "rpm" in the pages; patch is clean UTF-8.
-+
-+Notes, no rework:
-+- Page size is now 787,709 bytes against the 800 KB limit: about 12 KB of headroom. Any future dashboard task must remove bytes before adding.
-+- The `?session=` URL parameter was not in the plan. It only looks up an existing session key, so it is safe; keep it, but list unplanned additions under "Suggestions for Claude" next time instead of shipping them.
-+- "Run median Dom. freq" is ~2 Hz because most running windows are drum tumbling, not spin. It is honest; a "spin-block median" (≈20 Hz) could be added later when page space allows.
-+
-+## Objective
-+Adam asked (21 Oct) why every cycle says `load_class = MEDIUM`. It is a guess: `compute_weight_and_class()` (`firmware/smartthings_client.py`) averages power between 60–350 W in the first 30 rows; on firmware 07 those rows are fill at ~5–30 W, so nothing qualifies and it falls back to SmartThings water level, else a hard-coded 5 kg → MEDIUM. The kg formula `(W − 70) / 15` was never calibrated. The ML does not use it. After this task, new archived sessions say `unknown` instead of a guess, and real load can be recorded per session in `data/session_context.csv`.
-+
-+## Context
-+- INVARIANTS §4: `data/real_sessions/*.csv` are originals (do not rewrite old values); the CSV column `load_class` must stay (schema). §1: honest reporting.
-+- Code style: exhaustive inline comments, section headers.
-+
-+## Implementation Steps
-+1. `firmware/session_export.py`: write `load_class = "unknown"` for every new session. Keep calling nothing else that guesses. Leave `compute_weight_and_class()` in place but add a docstring warning "UNCALIBRATED heuristic, not used for exported data since 2026-10-21"; do not delete it (other scripts import it).
-+2. `data/session_context.csv`: add two columns at the end, `load_kg` and `load_source` (`manual` / `smartthings` / empty). Update `firmware/session_context.py` (load, save, upsert) so existing rows get empty values, `manual` rows keep their values, and backfill stays idempotent. Do not guess kg anywhere.
-+3. `data/pdm_feature_dictionary.json`: mark `load_class` (and `estimated_load_kg` if present) as "heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown". Wording only.
-+4. `ml/cycle_signature_report.py`: add a "Load (kg)" column from the sidecar (`-` when empty). Do not add load to the dashboard (no page budget).
-+5. `firmware/capture_pdm_dataset.py` still prints and stores `estimated_load_kg`, `load_class` and a "parasitic drag" derived from them. Do NOT change its maths in this task; add a printed line "(load estimate is an uncalibrated heuristic)" next to the load output, and list the file under "Suggestions for Claude" if you think it should be retired.
-+6. Tests: extend `firmware/tests/test_session_context.py` (new columns, manual load kept, idempotent backfill); update `firmware/tests/test_session_export.py` if it asserts a load class. Run all suites below.
-+7. HANDOFF with the template (keep `Open UNVERIFIED items`), `last_diff.patch` per workflow rule 6. Commit `fix(data): stop exporting guessed load_class; add load_kg to session context`. Pull --rebase, push.
-+
-+## Out of Scope
-+- Rewriting any existing CSV in `data/real_sessions/` or `data/testing_data/`.
-+- Dashboard, firmware, ML pipeline/features/thresholds/LOCO.
-+- Building a new load estimator (needs weighed loads first).
-+
-+## Acceptance Criteria
-+- [x] PLAN.md committed first (hash in HANDOFF).
-+- [x] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
-+- [x] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
-+- [x] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
-+- [x] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
-+- [x] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
-+
-+## Queue (Claude will plan these next; do not start)
-+1. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot (rig reboots as the washer switches on). Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE); consider fixing `epochMs()` jitter (2.7–3.8 s) in the same task. Needs a flash, so Adam confirms first.
-+2. **ML: programme-aware evaluation.** Once each signature class has ≥ 3 firmware-07 cycles, add LOCO results per class and test SmartThings-phase conditioning. Per-cycle normalisation is not allowed.
-+3. **Dashboard page budget.** Pages are at 787.7 KB of 800 KB; before any further dashboard feature, plan a size reduction (e.g. stop embedding testing sessions, or load session data from separate JSON files).
+ }
 diff --git a/firmware/capture_pdm_dataset.py b/firmware/capture_pdm_dataset.py
-index d06e554..9ad3634 100644
+index 9ad3634..20b33b7 100644
 --- a/firmware/capture_pdm_dataset.py
 +++ b/firmware/capture_pdm_dataset.py
-@@ -37,7 +37,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
- 
- # Configurations
- FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
--FIREBASE_AUTH = os.getenv("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
-+FIREBASE_AUTH = os.getenv("FIREBASE_AUTH")  # from .env only - no fallback secret
- TAPO_IP = os.getenv("TAPO_IP", "192.168.0.142")
- TAPO_USER = os.getenv("TAPO_DEVICE_USER") or os.getenv("TAPO_EMAIL")
- TAPO_PASS = os.getenv("TAPO_DEVICE_PASS") or os.getenv("TAPO_PASSWORD")
-@@ -283,8 +283,8 @@ def save_feature_dictionary():
-             "softener_remaining": {"type": "categorical", "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"},
-             "cumulative_water_l": {"type": "float", "unit": "L", "desc": "Cumulative water consumption report in Liters"},
-             "kids_lock": {"type": "categorical", "desc": "Child safety lock status (locked, unlocked)"},
--            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "AI estimated dry laundry mass from motor tumble inertia"},
--            "load_class": {"type": "categorical", "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"},
-+            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"},
-+            "load_class": {"type": "categorical", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"},
-             "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
-             "parasitic_drag_pct": {"type": "float", "unit": "%", "desc": "Percentage excess energy waste caused by friction"},
-             "bearing_health_index": {"type": "float", "unit": "%", "desc": "Continuous tub bearing health (100 = new, <40 = fail)"},
-@@ -404,7 +404,7 @@ async def capture_snapshot() -> dict:
-     print(f"Active Power Load    : {tapo.get('power_w', 0.0):.2f} W ({tapo.get('voltage_v', 0.0):.1f} V | {tapo.get('current_ma', 0.0):.1f} mA)")
-     print(f"Kinematic Vibration  : {esp.get('vibration_magnitude', 0.0):.2f} m/s^2 (X:{esp.get('accel_x',0.0)}, Y:{esp.get('accel_y',0.0)}, Z:{esp.get('accel_z',0.0)})")
-     print(f"Acoustic Sound RMS   : {esp.get('audio_rms', 0.0):.1f}")
--    print(f"Estimated Load Mass  : {pdm['estimated_load_kg']} kg ({pdm['load_class']})")
-+    print(f"Estimated Load Mass  : {pdm['estimated_load_kg']} kg ({pdm['load_class']}) (load estimate is an uncalibrated heuristic)")
-     print(f"Parasitic Energy Drag: {pdm['parasitic_drag_pct']}% ({pdm['parasitic_drag_w']} W excess friction)")
-     print(f"Bearing Health Index : {pdm['bearing_health_index']}%")
-     print(f"Damper Health Index  : {pdm['damper_health_index']}%")
-diff --git a/firmware/session_context.py b/firmware/session_context.py
-index 89e887f..93833ac 100644
---- a/firmware/session_context.py
-+++ b/firmware/session_context.py
-@@ -18,13 +18,15 @@ recording each wash session's:
-   - spin_level: spin speed setting or target RPM (e.g. 1200, 1400)
-   - context_source: 'smartthings_live', 'smartthings_history', 'manual', or 'unknown'
-   - note: optional human or system annotation
-+  - load_kg: measured dry laundry mass in kg (empty if unmeasured, never guessed)
-+  - load_source: 'manual', 'smartthings', or empty
- 
- Golden Invariants:
- ------------------
- 1. Original session files in `data/real_sessions/*.csv` are NEVER modified in place.
- 2. If a row in `data/session_context.csv` has `context_source == 'manual'`, it is
-    NEVER overwritten by automated archivers or backfills (Adam's manual notes win).
--3. The schema has exactly the 8 standard columns above.
-+3. The schema has exactly the 10 standard columns above.
- """
- 
- from __future__ import annotations
-@@ -60,8 +62,17 @@ CONTEXT_COLUMNS = [
-     "spin_level",
-     "context_source",
-     "note",
-+    "load_kg",
-+    "load_source",
- ]
- 
-+# Valid sources for measured laundry load
-+VALID_LOAD_SOURCES = {
-+    "manual",
-+    "smartthings",
-+    "",
-+}
-+
- # Valid sources for context data
- VALID_SOURCES = {
-     "smartthings_live",
-@@ -158,11 +169,15 @@ def upsert_session_context(
-         "spin_level": str(new_entry.get("spin_level", "") or ""),
-         "context_source": str(new_entry.get("context_source", "unknown") or "unknown"),
-         "note": str(new_entry.get("note", "") or ""),
-+        "load_kg": str(new_entry.get("load_kg", "") or ""),
-+        "load_source": str(new_entry.get("load_source", "") or ""),
-     }
- 
-     # Verify source validity
-     if cleaned_entry["context_source"] not in VALID_SOURCES:
-         cleaned_entry["context_source"] = "unknown"
-+    if cleaned_entry["load_source"] not in VALID_LOAD_SOURCES:
-+        cleaned_entry["load_source"] = ""
- 
-     for i, r in enumerate(existing_rows):
-         if r.get("session_file") == session_file:
-@@ -172,6 +187,14 @@ def upsert_session_context(
-                 print(f"  [SESSION CONTEXT] Keeping manual record for {session_file} (not overwriting)")
-                 return False
- 
-+            # Invariant: Preserve manual load entries when automated backfill runs
-+            if r.get("load_source") == "manual" and cleaned_entry["load_source"] != "manual":
-+                cleaned_entry["load_kg"] = r.get("load_kg", "")
-+                cleaned_entry["load_source"] = "manual"
-+            elif r.get("load_kg") and not cleaned_entry["load_kg"]:
-+                cleaned_entry["load_kg"] = r.get("load_kg", "")
-+                cleaned_entry["load_source"] = r.get("load_source", "")
-+
-             # Update existing non-manual record
-             existing_rows[i] = cleaned_entry
-             updated = True
-@@ -290,6 +313,7 @@ def resolve_context_for_session(
-     3. If not found, mark context_source = 'unknown' (step 1 probe returned 403).
-     """
-     existing_rows = {r["session_file"]: r for r in load_session_context(context_file)}
-+    existing_entry = existing_rows.get(session_file, {})
-     if session_file in existing_rows:
-         curr = existing_rows[session_file]
-         # If context is already resolved or manual, return it directly
-@@ -303,6 +327,9 @@ def resolve_context_for_session(
-     spin_level = ""
-     source = "unknown"
-     note = ""
-+    # Retain existing load values if present; never guess kg
-+    load_kg = existing_entry.get("load_kg", "")
-+    load_source = existing_entry.get("load_source", "")
- 
-     # Attempt to query live SmartThings timeline if session_id is available
-     if sid:
-@@ -342,6 +369,8 @@ def resolve_context_for_session(
-         "spin_level": spin_level,
-         "context_source": source,
-         "note": note,
-+        "load_kg": load_kg,
-+        "load_source": load_source,
-     }
- 
- 
-diff --git a/firmware/session_export.py b/firmware/session_export.py
-new file mode 100644
-index 0000000..bfffe95
---- /dev/null
-+++ b/firmware/session_export.py
-@@ -0,0 +1,244 @@
-+"""
-+session_export.py
-+One shared implementation of "Firebase session batches -> archived CSV".
-+
-+Before this module, cloud_downloader.py, cloud_multimodal_sync.py and
-+auto_drive_sync_daemon.py each carried their own copy of the CSV writer.
-+They now all call `export_session_to_csv()` here.
-+
-+Two record schemas are supported:
-+
-+* LEGACY (firmware 04/05/06): one instantaneous snapshot every 5 s
-+      {"t", "ts", "ax", "ay", "az", "rms", "pwr"}
-+  -> written exactly as before (8 columns), so old files stay identical.
-+
-+* V3 (firmware 07): one feature vector per 5.024 s window, compact keys
-+  (see V3_KEY_MAP). -> written as the same first 8 columns (so
-+  build_clean_dashboard.py keeps working) PLUS the window features.
-+
-+Column meaning for V3 rows: accel_x/y/z are window MEANS (gravity/tilt),
-+audio_rms is the full-window RMS, power_w is the mean of ~5 Tapo samples.
-+"""
-+
-+from __future__ import annotations
-+
-+# =============================================================================
-+# SECTION 1: Imports & paths
-+# =============================================================================
-+import csv
-+import math
-+import sys
-+from datetime import datetime
-+from pathlib import Path
-+from typing import Any, Dict, Iterable, List, Optional, Tuple
-+
-+BASE_DIR = Path(__file__).resolve().parent.parent
-+DATA_DIR = BASE_DIR / "data"
-+REAL_DIR = DATA_DIR / "real_sessions"
-+TEST_DIR = DATA_DIR / "testing_data"
-+
-+if str(BASE_DIR) not in sys.path:
-+    sys.path.insert(0, str(BASE_DIR))
-+
-+from firmware.smartthings_client import (  # noqa: E402
-+    estimate_point_phase_fallback,
-+    fetch_session_phase_timeline,
-+)
-+
-+LEGACY_COLUMNS = ["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class"]
-+
-+# Firmware-07 compact key -> CSV column. Order here = column order in the CSV.
-+V3_KEY_MAP: List[Tuple[str, str]] = [
-+    ("e", "epoch_ms"), ("na", "n_audio"), ("nv", "n_accel"), ("np", "n_power"),
-+    ("ov", "fifo_overflows"), ("vc", "accel_clip_samples"),
-+    ("apk", "audio_peak"), ("acr", "audio_crest"), ("aku", "audio_kurtosis"),
-+    ("ahr", "audio_hp_rms"), ("ahk", "audio_hp_kurtosis"),
-+    ("abm", "audio_block_rms_max"), ("ab9", "audio_block_rms_p90"), ("acn", "audio_centroid_hz"),
-+    ("ab0", "audio_band_0_250"), ("ab1", "audio_band_250_500"), ("ab2", "audio_band_500_1k"),
-+    ("ab3", "audio_band_1k_2k"), ("ab4", "audio_band_2k_4k"), ("ab5", "audio_band_4k_8k"),
-+    ("sx", "vib_std_x"), ("sy", "vib_std_y"), ("sz", "vib_std_z"),
-+    ("px", "vib_ptp_x"), ("py", "vib_ptp_y"), ("pz", "vib_ptp_z"),
-+    ("sm", "vib_mag_std"), ("vdf", "vib_dom_hz"), ("vdr", "vib_dom_rms"),
-+    ("vb0", "vib_band_0_5"), ("vb1", "vib_band_5_15"), ("vb2", "vib_band_15_30"), ("vb3", "vib_band_30_60"),
-+    ("pmn", "power_min"), ("pmx", "power_max"), ("psd", "power_std"),
-+]
-+V3_COLUMNS = LEGACY_COLUMNS + [c for _, c in V3_KEY_MAP] + ["phase_source"]
-+
-+# Historic session IDs whose file names were chosen by hand (kept so a forced
-+# re-download writes to the SAME file instead of creating duplicates).
-+LEGACY_FILENAME_OVERRIDES = {
-+    "wash_1020": "wash_cycle_2026-10-15_1020.csv",
-+}
-+
-+MIN_REAL_SESSION_ROWS = 150      # shorter sessions are bench tests -> testing_data/
-+LEGACY_RMS_RATIO = 256000.0 / 16384.0
-+
-+
-+# =============================================================================
-+# SECTION 2: Batch parsing
-+# =============================================================================
-+def _sort_key(k: Any):
-+    s = str(k)
-+    if s.startswith("w") and s[1:].isdigit():
-+        return (0, int(s[1:]))
-+    if s.isdigit():
-+        return (0, int(s))
-+    return (1, s)
-+
-+
-+def batches_to_rows(batches: Any) -> List[Dict[str, Any]]:
-+    """Firebase node (dict or list) -> chronologically sorted list of records."""
-+    if isinstance(batches, dict):
-+        items = [v for _, v in sorted(batches.items(), key=lambda kv: _sort_key(kv[0]))]
-+    elif isinstance(batches, list):
-+        items = list(batches)
-+    else:
-+        return []
-+    return [r for r in items if isinstance(r, dict) and "ax" in r]
-+
-+
-+def is_v3(rows: List[Dict[str, Any]]) -> bool:
-+    """Firmware-07 windows carry kurtosis ('aku'); legacy snapshots never do."""
-+    return any("aku" in r for r in rows[:5])
-+
-+
-+def first_epoch_ms(rows: List[Dict[str, Any]]) -> Optional[float]:
-+    for r in rows:
-+        for key in ("e", "ts"):
-+            v = r.get(key)
-+            if isinstance(v, (int, float)) and v > 1_700_000_000_000:
-+                return float(v)
-+    return None
-+
-+
-+def _num(v: Any) -> Optional[float]:
-+    try:
-+        f = float(v)
-+        return f if math.isfinite(f) else None
-+    except (TypeError, ValueError):
-+        return None
-+
-+
-+def _fmt(v: Optional[float], nd: int = 6) -> str:
-+    if v is None:
-+        return ""
-+    return f"{v:.{nd}g}"
-+
-+
-+# =============================================================================
-+# SECTION 3: File naming & routing
-+# =============================================================================
-+def format_session_filename(session_id: str, first_ts_ms: Optional[float] = None) -> str:
-+    """wash_cycle_YYYY-MM-DD_HHMM.csv (same rule the daemons always used)."""
-+    if session_id in LEGACY_FILENAME_OVERRIDES:
-+        return LEGACY_FILENAME_OVERRIDES[session_id]
-+    if session_id.startswith("wash_202"):
-+        clean = session_id.replace("wash_", "")
-+        for fmt in ("%Y-%m-%d_%H%M%S", "%Y-%m-%d_%H%M", "%Y%m%d_%H%M%S", "%Y%m%d_%H%M"):
-+            try:
-+                n = len(datetime.now().strftime(fmt))
-+                dt = datetime.strptime(clean[:n], fmt)
-+                return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
-+            except ValueError:
-+                pass
-+        return f"wash_cycle_{clean}.csv"
-+    if first_ts_ms and first_ts_ms > 1_700_000_000_000:
-+        dt = datetime.fromtimestamp(first_ts_ms / 1000.0)
-+        return f"wash_cycle_{dt.strftime('%Y-%m-%d_%H%M')}.csv"
-+    return f"wash_cycle_{datetime.now().strftime('%Y-%m-%d')}_{session_id.replace('wash_', '')}.csv"
-+
-+
-+def target_path(session_id: str, rows: List[Dict[str, Any]]) -> Path:
-+    fname = format_session_filename(session_id, first_epoch_ms(rows))
-+    is_test = len(rows) < MIN_REAL_SESSION_ROWS or "test" in fname.lower()
-+    return (TEST_DIR if is_test else REAL_DIR) / fname
-+
-+
-+# =============================================================================
-+# SECTION 4: Phase matching (SmartThings timeline, LOCF, fallback)
-+# =============================================================================
-+def _phase_for(row_epoch: Optional[float], timeline: List[Dict[str, Any]]) -> Optional[str]:
-+    """Last SmartThings checkpoint at or before the row (+15 s tolerance)."""
-+    if not timeline or not row_epoch:
-+        return None
-+    valid = [c for c in timeline if c["ts"] <= row_epoch + 15000]
-+    return valid[-1]["phase"] if valid else None
-+
-+
-+# =============================================================================
-+# SECTION 5: Export
-+# =============================================================================
-+def export_session_to_csv(session_id: str, batches: Any, st_info: Optional[dict] = None,
-+                          out_path: Optional[Path] = None) -> Optional[Path]:
-+    """
-+    Write one session to data/real_sessions/ or data/testing_data/.
-+    Returns the path written, or None if the session has < 3 records.
-+    """
-+    rows = batches_to_rows(batches)
-+    if len(rows) < 3:
-+        print(f"  [SKIP] session '{session_id}' has only {len(rows)} records")
-+        return None
-+
-+    v3 = is_v3(rows)
-+    path = out_path or target_path(session_id, rows)
-+    path.parent.mkdir(parents=True, exist_ok=True)
-+
-+    # Load class heuristic was uncalibrated ((W - 70) / 15); retired 2026-10-21.
-+    # We maintain the CSV column for schema stability, but always write "unknown" for new sessions.
-+    # Actual verified wash load (kg) is tracked in data/session_context.csv.
-+    load_class = "unknown"
-+    timeline = fetch_session_phase_timeline(session_id)
-+    first_ts = first_epoch_ms(rows)
-+    total_ms = (rows[-1].get("t", 0) - rows[0].get("t", 0)) if rows else 0
-+
-+    # Legacy firmware 06 sometimes ran with an amplified RMS divisor: rectify.
-+    scale = 1.0
-+    if not v3:
-+        rms_vals = sorted(float(r["rms"]) for r in rows if _num(r.get("rms")) is not None)
-+        if rms_vals and rms_vals[len(rms_vals) // 2] > 1200.0:
-+            scale = LEGACY_RMS_RATIO
-+
-+    last_phase = "none"
-+    n_st = 0
-+    with open(path, "w", encoding="utf-8", newline="") as f:
-+        w = csv.writer(f, lineterminator="\n")
-+        w.writerow(V3_COLUMNS if v3 else LEGACY_COLUMNS)
-+        for r in rows:
-+            t = int(_num(r.get("t")) or 0)
-+            ax, ay, az = (_num(r.get(k)) for k in ("ax", "ay", "az"))
-+            rms = _num(r.get("rms"))
-+            if rms is not None:
-+                rms = rms / scale
-+            pwr = _num(r.get("pwr") if "pwr" in r else r.get("power"))
-+            vm = math.sqrt((ax or 0) ** 2 + (ay or 0) ** 2 + (az or 0) ** 2)
-+
-+            # epoch of this row: v3 has "e"; legacy has server "ts" or first_ts + t
-+            row_epoch = _num(r.get("e")) or _num(r.get("ts"))
-+            if (not row_epoch or row_epoch < 1_700_000_000_000) and first_ts:
-+                row_epoch = first_ts + (t - rows[0].get("t", 0))
-+
-+            phase = _phase_for(row_epoch, timeline)
-+            source = "smartthings" if phase and phase != "none" else "fallback"
-+            if source == "smartthings":
-+                n_st += 1
-+            else:
-+                phase = estimate_point_phase_fallback(pwr or 0.0, vm, rms or 0.0, t,
-+                                                      total_duration_ms=total_ms, last_phase=last_phase)
-+            if phase and phase not in ("none", "stop"):
-+                last_phase = phase
-+
-+            if v3:
-+                base = [t, _fmt(ax, 5), _fmt(ay, 5), _fmt(az, 5), _fmt(rms, 6), _fmt(pwr, 5), phase, load_class]
-+                extra = [_fmt(_num(r.get(k)), 13 if k == "e" else 6) for k, _ in V3_KEY_MAP]
-+                w.writerow(base + extra + [source])
-+            else:
-+                w.writerow([t, f"{ax or 0:.2f}", f"{ay or 0:.2f}", f"{az or 0:.2f}",
-+                            f"{rms or 0:.1f}", f"{pwr or 0:.1f}", phase, load_class])
-+
-+    shown = path.relative_to(BASE_DIR) if path.is_relative_to(BASE_DIR) else path
-+    print(f"  [SUCCESS] {shown}  ({len(rows)} {'windows' if v3 else 'snapshots'}, "
-+          f"load {load_class}, SmartThings phase on {n_st}/{len(rows)} rows)")
-+    if n_st == 0:
-+        print("  [WARN] no SmartThings phase labels matched this session - check the daemon was "
-+              "polling SmartThings while the washer ran (phase-conditioned ML needs them)")
-+    return path
-diff --git a/firmware/smartthings_client.py b/firmware/smartthings_client.py
-index f8ff4ee..c551641 100644
---- a/firmware/smartthings_client.py
-+++ b/firmware/smartthings_client.py
-@@ -406,6 +406,10 @@ def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: fl
- 
- def compute_weight_and_class(rows: list, st_info: dict = None) -> tuple:
-     """
-+    WARNING: UNCALIBRATED heuristic, not used for exported data since 2026-10-21.
-+    Retained for backward compatibility with legacy scripts. New sessions exported
-+    via session_export.py write load_class = "unknown".
-+
-     Computes standardized load class (LIGHT, MEDIUM, HEAVY) and estimated weight (kg)
-     from Tapo P110 initial dry-tumble motor power inertia or SmartThings water level.
-     Returns: (load_class: str, est_kg: float)
-diff --git a/firmware/tests/test_session_context.py b/firmware/tests/test_session_context.py
-index 0d4fb1a..de29449 100644
---- a/firmware/tests/test_session_context.py
-+++ b/firmware/tests/test_session_context.py
-@@ -67,7 +67,10 @@ class TestSessionContext(unittest.TestCase):
-         self.assertEqual(rows[0]["session_file"], "wash_cycle_2026-10-21_0631.csv")
-         self.assertEqual(rows[0]["programme"], "QuickWash")
-         self.assertEqual(rows[0]["context_source"], "smartthings_live")
-+        self.assertEqual(rows[0]["load_kg"], "")
-+        self.assertEqual(rows[0]["load_source"], "")
-         self.assertEqual(list(rows[0].keys()), CONTEXT_COLUMNS)
-+        self.assertEqual(len(CONTEXT_COLUMNS), 10)
- 
-     def test_upsert_keeps_manual_row(self) -> None:
-         """Verify that a row marked with context_source='manual' is NEVER overwritten."""
-@@ -172,6 +175,8 @@ class TestSessionContext(unittest.TestCase):
-             "spin_level": "800",
-             "context_source": "manual",
-             "note": "keep this untouched",
-+            "load_kg": "4.5",
-+            "load_source": "manual",
+@@ -259,42 +259,183 @@ def save_feature_dictionary():
+         "description": "Unified 31-feature prognostic dataset combining kinematics, acoustics, electrical power, and ground-truth machine states.",
+         "pdm_framework": "P-F Interval Prognostics & Remaining Useful Life (RUL) Modeling",
+         "features": {
+-            "timestamp_ms": {"type": "integer", "unit": "ms", "desc": "Unix epoch millisecond timestamp"},
+-            "iso_time": {"type": "string", "desc": "UTC ISO 8601 formatted datetime"},
+-            "phase": {"type": "categorical", "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin, finish)"},
+-            "machine_state": {"type": "categorical", "desc": "Machine running state (stop, run, pause)"},
+-            "progress_pct": {"type": "integer", "unit": "%", "desc": "Current cycle completion progress (0% - 100%)"},
+-            "remaining_time_min": {"type": "integer", "unit": "min", "desc": "Estimated remaining cycle time in minutes"},
+-            "target_rpm": {"type": "integer", "unit": "RPM", "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"},
+-            "water_temperature": {"type": "categorical", "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"},
+-            "rinse_cycles": {"type": "integer", "unit": "count", "desc": "Configured wash rinse cycles (0 to 5)"},
+-            "accel_x": {"type": "float", "unit": "m/s^2", "desc": "Transverse lateral drum acceleration"},
+-            "accel_y": {"type": "float", "unit": "m/s^2", "desc": "Vertical acceleration (direct damper shock indicator)"},
+-            "accel_z": {"type": "float", "unit": "m/s^2", "desc": "Axial fore/aft acceleration (spider arm stability)"},
+-            "vibe_magnitude": {"type": "float", "unit": "m/s^2", "desc": "Euclidean resultant 3-axis vibration magnitude"},
+-            "audio_rms": {"type": "float", "unit": "RMS", "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction)"},
+-            "power_w": {"type": "float", "unit": "W", "desc": "Tapo P110 active electrical motor & heater power"},
+-            "voltage_v": {"type": "float", "unit": "V", "desc": "Tapo P110 mains electrical supply voltage"},
+-            "current_ma": {"type": "float", "unit": "mA", "desc": "Tapo P110 electrical load current"},
+-            "today_energy_wh": {"type": "float", "unit": "Wh", "desc": "Cumulative electrical energy consumed today"},
+-            "month_energy_kwh": {"type": "float", "unit": "kWh", "desc": "Cumulative electrical energy consumed this month"},
+-            "is_on": {"type": "boolean", "desc": "Smart plug power relay state (true/false)"},
+-            "detergent_remaining": {"type": "categorical", "desc": "Auto-dispenser detergent reservoir level (unknown, normal, low)"},
+-            "softener_remaining": {"type": "categorical", "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"},
+-            "cumulative_water_l": {"type": "float", "unit": "L", "desc": "Cumulative water consumption report in Liters"},
+-            "kids_lock": {"type": "categorical", "desc": "Child safety lock status (locked, unlocked)"},
+-            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"},
+-            "load_class": {"type": "categorical", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"},
+-            "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
+-            "parasitic_drag_pct": {"type": "float", "unit": "%", "desc": "Percentage excess energy waste caused by friction"},
+-            "bearing_health_index": {"type": "float", "unit": "%", "desc": "Continuous tub bearing health (100 = new, <40 = fail)"},
+-            "damper_health_index": {"type": "float", "unit": "%", "desc": "Continuous suspension damper health"},
+-            "machine_health_index": {"type": "float", "unit": "%", "desc": "Composite overall Machine Health Index (0-100%)"}
++                "timestamp_ms": {
++                        "type": "integer",
++                        "unit": "ms",
++                        "desc": "Unix epoch millisecond timestamp"
++                },
++                "iso_time": {
++                        "type": "string",
++                        "desc": "UTC ISO 8601 formatted datetime"
++                },
++                "phase": {
++                        "type": "categorical",
++                        "desc": "Ground truth cycle phase from SmartThings (none, weightSensing, wash, rinse, spin, finish)"
++                },
++                "machine_state": {
++                        "type": "categorical",
++                        "desc": "Machine running state (stop, run, pause)"
++                },
++                "progress_pct": {
++                        "type": "integer",
++                        "unit": "%",
++                        "desc": "Current cycle completion progress (0% - 100%)"
++                },
++                "remaining_time_min": {
++                        "type": "integer",
++                        "unit": "min",
++                        "desc": "Estimated remaining cycle time in minutes"
++                },
++                "target_rpm": {
++                        "type": "integer",
++                        "unit": "RPM",
++                        "desc": "Target centrifugal drum speed (0, 400, 800, 1000, 1200, 1400)"
++                },
++                "water_temperature": {
++                        "type": "categorical",
++                        "desc": "Selected water temp (cold, 20, 30, 40, 60, 90)"
++                },
++                "rinse_cycles": {
++                        "type": "integer",
++                        "unit": "count",
++                        "desc": "Configured wash rinse cycles (0 to 5)"
++                },
++                "accel_x": {
++                        "type": "float",
++                        "unit": "m/s^2",
++                        "desc": "Transverse lateral drum acceleration"
++                },
++                "accel_y": {
++                        "type": "float",
++                        "unit": "m/s^2",
++                        "desc": "Vertical acceleration (direct damper shock indicator)"
++                },
++                "accel_z": {
++                        "type": "float",
++                        "unit": "m/s^2",
++                        "desc": "Axial fore/aft acceleration (spider arm stability)"
++                },
++                "vibe_magnitude": {
++                        "type": "float",
++                        "unit": "m/s^2",
++                        "desc": "Euclidean resultant 3-axis vibration magnitude"
++                },
++                "audio_rms": {
++                        "type": "float",
++                        "unit": "Canonical RMS",
++                        "canonical_range": [
++                                0.0,
++                                1200.0
++                        ],
++                        "baseline_by_phase": {
++                                "none_or_stop": [
++                                        10.0,
++                                        150.0
++                                ],
++                                "wash": [
++                                        150.0,
++                                        350.0
++                                ],
++                                "rinse": [
++                                        180.0,
++                                        450.0
++                                ],
++                                "spin": [
++                                        600.0,
++                                        1100.0
++                                ]
++                        },
++                        "firmware_formula": "INMP441 I2S DMA: (sample >> 8), sqrt(mean(s^2)) / 1000.0 (Divisor: 256,000)",
++                        "ml_standardization": "Phase-conditioned Z-score or log1p scaling to eliminate spin false alarms",
++                        "desc": "INMP441 MEMS microphone acoustic sound pressure (bearing friction & cavitation indicator)"
++                },
++                "power_w": {
++                        "type": "float",
++                        "unit": "W",
++                        "desc": "Tapo P110 active electrical motor & heater power"
++                },
++                "voltage_v": {
++                        "type": "float",
++                        "unit": "V",
++                        "desc": "Tapo P110 mains electrical supply voltage"
++                },
++                "current_ma": {
++                        "type": "float",
++                        "unit": "mA",
++                        "desc": "Tapo P110 electrical load current"
++                },
++                "today_energy_wh": {
++                        "type": "float",
++                        "unit": "Wh",
++                        "desc": "Cumulative electrical energy consumed today"
++                },
++                "month_energy_kwh": {
++                        "type": "float",
++                        "unit": "kWh",
++                        "desc": "Cumulative electrical energy consumed this month"
++                },
++                "is_on": {
++                        "type": "boolean",
++                        "desc": "Smart plug power relay state (true/false)"
++                },
++                "detergent_remaining": {
++                        "type": "categorical",
++                        "desc": "Auto-dispenser detergent reservoir level (unknown, normal, low)"
++                },
++                "softener_remaining": {
++                        "type": "categorical",
++                        "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"
++                },
++                "cumulative_water_l": {
++                        "type": "float",
++                        "unit": "L",
++                        "desc": "Cumulative water consumption report in Liters"
++                },
++                "kids_lock": {
++                        "type": "categorical",
++                        "desc": "Child safety lock status (locked, unlocked)"
++                },
++                "estimated_load_kg": {
++                        "type": "float",
++                        "unit": "kg",
++                        "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"
++                },
++                "load_class": {
++                        "type": "categorical",
++                        "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"
++                },
++                "parasitic_drag_w": {
++                        "type": "float",
++                        "unit": "W",
++                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
++                },
++                "parasitic_drag_pct": {
++                        "type": "float",
++                        "unit": "%",
++                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
++                },
++                "bearing_health_index": {
++                        "type": "float",
++                        "unit": "%",
++                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
++                },
++                "damper_health_index": {
++                        "type": "float",
++                        "unit": "%",
++                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
++                },
++                "machine_health_index": {
++                        "type": "float",
++                        "unit": "%",
++                        "desc": "LEGACY CONTRACT FIELD. Not measured and not a model output. The ML outputs only an anomaly score and a cycle verdict (see ml/README.md)."
++                }
          }
-         upsert_session_context(manual_row, context_file=self.context_file)
+-    }
++}
+     with open(dict_file, "w", encoding="utf-8") as f:
+         json.dump(schema, f, indent=2)
+-    print(f"[DATA DICTIONARY] Saved schema contract to: {dict_file.relative_to(BASE_DIR)}")
++        f.write("\n")
++    shown = dict_file.relative_to(BASE_DIR) if dict_file.is_relative_to(BASE_DIR) else dict_file
++    print(f"[DATA DICTIONARY] Saved schema contract to: {shown}")
  
-@@ -184,7 +189,11 @@ class TestSessionContext(unittest.TestCase):
-         rows1 = {r["session_file"]: r for r in load_session_context(self.context_file)}
-         self.assertEqual(rows1[fw07_file.name]["programme"], "CustomManualProgramme")
-         self.assertEqual(rows1[fw07_file.name]["context_source"], "manual")
-+        self.assertEqual(rows1[fw07_file.name]["load_kg"], "4.5")
-+        self.assertEqual(rows1[fw07_file.name]["load_source"], "manual")
-         self.assertEqual(rows1[legacy_file.name]["context_source"], "unknown")
-+        self.assertEqual(rows1[legacy_file.name]["load_kg"], "")
-+        self.assertEqual(rows1[legacy_file.name]["load_source"], "")
- 
-         # 6. Second backfill run (idempotency check)
-         count2 = backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
-@@ -256,5 +265,40 @@ class TestSessionContext(unittest.TestCase):
-         self.assertEqual(result_rows["wash_cycle_manual_missing.csv"]["programme"], "CustomSpecial")
- 
- 
-+
-+    def test_manual_load_kg_survives_backfill_and_upsert(self) -> None:
-+        """
-+        Verify that manual load_kg and load_source survive automated backfill and upsert.
-+        """
-+        fw07_file = self.sessions_dir / "wash_cycle_2026-10-21_0631.csv"
-+        with open(fw07_file, "w", encoding="utf-8", newline="") as f:
-+            w = csv.writer(f)
-+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms", "n_accel"])
-+            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "unknown", 1792535460262, 1013])
-+            w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "unknown", 1792537204680, 1014])
-+
-+        # 1. Row with manual load_kg
-+        entry = {
-+            "session_file": fw07_file.name,
-+            "start_epoch_ms": "1792535460262",
-+            "end_epoch_ms": "1792537204680",
-+            "programme": "DailyWash",
-+            "water_temp": "cold",
-+            "spin_level": "1200",
-+            "context_source": "smartthings_live",
-+            "note": "automated with manual load",
-+            "load_kg": "5.2",
-+            "load_source": "manual",
-+        }
-+        self.assertTrue(upsert_session_context(entry, context_file=self.context_file))
-+
-+        # 2. Backfill runs over the file
-+        backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
-+
-+        # 3. Verify manual load_kg and load_source survived
-+        rows = {r["session_file"]: r for r in load_session_context(self.context_file)}
-+        self.assertEqual(rows[fw07_file.name]["load_kg"], "5.2")
-+        self.assertEqual(rows[fw07_file.name]["load_source"], "manual")
-+
- if __name__ == "__main__":
-     unittest.main()
-diff --git a/firmware/tests/test_session_export.py b/firmware/tests/test_session_export.py
-new file mode 100644
-index 0000000..21fc2e4
---- /dev/null
-+++ b/firmware/tests/test_session_export.py
-@@ -0,0 +1,80 @@
-+"""
-+test_session_export.py - offline tests for firmware/session_export.py
-+(no network: Firebase + SmartThings are not touched because the phase
-+timeline is read from a temporary local file).
-+
-+Run:  py firmware/tests/test_session_export.py
-+"""
-+# =============================================================================
-+# SECTION 1: Setup
-+# =============================================================================
-+import csv
-+import json
-+import sys
-+import tempfile
-+from pathlib import Path
-+
-+ROOT = Path(__file__).resolve().parents[2]
-+sys.path.insert(0, str(ROOT))
-+import firmware.smartthings_client as stc  # noqa: E402
-+from firmware import session_export as se  # noqa: E402
-+
-+
-+def v3_window(i: int, epoch0: int):
-+    """A record exactly as firmware 07 serialises it (compact keys)."""
-+    return {"t": 5024 * i, "e": epoch0 + 5024 * i, "na": 80384, "nv": 1005, "np": 5, "ov": 0, "vc": 0,
-+            "rms": 210.5, "apk": 3100.0, "acr": 14.7, "aku": 9.8, "ahr": 120.2, "ahk": 7.1, "abm": 300.0,
-+            "ab9": 250.0, "acn": 2900.0, "ab0": 60.0, "ab1": 30.0, "ab2": 40.0, "ab3": 70.0, "ab4": 90.0,
-+            "ab5": 110.0, "ax": -0.62, "ay": 2.14, "az": -9.25, "sx": 0.05, "sy": 0.04, "sz": 0.02,
-+            "px": 0.3, "py": 0.25, "pz": 0.1, "sm": 0.03, "vdf": 17.9, "vdr": 0.2, "vb0": 0.01, "vb1": 0.02,
-+            "vb2": 0.2, "vb3": 0.01, "pwr": 80.0 + i, "pmn": 75.0, "pmx": 90.0, "psd": 3.0}
-+
-+
-+# =============================================================================
-+# SECTION 2: Tests
-+# =============================================================================
-+def main() -> int:
-+    with tempfile.TemporaryDirectory() as td:
-+        td = Path(td)
-+        stc.PHASE_DIR = td / "phases"                 # local timeline -> no Firebase fallback needed
-+        epoch0 = 1_792_300_000_000
-+        sid = "wash_2026-10-20_081500"
-+        stc.PHASE_DIR.mkdir()
-+        with open(stc._local_timeline_path(sid), "w") as f:
-+            f.write(json.dumps({"ts": epoch0 - 1000, "phase": "weightSensing"}) + "\n")
-+            f.write(json.dumps({"ts": epoch0 + 5024 * 100, "phase": "wash"}) + "\n")
-+
-+        # --- v3 session: keys "w000001".. (dict, unordered on purpose) ---
-+        batches = {f"w{i:06d}": v3_window(i, epoch0) for i in range(200, 0, -1)}
-+        out = se.export_session_to_csv(sid, batches, out_path=td / "v3.csv")
-+        rows = list(csv.DictReader(open(out)))
-+        assert len(rows) == 200
-+        assert list(rows[0].keys())[:8] == se.LEGACY_COLUMNS, "first 8 columns must stay dashboard-compatible"
-+        assert int(rows[0]["timestamp_ms"]) < int(rows[1]["timestamp_ms"]), "rows must be chronological"
-+        assert rows[0]["phase"] == "weightSensing" and rows[150]["phase"] == "wash", "phase matching"
-+        assert rows[0]["phase_source"] == "smartthings"
-+        assert float(rows[0]["audio_kurtosis"]) == 9.8 and rows[0]["vib_dom_hz"] == "17.9"
-+        assert all(r["load_class"] == "unknown" for r in rows), "all v3 rows must have load_class == unknown"
-+        print("[ok] v3 export:", len(rows), "rows,", len(rows[0]), "columns")
-+
-+        # --- legacy session: integer keys, amplified RMS gets rectified ---
-+        legacy = {str(i): {"t": 5000 * i, "ts": epoch0 + 5000 * i, "ax": -0.7, "ay": 1.4, "az": -9.4,
-+                           "rms": 3000.0, "pwr": 60.0} for i in range(1, 20)}
-+        out2 = se.export_session_to_csv("wash_offline_ABCD", legacy, out_path=td / "legacy.csv")
-+        lrows = list(csv.DictReader(open(out2)))
-+        assert list(lrows[0].keys()) == se.LEGACY_COLUMNS, "legacy schema must be unchanged"
-+        assert abs(float(lrows[0]["audio_rms"]) - 3000 / se.LEGACY_RMS_RATIO) < 0.1
-+        assert all(r["load_class"] == "unknown" for r in lrows), "all legacy rows must have load_class == unknown"
-+        print("[ok] legacy export unchanged (8 columns, RMS rectified)")
-+
-+        # --- routing: short sessions go to testing_data ---
-+        assert se.target_path("wash_2026-10-20_081500", se.batches_to_rows(batches)).parent.name == "real_sessions"
-+        assert se.target_path("wash_x", se.batches_to_rows(legacy)).parent.name == "testing_data"
-+        assert se.format_session_filename(sid) == "wash_cycle_2026-10-20_0815.csv"
-+        print("[ok] routing + file naming")
-+    print("[PASS] session_export")
-+    return 0
-+
-+
-+if __name__ == "__main__":
-+    sys.exit(main())
-diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
-index 86eee1d..2eaad30 100644
---- a/ml/cycle_signature_report.py
-+++ b/ml/cycle_signature_report.py
-@@ -369,6 +369,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         programme_display = "unknown"
- 
-     water_temp = context_info.get("water_temp") or ""
-+    load_kg = context_info.get("load_kg") or ""
- 
-     return {
-         "file": csv_path.name,
-@@ -395,6 +396,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         "boot_at_start": boot_at_start,
-         "programme": programme_display,
-         "water_temp": water_temp,
-+        "load_kg": load_kg,
-         "context_source": raw_source,
-     }
- 
-@@ -470,15 +472,15 @@ def generate_cycle_signature_report() -> Path:
-         "",
-         "## 2. Comprehensive Cycle Signatures Table",
-         "",
--        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |",
--        "|---|---|---|---|---|---|---|---|---|---|---|---|",
-+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
-+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
-     ])
- 
-     for r in results:
-         lines.append(
-             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
-             f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
--            f"`{r['programme']}` | {r['water_temp'] or '-'} | `{r['context_source']}` |"
-+            f"`{r['programme']}` | {r['water_temp'] or '-'} | {r['load_kg'] or '-'} | `{r['context_source']}` |"
-         )
- 
-     lines.extend([
-diff --git a/ml/models/cycle_signature_report.md b/ml/models/cycle_signature_report.md
-index 15ca0d8..d7be05b 100644
---- a/ml/models/cycle_signature_report.md
-+++ b/ml/models/cycle_signature_report.md
-@@ -1,6 +1,6 @@
- # Wash Cycle Physical Signatures & Programme Report
- 
--**Generated:** 2026-10-21 16:20:02  
-+**Generated:** 2026-10-21 17:08:37  
- **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
- **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
- 
-@@ -24,21 +24,21 @@ Archived wash cycles were classified by their measured electrical power and mech
- 
- ## 2. Comprehensive Cycle Signatures Table
- 
--| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |
--|---|---|---|---|---|---|---|---|---|---|---|---|
--| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | `smartthings_live` |
--| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
--| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
-+| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
-+|---|---|---|---|---|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
-+| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
- 
- ---
- 
+ def append_to_prediction_csv(row: dict):
+     """Appends unified multimodal sample to data/pdm_multimodal_prediction_dataset.csv."""
