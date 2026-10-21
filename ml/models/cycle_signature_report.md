@@ -1,6 +1,6 @@
 # Wash Cycle Physical Signatures & Programme Report
 
-**Generated:** 2026-10-21 15:44:53  
+**Generated:** 2026-10-21 16:20:02  
 **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
 **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
 
@@ -18,7 +18,7 @@ Archived wash cycles were classified by their measured electrical power and mech
 - Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
 - Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
 - Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).
-- Zero accelerometer clipping samples occurred across all sessions.
+- Zero accelerometer clipping samples occurred across all firmware-07 sessions.
 
 ---
 

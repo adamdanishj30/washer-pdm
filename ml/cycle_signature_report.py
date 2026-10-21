@@ -106,6 +106,49 @@ def count_spin_blocks(
     return spin_blocks
 
 
+def find_signature_blocks(
+    powers: List[float],
+    min_spin_windows: int = MIN_SPIN_WINDOWS,
+    min_spin_w: float = SPIN_MIN_W,
+    heater_w: float = HEATER_W,
+) -> List[Dict[str, Any]]:
+    """
+    Find contiguous row-index spans for electrical heater and mechanical spin blocks:
+    - 'spin': >= min_spin_windows consecutive windows where min_spin_w < power <= heater_w
+    - 'heater': contiguous windows where power > heater_w (>= min_spin_windows consecutive)
+    Returns list of dicts: [{'type': 'heater'|'spin', 'i0': int, 'i1': int}] sorted by i0.
+    Reused by build_clean_dashboard.py to shade blocks on power & vibration charts.
+    """
+    blocks: List[Dict[str, Any]] = []
+
+    # 1. Spin extraction spans (200W < power <= 1000W)
+    cur_spin: List[int] = []
+    for i, p in enumerate(powers):
+        if min_spin_w < p <= heater_w:
+            cur_spin.append(i)
+        else:
+            if len(cur_spin) >= min_spin_windows:
+                blocks.append({"type": "spin", "i0": cur_spin[0], "i1": cur_spin[-1]})
+            cur_spin = []
+    if len(cur_spin) >= min_spin_windows:
+        blocks.append({"type": "spin", "i0": cur_spin[0], "i1": cur_spin[-1]})
+
+    # 2. Electrical heating spans (power > 1000W)
+    cur_heater: List[int] = []
+    for i, p in enumerate(powers):
+        if p > heater_w:
+            cur_heater.append(i)
+        else:
+            if len(cur_heater) >= min_spin_windows:
+                blocks.append({"type": "heater", "i0": cur_heater[0], "i1": cur_heater[-1]})
+            cur_heater = []
+    if len(cur_heater) >= min_spin_windows:
+        blocks.append({"type": "heater", "i0": cur_heater[0], "i1": cur_heater[-1]})
+
+    blocks.sort(key=lambda b: b["i0"])
+    return blocks
+
+
 def find_high_power_blocks(
     powers: List[float],
     dt_seconds: float = 5.024,
@@ -421,7 +464,7 @@ def generate_cycle_signature_report() -> Path:
         "- Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.",
         "- Maximum spin extraction dominant frequency $p90 \\approx 20.0\\text{ Hz}$ (~1,200 RPM) across all spin blocks.",
         "- Maximum sample acquisition gap is exactly **5.02 s** (measured via ESP32 hardware millisecond timer `timestamp_ms`).",
-        "- Zero accelerometer clipping samples occurred across all sessions.",
+        "- Zero accelerometer clipping samples occurred across all firmware-07 sessions.",
         "",
         "---",
         "",

@@ -66,49 +66,55 @@ def main() -> int:
         d.DATA_DIR = td
         stc.PHASE_DIR = td / "phases"
         import firmware.session_context as sc
-        sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
-        sc.REAL_SESSIONS_DIR = td / "real"
-        d.get_smartthings_status = lambda **_: {}
-        d.rebuild_derived = lambda: None
+        orig_context_file = sc.DEFAULT_CONTEXT_FILE
+        orig_real_dir = sc.REAL_SESSIONS_DIR
+        try:
+            sc.DEFAULT_CONTEXT_FILE = td / "session_context.csv"
+            sc.REAL_SESSIONS_DIR = td / "real"
+            d.get_smartthings_status = lambda **_: {}
+            d.rebuild_derived = lambda: None
 
-        e0 = 1_792_300_000_000
-        db = {
-            "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
-            "sessions": {
-                "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
-                "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
-                "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
-                "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
-            },
-            "session_meta": {
-                "wash_2026-10-20_081500": {"start": 1, "end": 2},
-                "wash_2026-10-21_090000": {"start": 3},            # still running
-                "wash_2026-10-19_070000": {"start": 1, "end": 2},
-            },
-        }
-        fake = FakeFB(db)
-        d.get_client = lambda: fake
-        hist = {"wash_old_legacy": {"completed": True}}
-        # pre-existing CSV for the 19 Oct session must NOT be overwritten
-        (se.REAL_DIR).mkdir(parents=True)
-        existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
-        existing.write_text("keep me\n")
+            e0 = 1_792_300_000_000
+            db = {
+                "live": {"fw": "07.0.0", "session": "wash_2026-10-21_090000", "active": True, "uptime": 1, "cnt": 1},
+                "sessions": {
+                    "wash_old_legacy": {"1": {"t": 1, "ax": 0, "ay": 0, "az": 9.8, "rms": 1}},
+                    "wash_2026-10-20_081500": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
+                    "wash_2026-10-21_090000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 50)},
+                    "wash_2026-10-19_070000": {f"w{i:06d}": v3_window(i, e0) for i in range(1, 181)},
+                },
+                "session_meta": {
+                    "wash_2026-10-20_081500": {"start": 1, "end": 2},
+                    "wash_2026-10-21_090000": {"start": 3},            # still running
+                    "wash_2026-10-19_070000": {"start": 1, "end": 2},
+                },
+            }
+            fake = FakeFB(db)
+            d.get_client = lambda: fake
+            hist = {"wash_old_legacy": {"completed": True}}
+            # pre-existing CSV for the 19 Oct session must NOT be overwritten
+            (se.REAL_DIR).mkdir(parents=True)
+            existing = se.REAL_DIR / "wash_cycle_2026-10-19_0700.csv"
+            existing.write_text("keep me\n")
 
-        n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
-        downloads = [g for g in fake.gets if g.startswith("sessions/")]
-        assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
-        assert n == 1, n
-        assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
-        assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
-        assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
-        assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
-        assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
+            n = d.scan_unarchived(hist, active_sid="wash_2026-10-21_090000", prune=True)
+            downloads = [g for g in fake.gets if g.startswith("sessions/")]
+            assert downloads == ["sessions/wash_2026-10-19_070000", "sessions/wash_2026-10-20_081500"], downloads
+            assert n == 1, n
+            assert existing.read_text() == "keep me\n", "existing CSV was overwritten!"
+            assert (se.REAL_DIR / "wash_cycle_2026-10-20_0815.csv").is_file()
+            assert db["session_meta"]["wash_2026-10-20_081500"]["archived"] is True
+            assert "wash_2026-10-20_081500" not in db["sessions"], "prune should delete verified session"
+            assert "wash_2026-10-21_090000" in db["sessions"], "running session must be untouched"
 
-        fake.gets.clear()
-        n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
-        assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
-        assert n2 == 0
-        print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
+            fake.gets.clear()
+            n2 = d.scan_unarchived(hist, active_sid=None, prune=False)
+            assert not [g for g in fake.gets if g.startswith("sessions/") and "shallow" not in g], fake.gets
+            assert n2 == 0
+            print("[PASS] daemon downloads only finished, unarchived sessions; never overwrites; prune verified")
+        finally:
+            sc.DEFAULT_CONTEXT_FILE = orig_context_file
+            sc.REAL_SESSIONS_DIR = orig_real_dir
     return 0
 
 
