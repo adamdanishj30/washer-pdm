@@ -1,5 +1,20 @@
 import json
 import os
+import sys
+import numpy as np
+
+# Import shared physics-based cycle signature thresholds and classification rules
+# (Ensures zero threshold duplication between ML reporting and dashboard display)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ml.cycle_signature_report import (
+    HEATER_W,
+    SPIN_MIN_W,
+    MAX_POWER_NO_DATA_W,
+    classify_signature,
+    count_spin_blocks,
+    find_signature_blocks,
+    load_session_context_map,
+)
 
 # =============================================================================
 # CSV Ingestion & Pre-computed Session Discovery
@@ -99,6 +114,7 @@ def discover_all_sessions():
     options = []
     
     # 1. Real Wash Sessions (from data/real_sessions)
+    context_map = load_session_context_map()
     real_options = []
     if os.path.exists(real_dir):
         files = sorted(os.listdir(real_dir), reverse=True)
@@ -111,6 +127,68 @@ def discover_all_sessions():
                 s_key = 'preset_real_' + fname.replace('.csv', '').replace('-', '_').replace('.', '_')
                 pts_cnt = len(rows)
                 duration_m = round((rows[-1][0] - rows[0][0]) / 60000.0) if pts_cnt > 1 else 0
+
+                # Compute physical summary dict for wash-type badge, summary line, and block shading
+                powers = [r[5] if (len(r) > 5 and r[5] is not None) else 0.0 for r in rows]
+                timestamps_ms = [r[0] for r in rows]
+                is_fw07 = len(rows[0]) >= 12
+                dt_seconds = 5.024 if is_fw07 else 5.0
+                max_power = max(powers) if powers else 0.0
+                has_valid_power = max_power >= MAX_POWER_NO_DATA_W
+
+                if not has_valid_power:
+                    active_min = 0
+                    heater_min = 0.0
+                    spin_blocks = 0
+                    blocks = []
+                else:
+                    active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
+                    if active_indices:
+                        t_start = timestamps_ms[active_indices[0]]
+                        t_end = timestamps_ms[active_indices[-1]]
+                        dt_ms = dt_seconds * 1000.0
+                        span_min = (t_end - t_start + dt_ms) / 60000.0 if t_end >= t_start else (len(active_indices) * dt_seconds / 60.0)
+                        active_min = int(round(span_min))
+                    else:
+                        active_min = 0
+
+                    heater_count = sum(1 for p in powers if p > HEATER_W)
+                    heater_min = round((heater_count * dt_seconds) / 60.0, 1)
+                    spin_blocks = count_spin_blocks(powers)
+                    blocks = find_signature_blocks(powers)
+
+                sig_class = classify_signature(max_power, heater_min, spin_blocks, float(active_min))
+                ctx = context_map.get(fname, {})
+                ctx_source = ctx.get('context_source', '').strip()
+                ctx_prog = ctx.get('programme', '').strip()
+                ctx_temp = ctx.get('water_temp', '').strip()
+
+                prog_val = ctx_prog if (ctx_source in ('smartthings_live', 'smartthings_history', 'manual') and ctx_prog and ctx_prog.lower() != 'unknown') else None
+                temp_val = ctx_temp if (prog_val and ctx_temp and ctx_temp.lower() != 'unknown') else None
+
+                run_medians = None
+                if is_fw07:
+                    running = [r for r in rows if r[6] is not None and r[6] > 0.08]
+                    if running:
+                        run_medians = {
+                            'vib_dom_hz': round(float(np.median([r[11] for r in running if r[11] is not None])), 1),
+                            'vib_std_x': round(float(np.median([r[8] for r in running if r[8] is not None])), 3),
+                            'vib_std_y': round(float(np.median([r[9] for r in running if r[9] is not None])), 3),
+                            'vib_std_z': round(float(np.median([r[10] for r in running if r[10] is not None])), 3),
+                            'vib_mag_std': round(float(np.median([r[6] for r in running if r[6] is not None])), 3),
+                        }
+
+                summary = {
+                    'signature': sig_class,
+                    'programme': prog_val,
+                    'water_temp': temp_val,
+                    'context_source': ctx_source if prog_val else None,
+                    'active_min': active_min,
+                    'heater_min': heater_min,
+                    'spin_blocks': spin_blocks,
+                    'blocks': blocks,
+                    'run_medians': run_medians
+                }
                 
                 if '2026-10-17_0835' in fname:
                     disp = f"🧺 17 Oct 2026, 08:35 AM ({duration_m}m Full Wash, {pts_cnt} pts)"
@@ -133,7 +211,8 @@ def discover_all_sessions():
                     'name': fname.replace('.csv', ''),
                     'displayName': disp,
                     'data': rows,
-                    'category': 'real'
+                    'category': 'real',
+                    'summary': summary
                 }
                 real_options.append(f'<option value="{s_key}">{disp}</option>')
                 
@@ -603,6 +682,47 @@ def generate_html(default_view='live'):
       pointer-events: auto;
     }}
 
+    /* Wash Type Badge */
+    .badge-wash-type {{
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.2px;
+      cursor: help;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }}
+    .badge-wash-type.hot {{
+      background: rgba(251, 146, 60, 0.14);
+      border: 1px solid rgba(251, 146, 60, 0.45);
+      color: var(--coral-accent);
+    }}
+    .badge-wash-type.cold {{
+      background: rgba(0, 240, 210, 0.14);
+      border: 1px solid rgba(0, 240, 210, 0.45);
+      color: var(--teal-accent);
+    }}
+    .badge-wash-type.quick {{
+      background: rgba(96, 165, 250, 0.14);
+      border: 1px solid rgba(96, 165, 250, 0.45);
+      color: #60a5fa;
+    }}
+    .badge-wash-type.unmetered {{
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--text-dim);
+    }}
+    .badge-wash-type.programme {{
+      background: rgba(168, 85, 247, 0.14);
+      border: 1px solid rgba(168, 85, 247, 0.45);
+      color: #c084fc;
+    }}
+
     canvas {{
       width: 100%;
       height: 100%;
@@ -980,6 +1100,10 @@ def generate_html(default_view='live'):
             <button class="span-btn active" id="btn-spline-full" onclick="setChartSpan('spline', 'full')">Full Run</button>
             <button class="span-btn" id="btn-spline-win" onclick="setChartSpan('spline', 'win')">40s Window</button>
           </div>
+          <span id="legend-spline-blocks" class="legend-item-dot" style="display: none; margin-right: 4px;">
+            <span style="display:inline-flex; align-items:center; gap:3px; margin-right:6px;"><span style="width:8px; height:8px; background:rgba(251,146,60,0.45); border:1px solid #fb923c; border-radius:2px;"></span><span style="font-size:10px; color:#fb923c;">Heater</span></span>
+            <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; background:rgba(0,240,210,0.35); border:1px solid #00f0d2; border-radius:2px;"></span><span style="font-size:10px; color:#00f0d2;">Spin</span></span>
+          </span>
           <span class="legend-item-dot">
             <span class="dot-indicator" style="background: var(--teal-accent);"></span> <span id="lbl-spline-vibe-title">|a|</span>: <strong id="spline-cur-vibe" style="color: var(--teal-accent); font-family: 'JetBrains Mono', monospace;">9.54</strong> m/s&sup2;
           </span>
@@ -1005,8 +1129,8 @@ def generate_html(default_view='live'):
             <button class="span-btn active" id="btn-xyz-full" onclick="setChartSpan('xyz', 'full')">Full Run</button>
             <button class="span-btn" id="btn-xyz-win" onclick="setChartSpan('xyz', 'win')">40s Window</button>
           </div>
-          <span class="axis-toggle-clean" id="pill-dom-freq" style="color: #60a5fa;" title="Dominant vibration frequency in 0.5–45 Hz. During spin this usually tracks drum speed (Hz &times; 60 &approx; rpm); not verified against a tachometer.">
-            Dom. freq: <strong id="vib-dom-freq" style="margin-left: 3px;">—</strong>
+          <span class="axis-toggle-clean" id="pill-dom-freq" style="color: #60a5fa;" title="Dominant vibration frequency in 0.5–45 Hz. Peak frequency during mechanical spin extraction.">
+            <span id="lbl-pill-dom-freq">Dom. freq:</span> <strong id="vib-dom-freq" style="margin-left: 3px;">—</strong>
           </span>
           <span class="axis-toggle-clean" id="pill-tog-x" style="color: var(--teal-accent);" onclick="toggleAxis('x')">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--teal-accent);"></span>
@@ -1025,6 +1149,15 @@ def generate_html(default_view='live'):
           </span>
         </div>
       </div>
+      <!-- Run medians row for historic sessions -->
+      <div id="card2-run-medians" style="display: none; padding: 4px 10px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <span style="color: var(--text-muted); font-weight: 600;">Run median (active):</span>
+        <span>Dom. freq <strong id="run-med-dom" style="color: #60a5fa;">—</strong></span>
+        <span>&bull;</span>
+        <span>&sigma;x/&sigma;y/&sigma;z <strong id="run-med-sigma" style="color: var(--teal-accent);">—</strong></span>
+        <span>&bull;</span>
+        <span>&sigma;|a| <strong id="run-med-mag" style="color: #fff;">—</strong></span>
+      </div>
       <div class="canvas-container-box box-xyz">
         <canvas id="xyz-canvas"></canvas>
       </div>
@@ -1034,7 +1167,10 @@ def generate_html(default_view='live'):
     <div class="card">
       <div class="card-header-row">
         <div>
-          <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="card-title-text" id="title-timeline">Live Rig Telemetry Stream</span>
+            <span id="badge-wash-type" class="badge-wash-type" style="display: none;"></span>
+          </div>
           <span class="card-sub-txt" id="sub-timeline">Real-time incoming telemetry stream from ESP32</span>
         </div>
         <div class="timeline-stats-container">
@@ -1092,6 +1228,10 @@ def generate_html(default_view='live'):
           <span class="card-sub-txt" id="sub-energy">TP-Link Tapo P110 (1 Hz) &bull; Active power and energy over the shown span</span>
         </div>
         <div class="vibe-badges-container">
+          <span id="legend-energy-blocks" class="axis-toggle-clean" style="display: none;">
+            <span style="display:inline-flex; align-items:center; gap:3px; margin-right:6px;"><span style="width:8px; height:8px; background:rgba(251,146,60,0.45); border:1px solid #fb923c; border-radius:2px;"></span><span style="font-size:10px; color:#fb923c;">Heater</span></span>
+            <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; background:rgba(0,240,210,0.35); border:1px solid #00f0d2; border-radius:2px;"></span><span style="font-size:10px; color:#00f0d2;">Spin</span></span>
+          </span>
           <span class="axis-toggle-clean" style="color: #facc15;">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: #facc15;"></span>
             Active: <strong id="energy-head-watts">0.0</strong> W
@@ -1210,23 +1350,126 @@ def generate_html(default_view='live'):
 
     function updateCard2Labels(isAxisSigma) {{
       const titleXyz = document.getElementById('title-xyz');
+      const lblPillDom = document.getElementById('lbl-pill-dom-freq');
       const lblPillX = document.getElementById('lbl-pill-x');
       const lblPillY = document.getElementById('lbl-pill-y');
       const lblPillZ = document.getElementById('lbl-pill-z');
       const lblPillMag = document.getElementById('lbl-pill-mag');
 
+      const isHistoric = (currentMode === 'historic');
+
+      if (lblPillDom) {{
+        lblPillDom.innerText = isHistoric ? 'Dom. freq (at cursor):' : 'Dom. freq:';
+      }}
+
       if (isAxisSigma) {{
         if (titleXyz) titleXyz.innerText = 'Per-Axis Vibration (std per 5 s window)';
-        if (lblPillX) lblPillX.innerText = '\u03c3x:';
-        if (lblPillY) lblPillY.innerText = '\u03c3y:';
-        if (lblPillZ) lblPillZ.innerText = '\u03c3z:';
-        if (lblPillMag) lblPillMag.innerText = '\u03c3|a|:';
+        if (lblPillX) lblPillX.innerText = isHistoric ? '\u03c3x (at cursor):' : '\u03c3x:';
+        if (lblPillY) lblPillY.innerText = isHistoric ? '\u03c3y (at cursor):' : '\u03c3y:';
+        if (lblPillZ) lblPillZ.innerText = isHistoric ? '\u03c3z (at cursor):' : '\u03c3z:';
+        if (lblPillMag) lblPillMag.innerText = isHistoric ? '\u03c3|a| (at cursor):' : '\u03c3|a|:';
       }} else {{
         if (titleXyz) titleXyz.innerText = 'Tri-Axial Vibration (Ax, Ay, Az)';
-        if (lblPillX) lblPillX.innerText = 'Ax:';
-        if (lblPillY) lblPillY.innerText = 'Ay:';
-        if (lblPillZ) lblPillZ.innerText = 'Az:';
-        if (lblPillMag) lblPillMag.innerText = '|a|:';
+        if (lblPillX) lblPillX.innerText = isHistoric ? 'Ax (at cursor):' : 'Ax:';
+        if (lblPillY) lblPillY.innerText = isHistoric ? 'Ay (at cursor):' : 'Ay:';
+        if (lblPillZ) lblPillZ.innerText = isHistoric ? 'Az (at cursor):' : 'Az:';
+        if (lblPillMag) lblPillMag.innerText = isHistoric ? '|a| (at cursor):' : '|a|:';
+      }}
+    }}
+
+    function updateWashTypeBadgeAndSummary(session) {{
+      const badgeEl = document.getElementById('badge-wash-type');
+      const legSpline = document.getElementById('legend-spline-blocks');
+      const legEnergy = document.getElementById('legend-energy-blocks');
+      const card2Medians = document.getElementById('card2-run-medians');
+
+      if (currentMode === 'live' || !session || session.category === 'test') {{
+        if (badgeEl) badgeEl.style.display = 'none';
+        if (legSpline) legSpline.style.display = 'none';
+        if (legEnergy) legEnergy.style.display = 'none';
+        if (card2Medians) card2Medians.style.display = 'none';
+        return;
+      }}
+
+      const sum = session.summary;
+      if (!sum) {{
+        if (badgeEl) {{
+          badgeEl.style.display = 'inline-flex';
+          badgeEl.className = 'badge-wash-type unmetered';
+          badgeEl.innerText = (session.category === 'custom') ? 'not classified' : 'Unclassified';
+          badgeEl.title = (session.category === 'custom') ? 'Custom uploaded CSV file (not classified).' : 'Built-in wash without physical summary.';
+        }}
+        if (legSpline) legSpline.style.display = 'none';
+        if (legEnergy) legEnergy.style.display = 'none';
+        if (card2Medians) card2Medians.style.display = 'none';
+        return;
+      }}
+
+      // 1. Wash-type badge pill
+      if (badgeEl) {{
+        badgeEl.style.display = 'inline-flex';
+        badgeEl.title = 'Classification rule: Heater > 1 kW for > 2 min and \u2265 2 spin blocks \u2192 Long hot; no heater and \u2265 3 spin blocks \u2192 Long cold; no heater, 1 spin block, < 35 min active \u2192 Quick; max power < 50 W \u2192 No power data. Spin block = \u2265 20 consecutive windows (100 s) at 200\u20131,000 W.';
+        if (sum.programme) {{
+          badgeEl.className = 'badge-wash-type programme';
+          const tempPart = sum.water_temp ? ` \u00b7 ${{sum.water_temp}}` : '';
+          const srcPart = sum.context_source === 'manual' ? 'manual' : 'SmartThings';
+          badgeEl.innerText = `${{sum.programme}}${{tempPart}} (${{srcPart}})`;
+        }} else {{
+          const sig = sum.signature || 'Unclassified';
+          if (sig.includes('Long hot')) {{
+            badgeEl.className = 'badge-wash-type hot';
+            badgeEl.innerText = 'Long hot (inferred from power)';
+          }} else if (sig.includes('Long cold')) {{
+            badgeEl.className = 'badge-wash-type cold';
+            badgeEl.innerText = 'Long cold (inferred from power)';
+          }} else if (sig.includes('Quick')) {{
+            badgeEl.className = 'badge-wash-type quick';
+            badgeEl.innerText = 'Quick (inferred from power)';
+          }} else if (sig === 'No power data') {{
+            badgeEl.className = 'badge-wash-type unmetered';
+            badgeEl.innerText = 'No power data';
+          }} else {{
+            badgeEl.className = 'badge-wash-type unmetered';
+            badgeEl.innerText = `${{sig}} (inferred from power)`;
+          }}
+        }}
+      }}
+
+      // 2. Timeline subtitle summary line
+      if (subTimeline && ACTIVE_DATA && ACTIVE_DATA.length > 0) {{
+        const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
+        if (sum.signature === 'No power data') {{
+          subTimeline.innerText = `${{durMin}}-min run • No electrical power data tracked for this cycle • ${{activeSessionName}}`;
+        }} else {{
+          const act = sum.active_min;
+          const heat = sum.heater_min;
+          const heatStr = heat > 0 ? ((heat % 1 === 0 ? heat.toFixed(0) : heat.toFixed(1)) + ' min heater') : 'no heater';
+          const spins = sum.spin_blocks;
+          const spinStr = `${{spins}} spin block${{spins === 1 ? '' : 's'}}`;
+          const tailNote = (durMin - act >= 8) ? ' (~10 min idle tail)' : '';
+          subTimeline.innerText = `${{act}} min active \u00b7 ${{heatStr}} \u00b7 ${{spinStr}} • ${{durMin}} min recorded${{tailNote}} • ${{activeSessionName}}`;
+        }}
+      }}
+
+      // 3. Block shading chart legends
+      const hasBlocks = (sum.blocks && sum.blocks.length > 0);
+      if (legSpline) legSpline.style.display = hasBlocks ? 'inline-flex' : 'none';
+      if (legEnergy) legEnergy.style.display = hasBlocks ? 'inline-flex' : 'none';
+
+      // 4. Run medians in Card 2
+      if (card2Medians) {{
+        if (sum.run_medians) {{
+          const rm = sum.run_medians;
+          card2Medians.style.display = 'flex';
+          const domEl = document.getElementById('run-med-dom');
+          const sigEl = document.getElementById('run-med-sigma');
+          const magEl = document.getElementById('run-med-mag');
+          if (domEl) domEl.innerText = rm.vib_dom_hz !== null ? `${{rm.vib_dom_hz.toFixed(1)}} Hz` : '\u2014';
+          if (sigEl) sigEl.innerText = `${{rm.vib_std_x.toFixed(3)}} / ${{rm.vib_std_y.toFixed(3)}} / ${{rm.vib_std_z.toFixed(3)}} m/s\u00b2`;
+          if (magEl) magEl.innerText = `${{rm.vib_mag_std.toFixed(3)}} m/s\u00b2`;
+        }} else {{
+          card2Medians.style.display = 'none';
+        }}
       }}
     }}
 
@@ -1240,6 +1483,7 @@ def generate_html(default_view='live'):
       const isAxisSigma = isHistoric ? seriesHasAxisStd(ACTIVE_DATA) : seriesHasAxisStd(LIVE_BUFFER);
 
       updateCard2Labels(isAxisSigma);
+      updateWashTypeBadgeAndSummary(isHistoric ? LOADED_SESSIONS[activeSessionKey] : null);
 
       if (isHistoric) {{
         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
@@ -2300,6 +2544,44 @@ def generate_html(default_view='live'):
         drawTimeGrid(splineCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
       }}
 
+      // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
+      if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {{
+        const session = LOADED_SESSIONS[activeSessionKey];
+        const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
+        if (blocks.length > 0) {{
+          const totalPts = ACTIVE_DATA.length;
+          const winSize = 40;
+          const startIdx = isFull ? 0 : Math.max(0, currentIndex - Math.floor(winSize / 2));
+          const endIdx = isFull ? (totalPts - 1) : Math.min(totalPts - 1, startIdx + winSize);
+          const ptsCount = isFull ? totalPts : (endIdx - startIdx + 1);
+
+          for (let b = 0; b < blocks.length; b++) {{
+            const blk = blocks[b];
+            const ov0 = Math.max(blk.i0, startIdx);
+            const ov1 = Math.min(blk.i1, endIdx);
+            if (ov0 <= ov1 && ptsCount > 1) {{
+              const x0 = marginLeft + (((ov0 - startIdx) / (ptsCount - 1)) * plotW);
+              const x1 = marginLeft + (((ov1 - startIdx) / (ptsCount - 1)) * plotW);
+              const clX0 = Math.max(marginLeft, Math.min(w - marginRight, x0));
+              const clX1 = Math.max(marginLeft, Math.min(w - marginRight, x1));
+              const rectW = Math.max(1 * dpr, clX1 - clX0);
+
+              if (blk.type === 'heater') {{
+                splineCtx.fillStyle = 'rgba(251, 146, 60, 0.16)';
+                splineCtx.fillRect(clX0, marginTop, rectW, plotH);
+                splineCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
+                splineCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
+              }} else if (blk.type === 'spin') {{
+                splineCtx.fillStyle = 'rgba(0, 240, 210, 0.14)';
+                splineCtx.fillRect(clX0, marginTop, rectW, plotH);
+                splineCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
+                splineCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
+              }}
+            }}
+          }}
+        }}
+      }}
+
       // Dynamic RMS scale based on visible points
       const maxRmsInPoints = points.reduce((m, p) => Math.max(m, p[4]), 0);
       const scaleConf = getRmsScale(maxRmsInPoints);
@@ -3260,6 +3542,34 @@ def generate_html(default_view='live'):
         drawTimeGrid(energyCtx, w, h, marginLeft, marginRight, plotW, plotH, marginTop, dpr, isMobile);
       }}
 
+      // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
+      if (currentMode === 'historic' && total > 1) {{
+        const session = LOADED_SESSIONS[activeSessionKey];
+        const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
+        if (blocks.length > 0) {{
+          for (let b = 0; b < blocks.length; b++) {{
+            const blk = blocks[b];
+            const x0 = marginLeft + ((blk.i0 / (total - 1)) * plotW);
+            const x1 = marginLeft + ((blk.i1 / (total - 1)) * plotW);
+            const clX0 = Math.max(marginLeft, Math.min(w - marginRight, x0));
+            const clX1 = Math.max(marginLeft, Math.min(w - marginRight, x1));
+            const rectW = Math.max(1 * dpr, clX1 - clX0);
+
+            if (blk.type === 'heater') {{
+              energyCtx.fillStyle = 'rgba(251, 146, 60, 0.16)';
+              energyCtx.fillRect(clX0, marginTop, rectW, plotH);
+              energyCtx.fillStyle = 'rgba(251, 146, 60, 0.6)';
+              energyCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
+            }} else if (blk.type === 'spin') {{
+              energyCtx.fillStyle = 'rgba(0, 240, 210, 0.14)';
+              energyCtx.fillRect(clX0, marginTop, rectW, plotH);
+              energyCtx.fillStyle = 'rgba(0, 240, 210, 0.6)';
+              energyCtx.fillRect(clX0, marginTop, rectW, 2 * dpr);
+            }}
+          }}
+        }}
+      }}
+
       // Fill area under power curve
       const grad = energyCtx.createLinearGradient(0, marginTop, 0, marginTop + plotH);
       grad.addColorStop(0, 'rgba(250, 204, 21, 0.28)');
@@ -3573,7 +3883,8 @@ def generate_html(default_view='live'):
         LOADED_SESSIONS[sessionKey] = {{
           name: cleanName,
           displayName: displayName,
-          data: records
+          data: records,
+          category: 'custom'
         }};
 
         const groupCustom = document.getElementById('group-custom-sessions');
@@ -3636,7 +3947,19 @@ def generate_html(default_view='live'):
     }});
 
     // Initial boot setup
-    setViewMode('{default_view}');
+    const initialSessionParam = urlParams.get('session');
+    if (initialSessionParam && LOADED_SESSIONS[initialSessionParam]) {{
+      switchToSession(initialSessionParam);
+    }} else if (initialSessionParam) {{
+      const foundKey = Object.keys(LOADED_SESSIONS).find(k => k.includes(initialSessionParam) || (LOADED_SESSIONS[k].name && LOADED_SESSIONS[k].name.includes(initialSessionParam)));
+      if (foundKey) {{
+        switchToSession(foundKey);
+      }} else {{
+        setViewMode('{default_view}');
+      }}
+    }} else {{
+      setViewMode('{default_view}');
+    }}
     window.addEventListener('load', () => {{
       resizeCanvases();
       if (PAGE_DEFAULT_VIEW === 'live' && currentMode === 'live') {{
