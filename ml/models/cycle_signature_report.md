@@ -1,6 +1,6 @@
 # Wash Cycle Physical Signatures & Programme Report
 
-**Generated:** 2026-10-21 16:20:02  
+**Generated:** 2026-10-21 17:08:37  
 **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
 **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
 
@@ -24,21 +24,21 @@ Archived wash cycles were classified by their measured electrical power and mech
 
 ## 2. Comprehensive Cycle Signatures Table
 
-| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | `smartthings_live` |
-| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
-| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | `unknown` |
+| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
+| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
 
 ---
 

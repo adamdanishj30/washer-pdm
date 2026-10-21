@@ -37,7 +37,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # Configurations
 FIREBASE_HOST = os.getenv("FIREBASE_HOST", "https://pdm-anomaly-detection-default-rtdb.asia-southeast1.firebasedatabase.app")
-FIREBASE_AUTH = os.getenv("FIREBASE_AUTH", "18mHDNCCisVdpFjUHbPnOASYWbZylX1QQ5sCx61V")
+FIREBASE_AUTH = os.getenv("FIREBASE_AUTH")  # from .env only - no fallback secret
 TAPO_IP = os.getenv("TAPO_IP", "192.168.0.142")
 TAPO_USER = os.getenv("TAPO_DEVICE_USER") or os.getenv("TAPO_EMAIL")
 TAPO_PASS = os.getenv("TAPO_DEVICE_PASS") or os.getenv("TAPO_PASSWORD")
@@ -283,8 +283,8 @@ def save_feature_dictionary():
             "softener_remaining": {"type": "categorical", "desc": "Auto-dispenser softener reservoir level (unknown, normal, low)"},
             "cumulative_water_l": {"type": "float", "unit": "L", "desc": "Cumulative water consumption report in Liters"},
             "kids_lock": {"type": "categorical", "desc": "Child safety lock status (locked, unlocked)"},
-            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "AI estimated dry laundry mass from motor tumble inertia"},
-            "load_class": {"type": "categorical", "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"},
+            "estimated_load_kg": {"type": "float", "unit": "kg", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"},
+            "load_class": {"type": "categorical", "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"},
             "parasitic_drag_w": {"type": "float", "unit": "W", "desc": "Mechanical friction energy waste above baseline"},
             "parasitic_drag_pct": {"type": "float", "unit": "%", "desc": "Percentage excess energy waste caused by friction"},
             "bearing_health_index": {"type": "float", "unit": "%", "desc": "Continuous tub bearing health (100 = new, <40 = fail)"},
@@ -404,7 +404,7 @@ async def capture_snapshot() -> dict:
     print(f"Active Power Load    : {tapo.get('power_w', 0.0):.2f} W ({tapo.get('voltage_v', 0.0):.1f} V | {tapo.get('current_ma', 0.0):.1f} mA)")
     print(f"Kinematic Vibration  : {esp.get('vibration_magnitude', 0.0):.2f} m/s^2 (X:{esp.get('accel_x',0.0)}, Y:{esp.get('accel_y',0.0)}, Z:{esp.get('accel_z',0.0)})")
     print(f"Acoustic Sound RMS   : {esp.get('audio_rms', 0.0):.1f}")
-    print(f"Estimated Load Mass  : {pdm['estimated_load_kg']} kg ({pdm['load_class']})")
+    print(f"Estimated Load Mass  : {pdm['estimated_load_kg']} kg ({pdm['load_class']}) (load estimate is an uncalibrated heuristic)")
     print(f"Parasitic Energy Drag: {pdm['parasitic_drag_pct']}% ({pdm['parasitic_drag_w']} W excess friction)")
     print(f"Bearing Health Index : {pdm['bearing_health_index']}%")
     print(f"Damper Health Index  : {pdm['damper_health_index']}%")

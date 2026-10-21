@@ -369,6 +369,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         programme_display = "unknown"
 
     water_temp = context_info.get("water_temp") or ""
+    load_kg = context_info.get("load_kg") or ""
 
     return {
         "file": csv_path.name,
@@ -395,6 +396,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         "boot_at_start": boot_at_start,
         "programme": programme_display,
         "water_temp": water_temp,
+        "load_kg": load_kg,
         "context_source": raw_source,
     }
 
@@ -470,15 +472,15 @@ def generate_cycle_signature_report() -> Path:
         "",
         "## 2. Comprehensive Cycle Signatures Table",
         "",
-        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Context Source |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ])
 
     for r in results:
         lines.append(
             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
             f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
-            f"`{r['programme']}` | {r['water_temp'] or '-'} | `{r['context_source']}` |"
+            f"`{r['programme']}` | {r['water_temp'] or '-'} | {r['load_kg'] or '-'} | `{r['context_source']}` |"
         )
 
     lines.extend([

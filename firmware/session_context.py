@@ -18,13 +18,15 @@ recording each wash session's:
   - spin_level: spin speed setting or target RPM (e.g. 1200, 1400)
   - context_source: 'smartthings_live', 'smartthings_history', 'manual', or 'unknown'
   - note: optional human or system annotation
+  - load_kg: measured dry laundry mass in kg (empty if unmeasured, never guessed)
+  - load_source: 'manual', 'smartthings', or empty
 
 Golden Invariants:
 ------------------
 1. Original session files in `data/real_sessions/*.csv` are NEVER modified in place.
 2. If a row in `data/session_context.csv` has `context_source == 'manual'`, it is
    NEVER overwritten by automated archivers or backfills (Adam's manual notes win).
-3. The schema has exactly the 8 standard columns above.
+3. The schema has exactly the 10 standard columns above.
 """
 
 from __future__ import annotations
@@ -60,7 +62,16 @@ CONTEXT_COLUMNS = [
     "spin_level",
     "context_source",
     "note",
+    "load_kg",
+    "load_source",
 ]
+
+# Valid sources for measured laundry load
+VALID_LOAD_SOURCES = {
+    "manual",
+    "smartthings",
+    "",
+}
 
 # Valid sources for context data
 VALID_SOURCES = {
@@ -158,11 +169,15 @@ def upsert_session_context(
         "spin_level": str(new_entry.get("spin_level", "") or ""),
         "context_source": str(new_entry.get("context_source", "unknown") or "unknown"),
         "note": str(new_entry.get("note", "") or ""),
+        "load_kg": str(new_entry.get("load_kg", "") or ""),
+        "load_source": str(new_entry.get("load_source", "") or ""),
     }
 
     # Verify source validity
     if cleaned_entry["context_source"] not in VALID_SOURCES:
         cleaned_entry["context_source"] = "unknown"
+    if cleaned_entry["load_source"] not in VALID_LOAD_SOURCES:
+        cleaned_entry["load_source"] = ""
 
     for i, r in enumerate(existing_rows):
         if r.get("session_file") == session_file:
@@ -171,6 +186,14 @@ def upsert_session_context(
             if r.get("context_source") == "manual":
                 print(f"  [SESSION CONTEXT] Keeping manual record for {session_file} (not overwriting)")
                 return False
+
+            # Invariant: Preserve manual load entries when automated backfill runs
+            if r.get("load_source") == "manual" and cleaned_entry["load_source"] != "manual":
+                cleaned_entry["load_kg"] = r.get("load_kg", "")
+                cleaned_entry["load_source"] = "manual"
+            elif r.get("load_kg") and not cleaned_entry["load_kg"]:
+                cleaned_entry["load_kg"] = r.get("load_kg", "")
+                cleaned_entry["load_source"] = r.get("load_source", "")
 
             # Update existing non-manual record
             existing_rows[i] = cleaned_entry
@@ -290,6 +313,7 @@ def resolve_context_for_session(
     3. If not found, mark context_source = 'unknown' (step 1 probe returned 403).
     """
     existing_rows = {r["session_file"]: r for r in load_session_context(context_file)}
+    existing_entry = existing_rows.get(session_file, {})
     if session_file in existing_rows:
         curr = existing_rows[session_file]
         # If context is already resolved or manual, return it directly
@@ -303,6 +327,9 @@ def resolve_context_for_session(
     spin_level = ""
     source = "unknown"
     note = ""
+    # Retain existing load values if present; never guess kg
+    load_kg = existing_entry.get("load_kg", "")
+    load_source = existing_entry.get("load_source", "")
 
     # Attempt to query live SmartThings timeline if session_id is available
     if sid:
@@ -342,6 +369,8 @@ def resolve_context_for_session(
         "spin_level": spin_level,
         "context_source": source,
         "note": note,
+        "load_kg": load_kg,
+        "load_source": load_source,
     }
 
 

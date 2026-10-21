@@ -406,6 +406,10 @@ def estimate_point_phase_fallback(power_w: float, vibe_mag: float, audio_rms: fl
 
 def compute_weight_and_class(rows: list, st_info: dict = None) -> tuple:
     """
+    WARNING: UNCALIBRATED heuristic, not used for exported data since 2026-10-21.
+    Retained for backward compatibility with legacy scripts. New sessions exported
+    via session_export.py write load_class = "unknown".
+
     Computes standardized load class (LIGHT, MEDIUM, HEAVY) and estimated weight (kg)
     from Tapo P110 initial dry-tumble motor power inertia or SmartThings water level.
     Returns: (load_class: str, est_kg: float)

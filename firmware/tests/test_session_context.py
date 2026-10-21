@@ -67,7 +67,10 @@ class TestSessionContext(unittest.TestCase):
         self.assertEqual(rows[0]["session_file"], "wash_cycle_2026-10-21_0631.csv")
         self.assertEqual(rows[0]["programme"], "QuickWash")
         self.assertEqual(rows[0]["context_source"], "smartthings_live")
+        self.assertEqual(rows[0]["load_kg"], "")
+        self.assertEqual(rows[0]["load_source"], "")
         self.assertEqual(list(rows[0].keys()), CONTEXT_COLUMNS)
+        self.assertEqual(len(CONTEXT_COLUMNS), 10)
 
     def test_upsert_keeps_manual_row(self) -> None:
         """Verify that a row marked with context_source='manual' is NEVER overwritten."""
@@ -172,6 +175,8 @@ class TestSessionContext(unittest.TestCase):
             "spin_level": "800",
             "context_source": "manual",
             "note": "keep this untouched",
+            "load_kg": "4.5",
+            "load_source": "manual",
         }
         upsert_session_context(manual_row, context_file=self.context_file)
 
@@ -184,7 +189,11 @@ class TestSessionContext(unittest.TestCase):
         rows1 = {r["session_file"]: r for r in load_session_context(self.context_file)}
         self.assertEqual(rows1[fw07_file.name]["programme"], "CustomManualProgramme")
         self.assertEqual(rows1[fw07_file.name]["context_source"], "manual")
+        self.assertEqual(rows1[fw07_file.name]["load_kg"], "4.5")
+        self.assertEqual(rows1[fw07_file.name]["load_source"], "manual")
         self.assertEqual(rows1[legacy_file.name]["context_source"], "unknown")
+        self.assertEqual(rows1[legacy_file.name]["load_kg"], "")
+        self.assertEqual(rows1[legacy_file.name]["load_source"], "")
 
         # 6. Second backfill run (idempotency check)
         count2 = backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
@@ -255,6 +264,41 @@ class TestSessionContext(unittest.TestCase):
         self.assertIn("wash_cycle_manual_missing.csv", result_rows, "Manual row must be retained even if CSV missing")
         self.assertEqual(result_rows["wash_cycle_manual_missing.csv"]["programme"], "CustomSpecial")
 
+
+
+    def test_manual_load_kg_survives_backfill_and_upsert(self) -> None:
+        """
+        Verify that manual load_kg and load_source survive automated backfill and upsert.
+        """
+        fw07_file = self.sessions_dir / "wash_cycle_2026-10-21_0631.csv"
+        with open(fw07_file, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["timestamp_ms", "accel_x", "accel_y", "accel_z", "audio_rms", "power_w", "phase", "load_class", "epoch_ms", "n_accel"])
+            w.writerow([8240, 0.1, 0.2, 9.8, 100, 15.0, "wash", "unknown", 1792535460262, 1013])
+            w.writerow([1800000, 0.1, 0.2, 9.8, 120, 250.0, "spin", "unknown", 1792537204680, 1014])
+
+        # 1. Row with manual load_kg
+        entry = {
+            "session_file": fw07_file.name,
+            "start_epoch_ms": "1792535460262",
+            "end_epoch_ms": "1792537204680",
+            "programme": "DailyWash",
+            "water_temp": "cold",
+            "spin_level": "1200",
+            "context_source": "smartthings_live",
+            "note": "automated with manual load",
+            "load_kg": "5.2",
+            "load_source": "manual",
+        }
+        self.assertTrue(upsert_session_context(entry, context_file=self.context_file))
+
+        # 2. Backfill runs over the file
+        backfill_all_sessions(data_dir=self.sessions_dir, context_file=self.context_file)
+
+        # 3. Verify manual load_kg and load_source survived
+        rows = {r["session_file"]: r for r in load_session_context(self.context_file)}
+        self.assertEqual(rows[fw07_file.name]["load_kg"], "5.2")
+        self.assertEqual(rows[fw07_file.name]["load_source"], "manual")
 
 if __name__ == "__main__":
     unittest.main()

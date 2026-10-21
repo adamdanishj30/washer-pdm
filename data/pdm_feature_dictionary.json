@@ -67,12 +67,27 @@
     "audio_rms": {
       "type": "float",
       "unit": "Canonical RMS",
-      "canonical_range": [0.0, 1200.0],
+      "canonical_range": [
+        0.0,
+        1200.0
+      ],
       "baseline_by_phase": {
-        "none_or_stop": [10.0, 150.0],
-        "wash": [150.0, 350.0],
-        "rinse": [180.0, 450.0],
-        "spin": [600.0, 1100.0]
+        "none_or_stop": [
+          10.0,
+          150.0
+        ],
+        "wash": [
+          150.0,
+          350.0
+        ],
+        "rinse": [
+          180.0,
+          450.0
+        ],
+        "spin": [
+          600.0,
+          1100.0
+        ]
       },
       "firmware_formula": "INMP441 I2S DMA: (sample >> 8), sqrt(mean(s^2)) / 1000.0 (Divisor: 256,000)",
       "ml_standardization": "Phase-conditioned Z-score or log1p scaling to eliminate spin false alarms",
@@ -127,11 +142,11 @@
     "estimated_load_kg": {
       "type": "float",
       "unit": "kg",
-      "desc": "AI estimated dry laundry mass from motor tumble inertia"
+      "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Originally AI estimated dry laundry mass from motor tumble inertia"
     },
     "load_class": {
       "type": "categorical",
-      "desc": "Laundry classification (LIGHT, MEDIUM, HEAVY)"
+      "desc": "Heuristic, uncalibrated; values in files archived before 2026-10-21 are guesses; new files write unknown. Laundry classification (LIGHT, MEDIUM, HEAVY, unknown)"
     },
     "parasitic_drag_w": {
       "type": "float",
@@ -146,17 +161,17 @@
     "bearing_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Continuous tub bearing health (100 = new, <40 = fail)"
+      "desc": "Indicative tub bearing health indicator (100 = nominal baseline, <40 = elevated risk). Measured primarily via 16 kHz INMP441 acoustic friction/harmonics, as 50 Hz MPU-6050 Nyquist limit (25 Hz) cannot resolve high-frequency bearing defect orders (BPFO/BPFI > 50 Hz)."
     },
     "damper_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Continuous suspension damper health"
+      "desc": "Indicative suspension damper health indicator (100 = nominal, <40 = high sway). Measured via low-frequency MPU-6050 vertical shock acceleration (ay) and dynamic rocking kinematics."
     },
     "machine_health_index": {
       "type": "float",
       "unit": "%",
-      "desc": "Composite overall Machine Health Index (0-100%)"
+      "desc": "Composite Machine Health Index relative to pristine baseline distribution (0-100%). Smoothed via EWMA/CUSUM at the cycle level to represent persistent mechanical states rather than transient spikes."
     }
   }
 }

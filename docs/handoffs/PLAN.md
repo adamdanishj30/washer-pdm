@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Stop writing a guessed load class; record real load (kg) in the session context file
 **Date:** 2026-10-21
 
@@ -39,12 +39,12 @@ Adam asked (21 Oct) why every cycle says `load_class = MEDIUM`. It is a guess: `
 - Building a new load estimator (needs weighed loads first).
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed first (hash in HANDOFF).
-- [ ] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
-- [ ] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
-- [ ] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
-- [ ] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
-- [ ] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
+- [x] PLAN.md committed first (hash in HANDOFF).
+- [x] A session exported by `session_export.py` in a test has `load_class = unknown` on every row.
+- [x] `data/session_context.csv` has 13 rows and the new `load_kg`, `load_source` columns (empty); backfill twice gives an identical file; a `manual` row with `load_kg` survives backfill (unit test).
+- [x] Data dictionary entry says heuristic/uncalibrated; report shows a Load (kg) column.
+- [x] `py firmware/tests/test_session_context.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`, `py ml/tests/test_pipeline_synthetic.py` pass; `py -m py_compile` on changed files.
+- [x] No file under `data/real_sessions/` modified; no secrets; pushed; hashes reported.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason.** 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot (rig reboots as the washer switches on). Add NEW `/live` fields `reset_reason` and `boot_count` (INVARIANTS §2 CAN CHANGE); consider fixing `epochMs()` jitter (2.7–3.8 s) in the same task. Needs a flash, so Adam confirms first.
