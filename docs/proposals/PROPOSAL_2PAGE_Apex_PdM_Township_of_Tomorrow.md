@@ -10,9 +10,9 @@
 **Stage:** Working prototype (TRL 4–5) with live data online  
 **Track Alignment:** **PLANET: 02 Circular Economy** (with Energy Efficiency in the narrative) with **PEOPLE** (Digital Living) synergy.
 
-| 10 | 4 | 20×+ | ~RM 170 |
+| 11 | 3 | 20×+ | ~RM 170 |
 |---|---|---|---|
-| Real wash sessions archived | Sensors working in sync | Vibration jump, idle → spin | Pilot kit cost, off the shelf |
+| Wash sessions recorded | Sensors working in sync | Vibration jump, idle → spin | Pilot kit cost, off the shelf |
 
 ---
 
@@ -33,11 +33,11 @@
 
 * **How does your solution address the problem?**  
   Apex PdM is a small sensor pod that sits on the outside of a machine. It records **vibration, sound and power together**, learns what *normal* looks like for that machine, and gives an **anomaly score and a simple verdict for every run** (normal / check it). A full health score and remaining-life estimate are our next step, once we have recorded real faults.
-* **What makes it innovative? (4 sensors working together)**  
+* **What makes it innovative? (3 sensors working together, machine state next)**  
   1. *Vibration (MPU-6050 @ 200 Hz):* 3-axis sensor that feels shaking, unbalance and loose or worn parts.
   2. *Sound (INMP441 @ 16 kHz):* Digital microphone that hears grinding, squealing and rattling.
   3. *Power (Tapo P110 @ 1 Hz):* Smart plug that measures how hard the motor is working, in watts.
-  4. *Machine State:* Context from SmartThings (wash, rinse, spin); comparing vibration and sound within the same phase is planned.
+  4. *Machine State (planned):* SmartThings reports wash, rinse, spin; saving it with the data and comparing within the same phase is next.
 * **What technology / product is involved?**  
   * **Dual-Core ESP32:** One core reads the sensors in real time, the other handles Wi-Fi and cloud upload, so neither slows the other down. Every 5 seconds the pod turns raw signals into **32 signal features**.
   * **Keeps Logging Through Wi-Fi Drops:** The pod stores about 4 minutes of data and sends it once the connection is back.
@@ -69,11 +69,11 @@
 
 * **Why we tested on a washing machine:**  
   A front-load washer is one of the toughest machines to monitor. It shakes hard, the load moves around, water sloshes, and the speed keeps changing from slow tumbling to a fast spin. If our pod gets clean, clear data here, a steady-running AC compressor or pump is an easier job.
-* **What we measured** (latest 66-minute cycle):  
+* **What we measured** (66-minute cycle on 19 Oct):  
   * Vibration jumped **over 20×** from idle to spin.  
   * The main vibration frequency climbed smoothly to **19.9 Hz (about 1,200 rpm)** as the drum sped up.  
   * The washer's sound in the higher bands was **36–90× louder** than the room's background noise, even with a compressor and water pump running nearby.
-* **Data in hand:** **10 real wash sessions archived** and **7,414 rows** of training-ready data, with 32 signal features per 5-second window (firmware-07 window record).
+* **Data in hand:** **11 wash sessions recorded** and **8,379 rows** of training-ready data, with 32 signal features per 5-second window (firmware-07 window record).
 * **Model validation:** Leave-one-cycle-out test on 8 healthy cycles (earlier snapshot-format data, before the 32-feature windows): 0 falsely flagged (95% upper bound 31%); a simulated doubling of sound was caught in 7 of 8.
 * **Hardware:** ESP32 dual-core + MPU-6050 (200 Hz) + INMP441 mic (16 kHz) + Tapo P110 smart plug (1 Hz).
 * **Live dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev).
