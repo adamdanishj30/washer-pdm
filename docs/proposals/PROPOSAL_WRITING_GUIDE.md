@@ -65,6 +65,7 @@ Use this order for the master proposal and the pitch deck. For the official 2-pa
 | Washer sound 36–90× louder than room noise in high bands | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
 | Live dashboard you can open now | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
 | Shows electricity use live | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
+| A heated wash used about 5× the energy of a cold wash on our rig (measured) | | Energy savings presented as a township or AC saving |
 | Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
 
 ---
@@ -80,6 +81,7 @@ Use only these. If you need a new number, add it here first **with its source**.
 | Machine state (phase labels) | None saved yet: every row across all 4 firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | `data/real_sessions/` (the four firmware-07 CSVs) |
 | Wash type | Classes inferred from power: Long cold (4 cycles: 16 Oct 08:57, 17 Oct 07:18, 18 Oct 05:16, 19 Oct 09:11), Long hot (1 cycle: 20 Oct 07:44), Quick (2 cycles: 21 Oct 05:14, 21 Oct 06:31), No power data (6 unmetered cycles). Rule: always say "inferred from power"; programme names are not logged | `ml/models/cycle_signature_report.md` |
 | Load weight | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
+| Energy per wash (measured) | Quick: 0.03–0.04 kWh per wash (peak 302–373 W); Long cold: 0.10–0.11 kWh per wash (peak 401–774 W); Long hot: 0.55 kWh per wash (peak 2,290 W). Heated wash used about 5× the energy of a cold wash. Rule: one household washer, measured by the smart plug; never present as an AC, township or fault saving | `ml/models/cycle_signature_report.md` |
 | Evaluation result (nested leave-one-cycle-out) | 0 of 8 healthy cycles falsely flagged (95% upper bound 31%); simulated +100% sound caught in 7 of 8 cycles; added vibration not detected. **Always say it was run on the 8 earlier snapshot-format (5 s snapshot) cycles, not on the 32-feature firmware-07 windows** | `ml/models/loco_report.md` |
 | Training-ready rows | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
 | Window record | 45-column row every 5.024 s, of which 32 are signal features (audio 15, vibration 13, power 4) | `firmware/session_export.py` (`V3_KEY_MAP`). Not the feature dictionary: that is the legacy 31-field contract |

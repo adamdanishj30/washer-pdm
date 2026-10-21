@@ -260,7 +260,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
     else:
         recorded_min = round(n_rows * dt_seconds / 60.0, 1)
 
-    # 2. Active minutes (power >= 8W)
+    # 2. Active minutes (power >= 8W) & Energy Integration
     has_valid_power = max_power >= MAX_POWER_NO_DATA_W
     if not has_valid_power:
         active_min_num = 0.0
@@ -271,6 +271,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         spin_blocks_str = "n/a"
         high_power_blocks: List[Dict[str, Any]] = []
         n_high_power_str = "n/a"
+        energy_kwh: Optional[float] = None
+        peak_power_w: Optional[int] = None
     else:
         active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
         if active_indices:
@@ -297,6 +299,11 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
         n_high_power_str = str(len(high_power_blocks))
 
+        # 6. Measured energy per wash (kWh) and peak power (W)
+        # Integrated: Σ power_w * dt_seconds / 3,600,000 (total washer electrical draw)
+        energy_kwh = round(sum(powers) * dt_seconds / 3600000.0, 3)
+        peak_power_w = int(round(max_power))
+
     # 6. Signature class (inferred from power)
     signature_class = classify_signature(
         max_power=max_power,
@@ -304,6 +311,10 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         spin_blocks=spin_blocks,
         active_min=active_min_num,
     )
+
+    if signature_class == "No power data":
+        energy_kwh = None
+        peak_power_w = None
 
     # 7. Firmware-07 data quality counters
     if is_fw07:
@@ -385,6 +396,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
         "n_high_power": n_high_power_str,
         "blocks": high_power_blocks,
         "signature_class": signature_class,
+        "energy_kwh": energy_kwh,
+        "peak_power_w": peak_power_w,
         "med_n_accel": med_n_accel,
         "min_n_accel": min_n_accel,
         "fifo_ov": fifo_ov,
@@ -460,6 +473,28 @@ def generate_cycle_signature_report() -> Path:
         member_files = ", ".join(f"`{m['file']}`" for m in members)
         lines.append(f"- **{sig_name} ({len(members)} cycles):** {member_files}")
 
+    # Per-class energy summary lines under the class list
+    lines.append("")
+    lines.append("**Measured Energy Per Wash:**")
+    for key, display in [
+        ("Long cold (inferred)", "Long cold"),
+        ("Long hot (inferred)", "Long hot"),
+        ("Quick (inferred)", "Quick"),
+        ("No power data", "No power data"),
+    ]:
+        if key in groups:
+            kwhs = [m["energy_kwh"] for m in groups[key] if m.get("energy_kwh") is not None]
+            if kwhs:
+                k_min, k_max = min(kwhs), max(kwhs)
+                if round(k_min, 2) == round(k_max, 2):
+                    lines.append(f"- **{display}:** {k_min:.2f} kWh per wash")
+                else:
+                    lines.append(f"- **{display}:** {k_min:.2f}–{k_max:.2f} kWh per wash")
+            else:
+                lines.append(f"- **{display}:** n/a (unmetered runs)")
+    lines.append("")
+    lines.append("Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.")
+
     lines.extend([
         "",
         "**Sensor Integrity Across Firmware-07 Runs:**",
@@ -472,14 +507,16 @@ def generate_cycle_signature_report() -> Path:
         "",
         "## 2. Comprehensive Cycle Signatures Table",
         "",
-        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Energy (kWh) | Peak W | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ])
 
     for r in results:
+        energy_str = f"{r['energy_kwh']:.3f}" if r['energy_kwh'] is not None else "n/a"
+        peak_str = str(r['peak_power_w']) if r['peak_power_w'] is not None else "n/a"
         lines.append(
             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
-            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
+            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | {energy_str} | {peak_str} | **{r['signature_class']}** | "
             f"`{r['programme']}` | {r['water_temp'] or '-'} | {r['load_kg'] or '-'} | `{r['context_source']}` |"
         )
 
