@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Writing guide: track is PLANET · 03 Energy Efficiency, new citable sources, "machine learning" wording
 **Date:** 2026-10-21
 
@@ -12,7 +12,7 @@ APPROVED: `14b43bf`, `7a9ad79` (dictionary honesty fix). You archived the plan a
 
 Checked by Claude: all five legacy fields read "LEGACY CONTRACT FIELD. Not measured and not a model output…" in both `data/pdm_feature_dictionary.json` and `firmware/capture_pdm_dataset.py`; no "Measured / Nyquist / CUSUM" left in the JSON; the capture script's other changes are only the embedded schema made to match the JSON (no maths changed); HANDOFF follows the full template with the carried-forward UNVERIFIED list. Good.
 
-Your "50 Hz MPU" finding (proposal `.md`, `generate_proposal_pdf.py`, `proposal_presentation.html`) is noted. Those are submission files that Adam is batching in `Hackathon/NEEDS_CHANGING.md`; do NOT edit them in this task.
+Your "50 Hz MPU" finding (proposal `.md`, `generate_proposal_pdf.py`, `proposal_presentation.html`, PDF) is already fixed: another Claude thread corrected that wording on Drive on 21 Oct with Adam's approval, and also rewrote the old firmware-05 UDP lines to describe firmware 07's local HTTP fail-safe and 48-window outbox (PDF regenerated). Do NOT redo it, and do NOT edit those submission files in this task. If `git status` shows them modified, commit them separately as `docs: proposal MPU rate and local fail-safe wording (approved by Adam)` before Step 1.
 
 ## Objective
 Adam chose one hackathon track on 21 Oct: **PLANET · 03 Energy Efficiency**, with circular economy only as a supporting benefit. The Drive copies in `Hackathon/` were already updated. This task brings the repo's writing guide in line so future drafts by people or agents follow it.
@@ -35,14 +35,15 @@ Adam chose one hackathon track on 21 Oct: **PLANET · 03 Energy Efficiency**, wi
 Proposal `.md`/PDF/HTML, `generate_*.py`, `Hackathon/` files, video files, code.
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed first.
-- [ ] Guide has a Track section naming PLANET · 03 Energy Efficiency; circular economy only as supporting benefit.
-- [ ] The three sources appear in §4 with the exact citations above; RM 900/yr still labelled an estimate.
-- [ ] `grep -n "\bAI\b" docs/proposals/PROPOSAL_WRITING_GUIDE.md` shows only the "AI agents" line (or other non-model uses, each listed in HANDOFF).
-- [ ] Only the guide (plus PLAN/HANDOFF/patch) changed; pushed; hash reported.
+- [x] PLAN.md committed first.
+- [x] Guide has a Track section naming PLANET · 03 Energy Efficiency; circular economy only as supporting benefit.
+- [x] The three sources appear in §4 with the exact citations above; RM 900/yr still labelled an estimate.
+- [x] `grep -n "\bAI\b" docs/proposals/PROPOSAL_WRITING_GUIDE.md` shows only the "AI agents" line (or other non-model uses, each listed in HANDOFF).
+- [x] Only the guide (plus PLAN/HANDOFF/patch) changed; pushed; hash reported.
 
 ## Queue (Claude will plan these next; do not start)
 1. **Firmware: report reset reason** (+ `epochMs()` jitter 2.7–3.8 s). 3 of 4 firmware-07 sessions start ~8 s after an ESP32 boot. Needs a flash, so Adam confirms first.
 2. **ML: programme-aware evaluation** once each signature class has ≥ 3 firmware-07 cycles. No per-cycle normalisation.
 3. **Dashboard page budget** (787.7 KB of 800 KB) before any new dashboard feature.
 4. **Retire or clearly mark `firmware/capture_pdm_dataset.py`** (still computes a load guess and "parasitic drag"; production archiving no longer uses it). Antigravity suggestion, 21 Oct.
+5. **Proposal: other firmware-05-era claims** (e.g. hot path pushing `/live.json` at 1 Hz) still in `docs/proposals`. Submission files, so this waits for Adam via `Hackathon/NEEDS_CHANGING.md`.
