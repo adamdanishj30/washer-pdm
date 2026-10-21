@@ -58,6 +58,7 @@ If two files disagree: `INVARIANTS_DO_NOT_CHANGE.md` wins, then the source of tr
 - **Run Continuous Cloud Sync Daemon:** `py -3.12 firmware/cloud_multimodal_sync.py --interval 30` (wrapper around the archive daemon; min 30 s)
 - **Download Firebase Sessions (incremental):** `py firmware/cloud_downloader.py` (`--force` re-downloads everything: costly)
 - **Recompile HTML Dashboards:** `py build_clean_dashboard.py`
+  - Deploys need `preset_sessions.js` committed with the pages.
 - **Run Wi-Fi UDP Logger:** `py firmware/wifi_logger.py`
 - **Verify Python Syntax:** `py -m py_compile build_clean_dashboard.py firmware/cloud_multimodal_sync.py firmware/capture_pdm_dataset.py firmware/tapo_firebase_streamer.py`
 

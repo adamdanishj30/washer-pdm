@@ -1267,10 +1267,14 @@ def generate_html(default_view='live'):
   <script>
     let LOADED_SESSIONS = Object.assign({{}}, PRESET_SESSIONS);
     let activeSessionKey = '{FIRST_SESSION_KEY}';
-    let activeSessionName = '{FIRST_SESSION_NAME}';
+    if (!LOADED_SESSIONS[activeSessionKey]) {{
+      const _sessionKeys = Object.keys(LOADED_SESSIONS);
+      activeSessionKey = _sessionKeys.length > 0 ? _sessionKeys[0] : '';
+    }}
+    let activeSessionName = LOADED_SESSIONS[activeSessionKey] ? (LOADED_SESSIONS[activeSessionKey].name || '{FIRST_SESSION_NAME}') : '{FIRST_SESSION_NAME}';
     let ACTIVE_DATA = (LOADED_SESSIONS[activeSessionKey] && LOADED_SESSIONS[activeSessionKey].data) ? LOADED_SESSIONS[activeSessionKey].data : [];
 
-    let currentMode = '{default_view}'; // 'live' or 'historic'
+    let currentMode = (activeSessionKey === '' && '{default_view}' === 'historic') ? 'live' : '{default_view}'; // 'live' or 'historic'
     let currentIndex = 0;
     let isPlaying = false;
     let playInterval = null;
@@ -1490,7 +1494,8 @@ def generate_html(default_view='live'):
       const isAxisSigma = isHistoric ? seriesHasAxisStd(ACTIVE_DATA) : seriesHasAxisStd(LIVE_BUFFER);
 
       updateCard2Labels(isAxisSigma);
-      updateWashTypeBadgeAndSummary(isHistoric ? LOADED_SESSIONS[activeSessionKey] : null);
+      const activeSession = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
+      updateWashTypeBadgeAndSummary(isHistoric ? activeSession : null);
 
       if (isHistoric) {{
         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
@@ -2553,7 +2558,7 @@ def generate_html(default_view='live'):
 
       // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
       if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {{
-        const session = LOADED_SESSIONS[activeSessionKey];
+        const session = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
         const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
         if (blocks.length > 0) {{
           const totalPts = ACTIVE_DATA.length;
@@ -3551,7 +3556,7 @@ def generate_html(default_view='live'):
 
       // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
       if (currentMode === 'historic' && total > 1) {{
-        const session = LOADED_SESSIONS[activeSessionKey];
+        const session = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
         const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
         if (blocks.length > 0) {{
           for (let b = 0; b < blocks.length; b++) {{

@@ -57,5 +57,5 @@ jobs:
         run: |
           git config --global user.name "Autonomous-PdM-Bot"
           git config --global user.email "bot@pdm-sideproject.local"
-          git add data/ index.html dashboard.html cloud_dashboard.html
+          git add data/ index.html dashboard.html cloud_dashboard.html historical.html preset_sessions.js
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore(cloud): auto-sync new wash session telemetry" && git push)

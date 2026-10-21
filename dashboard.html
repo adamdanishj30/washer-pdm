@@ -1013,10 +1013,14 @@
   <script>
     let LOADED_SESSIONS = Object.assign({}, PRESET_SESSIONS);
     let activeSessionKey = 'preset_real_wash_cycle_2026_10_21_0631';
-    let activeSessionName = 'wash_cycle_2026-10-21_0631';
+    if (!LOADED_SESSIONS[activeSessionKey]) {
+      const _sessionKeys = Object.keys(LOADED_SESSIONS);
+      activeSessionKey = _sessionKeys.length > 0 ? _sessionKeys[0] : '';
+    }
+    let activeSessionName = LOADED_SESSIONS[activeSessionKey] ? (LOADED_SESSIONS[activeSessionKey].name || 'wash_cycle_2026-10-21_0631') : 'wash_cycle_2026-10-21_0631';
     let ACTIVE_DATA = (LOADED_SESSIONS[activeSessionKey] && LOADED_SESSIONS[activeSessionKey].data) ? LOADED_SESSIONS[activeSessionKey].data : [];
 
-    let currentMode = 'live'; // 'live' or 'historic'
+    let currentMode = (activeSessionKey === '' && 'live' === 'historic') ? 'live' : 'live'; // 'live' or 'historic'
     let currentIndex = 0;
     let isPlaying = false;
     let playInterval = null;
@@ -1236,7 +1240,8 @@
       const isAxisSigma = isHistoric ? seriesHasAxisStd(ACTIVE_DATA) : seriesHasAxisStd(LIVE_BUFFER);
 
       updateCard2Labels(isAxisSigma);
-      updateWashTypeBadgeAndSummary(isHistoric ? LOADED_SESSIONS[activeSessionKey] : null);
+      const activeSession = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
+      updateWashTypeBadgeAndSummary(isHistoric ? activeSession : null);
 
       if (isHistoric) {
         const durMin = ((ACTIVE_DATA[ACTIVE_DATA.length - 1][0] - ACTIVE_DATA[0][0]) / 60000).toFixed(1);
@@ -2299,7 +2304,7 @@
 
       // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
       if (currentMode === 'historic' && ACTIVE_DATA && ACTIVE_DATA.length > 1) {
-        const session = LOADED_SESSIONS[activeSessionKey];
+        const session = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
         const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
         if (blocks.length > 0) {
           const totalPts = ACTIVE_DATA.length;
@@ -3297,7 +3302,7 @@
 
       // Shaded blocks for electrical heater (amber) and mechanical spin (teal)
       if (currentMode === 'historic' && total > 1) {
-        const session = LOADED_SESSIONS[activeSessionKey];
+        const session = LOADED_SESSIONS[activeSessionKey] || (Object.keys(LOADED_SESSIONS).length > 0 ? LOADED_SESSIONS[Object.keys(LOADED_SESSIONS)[0]] : null);
         const blocks = (session && session.summary) ? (session.summary.blocks || []) : [];
         if (blocks.length > 0) {
           for (let b = 0; b < blocks.length; b++) {
