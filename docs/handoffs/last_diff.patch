@@ -1,94 +1,391 @@
-diff --git a/docs/handoffs/current_state_and_scale_up_handoff.md b/docs/handoffs/current_state_and_scale_up_handoff.md
-index 85e2e56..e6e1146 100644
---- a/docs/handoffs/current_state_and_scale_up_handoff.md
-+++ b/docs/handoffs/current_state_and_scale_up_handoff.md
-@@ -1,6 +1,6 @@
- # Apex PdM: current-state handoff and scale-up plan
- 
--Last updated: 2026-10-19. This is the file to read first when starting a new session.
-+Last updated: 2026-10-21. This is the file to read first when starting a new session.
- Status labels: **[DONE]** built and tested here, **[UNVERIFIED]** written but not run on hardware, **[PROPOSAL]** idea, not built.
- 
- ## 1. What this project is
-@@ -47,6 +47,8 @@ Current real-data result (legacy snapshot schema, Mahalanobis, nested LOCO): 0/8
- ## 5. Hackathon story [PROPOSAL]
- Pitch what is true: a low-cost, non-destructive multimodal edge sensor that learns each machine's own healthy baseline and flags sustained departures, with every claim backed by a leave-one-cycle-out report. Do not claim remaining-life or cost savings yet; frame them as what the platform enables once degradation data is collected. Strong, defensible points: on-device DSP (raw audio never leaves the device), tiny Firebase footprint, per-asset baselines (no labelled faults needed), transparent per-feature explanations.
- 
-+Sources of truth for pitch material: event facts in `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.md`, allowed numbers in `docs/proposals/PROPOSAL_WRITING_GUIDE.md` §4, video script and deck outline in `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md`. Reality checks (synced 2026-10-21): pilot kit RM 169.68 net paid (node RM 131.07; receipts in `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md`; sub-RM 50 is unvalidated); 13 sessions are recorded as of 21 Oct (9,114 training rows), of which 8 healthy legacy cycles form the LOCO set and 4 are complete firmware-07 cycles (19 Oct 09:11, 20 Oct 07:44, 21 Oct 05:14, 21 Oct 06:31; none has SmartThings phase labels, wash types inferred from power: 4 Long cold, 1 Long hot, 2 Quick, 6 No power data; load not recorded); the evaluated model is pooled (not phase-conditioned); the mount is VHB tape (magnetic is a proposal); a firmware-07 window record is 45 columns with 32 signal features.
-+
- ## 6. From rig to mass-producible prototype [PROPOSAL]
- Nothing here is built or priced; costs and part choices must be verified.
- * **Hardware:** custom ESP32 board replacing the breadboard rig; a better MEMS accelerometer (wider bandwidth than the MPU-6050's 44 Hz filter setting, e.g. an industrial vibration part) for bearing-range content; MEMS mic in a protected port; a current-transformer energy-metering front end instead of a plug-in smart plug for fixed-wired equipment; magnet/adhesive/stud mount so placement is repeatable; enclosure sealed for dust and humidity.
 diff --git a/docs/proposals/PROPOSAL_WRITING_GUIDE.md b/docs/proposals/PROPOSAL_WRITING_GUIDE.md
-index e8b734b..f53685d 100644
+index f53685d..3e61209 100644
 --- a/docs/proposals/PROPOSAL_WRITING_GUIDE.md
 +++ b/docs/proposals/PROPOSAL_WRITING_GUIDE.md
-@@ -1,7 +1,7 @@
- # Apex PdM: Proposal Writing Guide
+@@ -65,6 +65,7 @@ Use this order for the master proposal and the pitch deck. For the official 2-pa
+ | Washer sound 36–90× louder than room noise in high bands | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
+ | Live dashboard you can open now | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
+ | Shows electricity use live | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
++| A heated wash used about 5× the energy of a cold wash on our rig (measured) | | Energy savings presented as a township or AC saving |
+ | Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
  
- **Read this before writing or editing any proposal, brief, pitch deck or Q&A answer.**
--Last updated: 2026-10-21 (track set to Energy Efficiency, citable sources, ML wording). Owner: Adam.
-+Last updated: 2026-10-21 (facts updated to 21 Oct: 13 sessions, 4 fw-07 cycles, inferred wash types, no load guess). Owner: Adam.
+ ---
+@@ -80,6 +81,7 @@ Use only these. If you need a new number, add it here first **with its source**.
+ | Machine state (phase labels) | None saved yet: every row across all 4 firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | `data/real_sessions/` (the four firmware-07 CSVs) |
+ | Wash type | Classes inferred from power: Long cold (4 cycles: 16 Oct 08:57, 17 Oct 07:18, 18 Oct 05:16, 19 Oct 09:11), Long hot (1 cycle: 20 Oct 07:44), Quick (2 cycles: 21 Oct 05:14, 21 Oct 06:31), No power data (6 unmetered cycles). Rule: always say "inferred from power"; programme names are not logged | `ml/models/cycle_signature_report.md` |
+ | Load weight | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
++| Energy per wash (measured) | Quick: 0.03–0.04 kWh per wash (peak 302–373 W); Long cold: 0.10–0.11 kWh per wash (peak 401–774 W); Long hot: 0.55 kWh per wash (peak 2,290 W). Heated wash used about 5× the energy of a cold wash. Rule: one household washer, measured by the smart plug; never present as an AC, township or fault saving | `ml/models/cycle_signature_report.md` |
+ | Evaluation result (nested leave-one-cycle-out) | 0 of 8 healthy cycles falsely flagged (95% upper bound 31%); simulated +100% sound caught in 7 of 8 cycles; added vibration not detected. **Always say it was run on the 8 earlier snapshot-format (5 s snapshot) cycles, not on the 32-feature firmware-07 windows** | `ml/models/loco_report.md` |
+ | Training-ready rows | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
+ | Window record | 45-column row every 5.024 s, of which 32 are signal features (audio 15, vibration 13, power 4) | `firmware/session_export.py` (`V3_KEY_MAP`). Not the feature dictionary: that is the legacy 31-field contract |
+diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
+index 2eaad30..2e408d4 100644
+--- a/ml/cycle_signature_report.py
++++ b/ml/cycle_signature_report.py
+@@ -260,7 +260,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+     else:
+         recorded_min = round(n_rows * dt_seconds / 60.0, 1)
  
- This guide covers what our proposal must say, in what order, in what tone, and which numbers we are allowed to use. It applies to people and to AI agents (Claude, Antigravity/Gemini).
+-    # 2. Active minutes (power >= 8W)
++    # 2. Active minutes (power >= 8W) & Energy Integration
+     has_valid_power = max_power >= MAX_POWER_NO_DATA_W
+     if not has_valid_power:
+         active_min_num = 0.0
+@@ -271,6 +271,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         spin_blocks_str = "n/a"
+         high_power_blocks: List[Dict[str, Any]] = []
+         n_high_power_str = "n/a"
++        energy_kwh: Optional[float] = None
++        peak_power_w: Optional[int] = None
+     else:
+         active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
+         if active_indices:
+@@ -297,6 +299,11 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
+         n_high_power_str = str(len(high_power_blocks))
  
-@@ -58,14 +58,14 @@ Use this order for the master proposal and the pitch deck. For the official 2-pa
- | ✅ Say confidently (we have proof) | 🟡 Say as the plan (not done yet) | ❌ Don't say |
- |---|---|---|
- | We built a working rig that streams live data | Health score / remaining-life prediction ("once we record real faults") | "Zero false alarms", "100% accurate" |
--| 11 wash sessions recorded, 8,379 data rows | False-alarm rate on the new firmware ("measuring over the next 20+ cycles") | "TRL 6" (we are TRL 4–5) |
-+| 13 wash sessions recorded, 9,114 data rows | False-alarm rate on the new firmware ("measuring over the next 20+ cycles") | "TRL 6" (we are TRL 4–5) |
- | Vibration up 20×+ from idle to spin | Ringgit energy savings ("our estimate; the pilot will confirm") | "Predicts exactly when it will break" |
--| Drum frequency climbs to 19.9 Hz (~1,200 rpm), the same in both new-firmware washes | Phase badge on the website (until it's built); machine state (wash/rinse/spin) saved with the data | "Dust-proof" (IP55 = dust-*protected*) |
--| Washer sound 36–90× louder than room noise in high bands | Township map, phone alerts, resident app | "Triples savings" or any multiplier we didn't measure |
--| Live dashboard you can open now | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
--| Shows electricity use live | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
--| Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
--| | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
-+| Drum frequency climbs to ~20 Hz (~1,200 rpm), confirmed across all 4 new-firmware washes | Phase badge on the website (wash / rinse / spin; planned once machine state is saved with the data, distinct from the wash-type badge) | "Dust-proof" (IP55 = dust-*protected*) |
-+| The website labels each wash type, inferred from power | Township map, phone alerts, resident app | "Triples savings" or any multiplier we didn't measure |
-+| Washer sound 36–90× louder than room noise in high bands | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
-+| Live dashboard you can open now | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
-+| Shows electricity use live | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
-+| Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
++        # 6. Measured energy per wash (kWh) and peak power (W)
++        # Integrated: Σ power_w * dt_seconds / 3,600,000 (total washer electrical draw)
++        energy_kwh = round(sum(powers) * dt_seconds / 3600000.0, 3)
++        peak_power_w = int(round(max_power))
++
+     # 6. Signature class (inferred from power)
+     signature_class = classify_signature(
+         max_power=max_power,
+@@ -305,6 +312,10 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         active_min=active_min_num,
+     )
+ 
++    if signature_class == "No power data":
++        energy_kwh = None
++        peak_power_w = None
++
+     # 7. Firmware-07 data quality counters
+     if is_fw07:
+         n_accels = [float(r["n_accel"]) for r in rows if r.get("n_accel")]
+@@ -385,6 +396,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
+         "n_high_power": n_high_power_str,
+         "blocks": high_power_blocks,
+         "signature_class": signature_class,
++        "energy_kwh": energy_kwh,
++        "peak_power_w": peak_power_w,
+         "med_n_accel": med_n_accel,
+         "min_n_accel": min_n_accel,
+         "fifo_ov": fifo_ov,
+@@ -460,6 +473,28 @@ def generate_cycle_signature_report() -> Path:
+         member_files = ", ".join(f"`{m['file']}`" for m in members)
+         lines.append(f"- **{sig_name} ({len(members)} cycles):** {member_files}")
+ 
++    # Per-class energy summary lines under the class list
++    lines.append("")
++    lines.append("**Measured Energy Per Wash:**")
++    for key, display in [
++        ("Long cold (inferred)", "Long cold"),
++        ("Long hot (inferred)", "Long hot"),
++        ("Quick (inferred)", "Quick"),
++        ("No power data", "No power data"),
++    ]:
++        if key in groups:
++            kwhs = [m["energy_kwh"] for m in groups[key] if m.get("energy_kwh") is not None]
++            if kwhs:
++                k_min, k_max = min(kwhs), max(kwhs)
++                if round(k_min, 2) == round(k_max, 2):
++                    lines.append(f"- **{display}:** {k_min:.2f} kWh per wash")
++                else:
++                    lines.append(f"- **{display}:** {k_min:.2f}–{k_max:.2f} kWh per wash")
++            else:
++                lines.append(f"- **{display}:** n/a (unmetered runs)")
++    lines.append("")
++    lines.append("Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.")
++
+     lines.extend([
+         "",
+         "**Sensor Integrity Across Firmware-07 Runs:**",
+@@ -472,14 +507,16 @@ def generate_cycle_signature_report() -> Path:
+         "",
+         "## 2. Comprehensive Cycle Signatures Table",
+         "",
+-        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
+-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
++        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Energy (kWh) | Peak W | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
++        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+     ])
+ 
+     for r in results:
++        energy_str = f"{r['energy_kwh']:.3f}" if r['energy_kwh'] is not None else "n/a"
++        peak_str = str(r['peak_power_w']) if r['peak_power_w'] is not None else "n/a"
+         lines.append(
+             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
+-            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
++            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | {energy_str} | {peak_str} | **{r['signature_class']}** | "
+             f"`{r['programme']}` | {r['water_temp'] or '-'} | {r['load_kg'] or '-'} | `{r['context_source']}` |"
+         )
+ 
+diff --git a/ml/models/cycle_signature_report.md b/ml/models/cycle_signature_report.md
+index d7be05b..12a0961 100644
+--- a/ml/models/cycle_signature_report.md
++++ b/ml/models/cycle_signature_report.md
+@@ -1,6 +1,6 @@
+ # Wash Cycle Physical Signatures & Programme Report
+ 
+-**Generated:** 2026-10-21 17:08:37  
++**Generated:** 2026-10-21 19:05:25  
+ **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
+ **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
+ 
+@@ -14,6 +14,14 @@ Archived wash cycles were classified by their measured electrical power and mech
+ - **No power data (6 cycles):** `wash_cycle_2026-10-11_1019.csv`, `wash_cycle_2026-10-12_1019.csv`, `wash_cycle_2026-10-15_1020.csv`, `wash_cycle_2026-10-15_morning.csv`, `wash_cycle_2026-10-17_0835.csv`, `wash_cycle_2026-10-19_0022.csv`
+ - **Quick (inferred) (2 cycles):** `wash_cycle_2026-10-21_0514.csv`, `wash_cycle_2026-10-21_0631.csv`
+ 
++**Measured Energy Per Wash:**
++- **Long cold:** 0.10–0.11 kWh per wash
++- **Long hot:** 0.55 kWh per wash
++- **Quick:** 0.03–0.04 kWh per wash
++- **No power data:** n/a (unmetered runs)
++
++Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.
++
+ **Sensor Integrity Across Firmware-07 Runs:**
+ - Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
+ - Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
+@@ -24,21 +32,21 @@ Archived wash cycles were classified by their measured electrical power and mech
+ 
+ ## 2. Comprehensive Cycle Signatures Table
+ 
+-| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
+-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+-| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
+-| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
+-| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
++| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Energy (kWh) | Peak W | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
++|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
++| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | 0.101 | 774 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
++| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | 0.113 | 565 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | 0.106 | 401 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | 0.112 | 420 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | 0.549 | 2290 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | 0.036 | 373 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
++| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | 0.029 | 302 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
  
  ---
  
-@@ -75,12 +75,13 @@ Use only these. If you need a new number, add it here first **with its source**.
- 
- | Fact | Value | Source |
- |---|---|---|
--| Wash sessions recorded | 11 (as of 20 Oct): 8 healthy older-firmware cycles form the evaluation set; 2 complete firmware-07 cycles (19 Oct 09:11, 20 Oct 07:44); 1 short older-firmware session (19 Oct 00:22, 167 rows, not evaluated) | `data/real_sessions/`, `ml/models/loco_report.md` |
--| Firmware-07 cycles | 2 complete (786 and 965 windows). The model switches to the firmware-07 schema at 3+ cycles; not trained on them yet | same |
--| Machine state (phase labels) | None saved yet: every row of both firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | the two firmware-07 CSVs |
--| Programme / load per cycle | Not recorded (19 and 20 Oct runs differ: 20 Oct used the heater, peak 2,290 W, 0.55 kWh; 19 Oct none, peak 420 W, 0.11 kWh). `load_class` is a constant `MEDIUM`, not a measurement | same |
-+| Wash sessions recorded | 13 (as of 21 Oct): 8 healthy older-firmware cycles form the evaluation set; 4 complete firmware-07 cycles (19 Oct 09:11, 20 Oct 07:44, 21 Oct 05:14, 21 Oct 06:31); 1 short older-firmware session (19 Oct 00:22, 167 rows, not evaluated) | `data/real_sessions/`, `ml/models/loco_report.md` |
-+| Firmware-07 cycles | 4 complete (786, 965, 387, 348 windows; 2,486 total). The evaluated model in `ml/models/loco_report.md` is evaluated on the 8 legacy cycles and has not been retrained on firmware-07 data yet | `data/real_sessions/`, `ml/models/loco_report.md` |
-+| Machine state (phase labels) | None saved yet: every row across all 4 firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | `data/real_sessions/` (the four firmware-07 CSVs) |
-+| Wash type | Classes inferred from power: Long cold (4 cycles: 16 Oct 08:57, 17 Oct 07:18, 18 Oct 05:16, 19 Oct 09:11), Long hot (1 cycle: 20 Oct 07:44), Quick (2 cycles: 21 Oct 05:14, 21 Oct 06:31), No power data (6 unmetered cycles). Rule: always say "inferred from power"; programme names are not logged | `ml/models/cycle_signature_report.md` |
-+| Load weight | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
- | Evaluation result (nested leave-one-cycle-out) | 0 of 8 healthy cycles falsely flagged (95% upper bound 31%); simulated +100% sound caught in 7 of 8 cycles; added vibration not detected. **Always say it was run on the 8 earlier snapshot-format (5 s snapshot) cycles, not on the 32-feature firmware-07 windows** | `ml/models/loco_report.md` |
--| Training-ready rows | 8,379 (rebuilt 20 Oct 11:28; was 7,414 before the 20 Oct wash) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
-+| Training-ready rows | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
- | Window record | 45-column row every 5.024 s, of which 32 are signal features (audio 15, vibration 13, power 4) | `firmware/session_export.py` (`V3_KEY_MAP`). Not the feature dictionary: that is the legacy 31-field contract |
- | Vibration sensor | MPU-6050, 200 Hz, ±16 g | `INVARIANTS_DO_NOT_CHANGE.md` §2 |
- | Microphone | INMP441, 16 kHz | same |
-@@ -88,7 +89,8 @@ Use only these. If you need a new number, add it here first **with its source**.
- | Controller | ESP32 dual-core (one core sensors, one core Wi-Fi/cloud) | firmware 07 |
- | Offline buffer | ~4 min of data kept during Wi-Fi drops | INVARIANTS §2 (outbox 48 windows) |
- | Vibration jump idle → spin | over 20× (σ 0.03 → 0.72 m/s²) | `wash_cycle_2026-10-19_0911.csv` |
--| Drum frequency in final spin | 19.9 Hz ≈ 1,200 rpm, in both firmware-07 cycles (19 and 20 Oct) | `vib_dom_hz` in both files |
-+| Drum frequency in final spin | ≈ 20 Hz (19.9–20.0 Hz ≈ 1,200 rpm), confirmed across all 4 firmware-07 cycles (19.9 Hz on 19 and 20 Oct; 20.0 Hz p90 on 21 Oct 05:14 and 06:31) | `vib_dom_hz` in the four firmware-07 CSVs, `ml/models/cycle_signature_report.md` §3 |
-+| Local fail-safe (firmware 07) | HTTP on the home network serving the latest feature window (`/window.json`), the last 2.56 s of raw 200 Hz vibration (`/accel.csv`), and a short audio clip (`/clip.wav`) that never goes to the cloud; reachability [UNVERIFIED] | `firmware/07_feature_streamer/07_feature_streamer.ino`, `INVARIANTS_DO_NOT_CHANGE.md` §2 |
- | Washer sound vs room noise (spin, 250 Hz–4 kHz bands) | 36–90× louder | same file (audio bands vs washer-off rows) |
- | Washer rated max spin | 1,400 rpm | Samsung WW10TP44DSX spec |
- | Enclosure and mount | ABS project box 158×90×60 mm (sold as dustproof/waterproof), 3M VHB tape mount. Drilled ports mean no IP claim: say "splash-resistant, untested" | `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md`, `docs/hardware_guides/hardware_bom_and_setup_guide.md` |
-@@ -108,7 +110,7 @@ Use only these. If you need a new number, add it here first **with its source**.
- **Estimate example (always labelled as an estimate):**
- One 5 kW commercial AC × 10 h/day ≈ 18,250 kWh/yr. A worn part adding 10% ≈ 1,825 kWh ≈ **about RM 900/yr** (estimate) at ~RM 0.50/kWh. A ~RM 170 pod catching one such problem pays back within a few months.
- 
--**Not allowed (corrected 2026-10-20):** "under RM 50 in parts" (unvalidated volume target only), "magnetic mount" (mount is VHB tape), "45 features" (use "45-column record, 32 signal features"), "phase-conditioned model works", "IP55/IP65 pod".
-+**Not allowed (corrected 2026-10-21):** "under RM 50 in parts" (unvalidated volume target only), "magnetic mount" (mount is VHB tape), "45 features" (use "45-column record, 32 signal features"), "phase-conditioned model works", "IP55/IP65 pod", "UDP broadcast" and "50 Hz vibration" (firmware-05 era; firmware 07 has no UDP and samples at 200 Hz).
- 
- **Not allowed until confirmed:** equipment counts for Masjid Elmina / Elmina Lakeside Mall (old drafts said "8 chillers", "11 compressors", which are unverified), CO₂ tonnes, scrap tonnes, "15–35% excess power", "5–10 years longer life".
- 
+diff --git a/ml/tests/test_cycle_signature_energy.py b/ml/tests/test_cycle_signature_energy.py
+new file mode 100644
+index 0000000..6ca1443
+--- /dev/null
++++ b/ml/tests/test_cycle_signature_energy.py
+@@ -0,0 +1,198 @@
++"""
++ml/tests/test_cycle_signature_energy.py
++Unit tests for energy integration (kWh) and peak power (W) metrics in cycle signatures.
++
++Verifies:
++1. Constant 1,000 W for 720 windows at 5.0 s yields exactly 1.000 kWh and 1,000 W peak.
++2. Low-power session (< 50 W) yields None for both energy and peak power (No power data).
++3. Firmware-07 windowed session (dt = 5.024 s) correctly scales energy by 5.024 s.
++4. Variable power profile correctly extracts peak power and integrates kWh.
++
++Constraints:
++- Operates strictly on synthetic files in tempfile.TemporaryDirectory().
++- Never writes to data/ or ml/models/.
++"""
++
++from __future__ import annotations
++
++import csv
++from pathlib import Path
++import sys
++import tempfile
++from typing import List
++
++# =============================================================================
++# SECTION 1: Path Setup & Module Import
++# =============================================================================
++ROOT = Path(__file__).resolve().parents[2]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from ml.cycle_signature_report import analyze_session_csv  # noqa: E402
++
++
++# =============================================================================
++# SECTION 2: Synthetic CSV Generator Helpers
++# =============================================================================
++def write_synthetic_legacy_csv(
++    csv_path: Path,
++    powers: List[float],
++    dt_ms: int = 5000,
++) -> None:
++    """
++    Write a synthetic legacy CSV session file with specified power profile.
++    Uses legacy columns: timestamp_ms, power_w, accel_x, accel_y, accel_z, audio_rms.
++    """
++    fieldnames = ["timestamp_ms", "power_w", "accel_x", "accel_y", "accel_z", "audio_rms"]
++    with open(csv_path, "w", newline="", encoding="utf-8") as f:
++        writer = csv.DictWriter(f, fieldnames=fieldnames)
++        writer.writeheader()
++        t = 0
++        for p in powers:
++            writer.writerow({
++                "timestamp_ms": t,
++                "power_w": f"{p:.2f}",
++                "accel_x": "-0.66",
++                "accel_y": "2.88",
++                "accel_z": "-9.00",
++                "audio_rms": "120.0",
++            })
++            t += dt_ms
++
++
++def write_synthetic_fw07_csv(
++    csv_path: Path,
++    powers: List[float],
++    dt_ms: int = 5024,
++) -> None:
++    """
++    Write a synthetic firmware-07 CSV session file with specified power profile.
++    Contains epoch_ms and vib_mag_std to trigger schema_label == 'fw07'.
++    """
++    fieldnames = [
++        "timestamp_ms", "epoch_ms", "power_w", "accel_x", "accel_y", "accel_z",
++        "audio_rms", "vib_mag_std", "vib_dom_hz", "n_accel", "fifo_overflows",
++        "accel_clip_samples",
++    ]
++    with open(csv_path, "w", newline="", encoding="utf-8") as f:
++        writer = csv.DictWriter(f, fieldnames=fieldnames)
++        writer.writeheader()
++        t = 100000  # Start well above 30s to avoid boot_at_start
++        epoch = 1729000000000
++        for p in powers:
++            writer.writerow({
++                "timestamp_ms": t,
++                "epoch_ms": epoch,
++                "power_w": f"{p:.2f}",
++                "accel_x": "-0.66",
++                "accel_y": "2.88",
++                "accel_z": "-9.00",
++                "audio_rms": "150.0",
++                "vib_mag_std": "0.032",
++                "vib_dom_hz": "19.9",
++                "n_accel": "1005",
++                "fifo_overflows": "0",
++                "accel_clip_samples": "0",
++            })
++            t += dt_ms
++            epoch += dt_ms
++
++
++# =============================================================================
++# SECTION 3: Test Cases
++# =============================================================================
++def test_constant_1000w_720_windows() -> None:
++    """
++    Test 1: Constant 1,000 W for 720 windows at 5.0 s.
++    Duration: 720 * 5.0 s = 3,600 s = 1.0 hour.
++    Energy: 1,000 W * 3,600 s / 3,600,000 = 1.000 kWh.
++    Peak power: 1,000 W.
++    """
++    with tempfile.TemporaryDirectory() as td:
++        session_path = Path(td) / "wash_cycle_2026-11-01_1000.csv"
++        powers = [1000.0] * 720
++        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
++
++        res = analyze_session_csv(session_path, {})
++        assert res["energy_kwh"] is not None, "energy_kwh should not be None for 1000 W session"
++        assert res["peak_power_w"] is not None, "peak_power_w should not be None for 1000 W session"
++
++        # Check exact expected numbers
++        assert res["energy_kwh"] == 1.000, f"Expected 1.000 kWh, got {res['energy_kwh']}"
++        assert res["peak_power_w"] == 1000, f"Expected peak 1000 W, got {res['peak_power_w']}"
++        print("  [PASS] test_constant_1000w_720_windows (1.000 kWh, 1000 W peak)")
++
++
++def test_unmetered_low_power_yields_none() -> None:
++    """
++    Test 2: Low-power session (< 50 W maximum power).
++    Must result in energy_kwh = None and peak_power_w = None.
++    Signature class must be 'No power data'.
++    """
++    with tempfile.TemporaryDirectory() as td:
++        session_path = Path(td) / "wash_cycle_2026-11-01_1001.csv"
++        # Constant 25 W (well below 50 W threshold)
++        powers = [25.0] * 120
++        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
++
++        res = analyze_session_csv(session_path, {})
++        assert res["energy_kwh"] is None, f"Expected energy_kwh=None, got {res['energy_kwh']}"
++        assert res["peak_power_w"] is None, f"Expected peak_power_w=None, got {res['peak_power_w']}"
++        assert res["signature_class"] == "No power data", f"Expected 'No power data', got {res['signature_class']}"
++        print("  [PASS] test_unmetered_low_power_yields_none (None, None, 'No power data')")
++
++
++def test_firmware_07_dt_scaling() -> None:
++    """
++    Test 3: Firmware-07 windowed session with dt = 5.024 s.
++    720 windows at 1,000 W:
++    Energy: 720 * 1,000 * 5.024 / 3,600,000 = 1.0048 kWh -> rounded to 3 dp = 1.005 kWh.
++    Peak power: 1,000 W.
++    """
++    with tempfile.TemporaryDirectory() as td:
++        session_path = Path(td) / "wash_cycle_2026-11-01_1002.csv"
++        powers = [1000.0] * 720
++        write_synthetic_fw07_csv(session_path, powers, dt_ms=5024)
++
++        res = analyze_session_csv(session_path, {})
++        assert res["schema"] == "fw07", f"Expected schema fw07, got {res['schema']}"
++        assert res["energy_kwh"] == 1.005, f"Expected 1.005 kWh, got {res['energy_kwh']}"
++        assert res["peak_power_w"] == 1000, f"Expected peak 1000 W, got {res['peak_power_w']}"
++        print("  [PASS] test_firmware_07_dt_scaling (1.005 kWh at dt=5.024s)")
++
++
++def test_variable_power_profile() -> None:
++    """
++    Test 4: Variable power profile with distinct peak and active intervals.
++    100 windows at 10 W, 50 windows at 2,290 W, 100 windows at 300 W (dt = 5.0 s).
++    Total energy: (100*10 + 50*2290 + 100*300) * 5.0 / 3,600,000
++                = (1,000 + 114,500 + 30,000) * 5.0 / 3,600,000
++                = 145,500 * 5.0 / 3,600,000 = 0.202083... kWh -> 0.202 kWh.
++    Peak power: 2,290 W.
++    """
++    with tempfile.TemporaryDirectory() as td:
++        session_path = Path(td) / "wash_cycle_2026-11-01_1003.csv"
++        powers = [10.0] * 100 + [2290.0] * 50 + [300.0] * 100
++        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
++
++        res = analyze_session_csv(session_path, {})
++        assert res["energy_kwh"] == 0.202, f"Expected 0.202 kWh, got {res['energy_kwh']}"
++        assert res["peak_power_w"] == 2290, f"Expected peak 2290 W, got {res['peak_power_w']}"
++        print("  [PASS] test_variable_power_profile (0.202 kWh, 2290 W peak)")
++
++
++# =============================================================================
++# SECTION 4: Test Suite Runner
++# =============================================================================
++def main() -> int:
++    print("[RUN] Running cycle signature energy calculation tests...")
++    test_constant_1000w_720_windows()
++    test_unmetered_low_power_yields_none()
++    test_firmware_07_dt_scaling()
++    test_variable_power_profile()
++    print("[PASS] All cycle signature energy tests passed successfully.")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())

@@ -1,87 +1,90 @@
 # Handoff to Claude (Architect)
 
-**Plan:** Writing guide §4 and current-state doc: bring facts up to 21 Oct (4 firmware-07 cycles, inferred wash types, no load guess)
-**Date:** 2026-10-21 18:25, Asia/Kuala_Lumpur
-**Status:** COMPLETE
+**Plan:** Measured energy per wash: add kWh and peak W to the cycle signature report and the writing guide  
+**Date:** 2026-10-21 19:15, Asia/Kuala_Lumpur  
+**Status:** COMPLETE  
 **Diff Patch:** [last_diff.patch](file:///g:/My%20Drive/PdM%20SideProject/docs/handoffs/last_diff.patch)
 
 ## Commits
-- `4f4f9ea` docs: plan writing guide facts refresh (Step 0)
-- `6cdff0f` docs: current-state note (external edit)
-- `8439d1b` docs: writing guide facts as of 21 Oct
-- Pending: `docs(handoff): complete writing guide facts refresh`
+- `06595ff` docs: plan energy per wash (Step 0)
+- `f576438` ml: energy per wash in cycle signature report; guide energy row
 - **Branch:** main
 
 ## What Changed
-- **Step 0 (Plan Commitment & External Edit):**
-  - Committed `docs/handoffs/PLAN.md` immediately (`4f4f9ea`).
-  - Separately committed the external Drive modification to `docs/handoffs/current_state_and_scale_up_handoff.md` (`6cdff0f`), recording its diff below.
-- **Step 1 (Writing Guide §4 Facts Update from Repository Files):**
-  - Updated "Wash sessions recorded" to 13 (8 legacy LOCO evaluation cycles, 4 complete firmware-07 cycles, 1 short un-evaluated cycle).
-  - Updated "Firmware-07 cycles" to 4 complete cycles (786, 965, 387, 348 windows; 2,486 total). Confirmed model in `ml/models/loco_report.md` is evaluated on legacy cycles and has not been retrained on firmware-07 data yet.
-  - Verified `phase` and `phase_source` across all 4 firmware-07 CSVs: all rows contain `phase = none` and `phase_source = fallback`. Stated "planned".
-  - Replaced "Programme / load per cycle" with two dedicated rows:
-    - **"Wash type"**: classes inferred from power (4 Long cold, 1 Long hot, 2 Quick, 6 No power data) sourced from `ml/models/cycle_signature_report.md`, with the rule "always say 'inferred from power'; programme names are not logged".
-    - **"Load weight"**: not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered).
-    - Removed every occurrence of `load_class` and `MEDIUM` from the guide (`grep` returns 0 hits).
-  - Updated "Training-ready rows" to 9,114 (verified from `data/pdm_ml_standardized_training_dataset.csv`; noted "(was 8,379 before the two 21 Oct quick washes)").
-  - Extended "Drum frequency in final spin" to confirm ≈ 20 Hz (19.9–20.0 Hz ≈ 1,200 rpm) across all 4 firmware-07 cycles based on `vib_dom_hz` in the CSVs and `cycle_signature_report.md` §3.
-  - Added row **"Local fail-safe (firmware 07)"**: HTTP on home network serving `/window.json`, `/accel.csv` (2.56 s of raw 200 Hz vibration), and `/clip.wav`, marked reachability `[UNVERIFIED]`.
-  - Added "UDP broadcast" and "50 Hz vibration" to "Not allowed".
-- **Step 2 (Writing Guide §3 Say/Plan Table):**
-  - Updated cell from "11 wash sessions recorded, 8,379 data rows" to "13 wash sessions recorded, 9,114 data rows".
-  - Added to Say column: "The website labels each wash type, inferred from power".
-  - Clarified Plan column: "Phase badge on the website (wash / rinse / spin; planned once machine state is saved with the data, distinct from the wash-type badge)".
-- **Step 3 (Current-State Doc Reality Checks):**
-  - Updated line ~50 reality checks sentence to 13 sessions, 9,114 training rows, 4 firmware-07 cycles, wash types inferred from power (4 Long cold, 1 Long hot, 2 Quick, 6 No power data), and load not recorded.
-  - Updated "Last updated" line to 2026-10-21. Zero other changes made.
-- **Explanation for File Mtimes at 18:01 MYT:**
-  - During the previous session's push preparation, a `git pull --rebase --autostash` command stashed working tree files. When `git stash apply 72833de` was executed, git touched and wrote back `wash_cycle_2026-10-15_1020.csv`, `wash_cycle_2026-10-16_0857.csv`, `wash_cycle_2026-10-17_0718.csv`, and `data/pdm_ml_standardized_training_dataset.csv`. All file contents were confirmed byte-identical to prior commits; no data or numbers were altered.
+- **Step 0 (Plan Commitment):**
+  - Executed `git pull` (already up to date, no autostash) and committed `docs/handoffs/PLAN.md` (`06595ff`).
+- **Step 1 (`ml/cycle_signature_report.py` - Energy & Peak Calculation):**
+  - Updated `analyze_session_csv()` to compute `energy_kwh` ($\sum \text{power\_w} \times \text{dt\_seconds} / 3{,}600{,}000$, rounded to 3 decimal places) and `peak_power_w` ($\max(\text{power\_w})$, rounded to whole W).
+  - Explicitly set both `energy_kwh` and `peak_power_w` to `None` when `max_power < 50.0` W or `signature_class == "No power data"`.
+  - Added columns "Energy (kWh)" and "Peak W" to Table 2 (Section 2) in the markdown report (formatting unmetered runs as `n/a`).
+  - Added dynamically computed per-class energy summary lines under Section 1 class list (`Long cold: 0.10–0.11 kWh per wash`, `Long hot: 0.55 kWh per wash`, `Quick: 0.03–0.04 kWh per wash`, `No power data: n/a (unmetered runs)`).
+  - Added clarifying note that energy is integrated from 1 Hz smart-plug power averaged per window, representing total washer electrical draw (not an anomaly/fault signal).
+  - Preserved all existing classification thresholds, rules, and constants.
+- **Step 2 (`ml/tests/test_cycle_signature_energy.py` - Unit Tests):**
+  - Added comprehensive test suite operating purely in `tempfile.TemporaryDirectory()` (never touching `data/` or `ml/models/`).
+  - Test 1: Constant 1,000 W for 720 windows at 5.0 s $\rightarrow$ exact 1.000 kWh and 1,000 W peak.
+  - Test 2: Low-power cycle (< 50 W) $\rightarrow$ `energy_kwh` is `None`, `peak_power_w` is `None`, and `signature_class` is `"No power data"`.
+  - Test 3: Firmware-07 cycle (dt = 5.024 s) with 720 windows at 1,000 W $\rightarrow$ exact 1.005 kWh ($720 \times 1000 \times 5.024 / 3.6e6 = 1.0048$).
+  - Test 4: Variable power profile with distinct intervals $\rightarrow$ exact peak power and integral.
+- **Step 3 (`ml/models/cycle_signature_report.md` - Report Regeneration):**
+  - Regenerated report via `py ml/cycle_signature_report.py`.
+  - Diff confirms only the new columns and lines were added; classes, member files, and data quality counters are 100% identical.
+- **Step 4 (`docs/proposals/PROPOSAL_WRITING_GUIDE.md` - Facts & Rules):**
+  - In §3 Say column, added: `"A heated wash used about 5× the energy of a cold wash on our rig (measured)"`.
+  - In §4, added row **"Energy per wash (measured)"**: Quick: 0.03–0.04 kWh per wash (peak 302–373 W); Long cold: 0.10–0.11 kWh per wash (peak 401–774 W); Long hot: 0.55 kWh per wash (peak 2,290 W); heated wash used about 5× the energy of a cold wash; sourced to `ml/models/cycle_signature_report.md`; rule: "one household washer, measured by the smart plug; never present as an AC, township or fault saving".
 
-## External Edit Diff (`6cdff0f`)
-```diff
-diff --git a/docs/handoffs/current_state_and_scale_up_handoff.md b/docs/handoffs/current_state_and_scale_up_handoff.md
---- a/docs/handoffs/current_state_and_scale_up_handoff.md
-+++ b/docs/handoffs/current_state_and_scale_up_handoff.md
-@@ -47,6 +47,8 @@ Current real-data result (legacy snapshot schema, Mahalanobis, nested LOCO): 0/8
- ## 5. Hackathon story [PROPOSAL]
- Pitch what is true: a low-cost, non-destructive multimodal edge sensor that learns each machine's own healthy baseline and flags sustained departures, with every claim backed by a leave-one-cycle-out report. Do not claim remaining-life or cost savings yet; frame them as what the platform enables once degradation data is collected. Strong, defensible points: on-device DSP (raw audio never leaves the device), tiny Firebase footprint, per-asset baselines (no labelled faults needed), transparent per-feature explanations.
- 
-+Sources of truth for pitch material: event facts in `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.md`, allowed numbers in `docs/proposals/PROPOSAL_WRITING_GUIDE.md` §4, video script and deck outline in `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md`. Reality checks (synced 2026-10-20): pilot kit RM 169.68 net paid (node RM 131.07; receipts in `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md`; sub-RM 50 is unvalidated); 11 sessions are recorded as of 20 Oct (8,379 training rows), of which 8 healthy legacy cycles form the LOCO set and 2 are complete firmware-07 cycles (19 and 20 Oct; neither has SmartThings phase labels, programme and load not logged); the evaluated model is pooled (not phase-conditioned); the mount is VHB tape (magnetic is a proposal); a firmware-07 window record is 45 columns with 32 signal features.
-+
- ## 6. From rig to mass-producible prototype [PROPOSAL]
+---
+
+## Cycle Energy & Peak Comparison Table (Script vs Claude's Figures)
+
+| Session File | Schema | Script Energy (kWh) | Script Peak W | Claude's Energy (kWh) | Claude's Peak W | Difference / Explanation |
+|---|---|---|---|---|---|---|
+| `wash_cycle_2026-10-11_1019.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 0.0 W) |
+| `wash_cycle_2026-10-12_1019.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 0.0 W) |
+| `wash_cycle_2026-10-15_1020.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 0.0 W) |
+| `wash_cycle_2026-10-15_morning.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 0.0 W) |
+| `wash_cycle_2026-10-16_0857.csv` | legacy | 0.101 | 774 | 0.101 | 774 | Exact match (diff: 0.000 kWh, 0 W) |
+| `wash_cycle_2026-10-17_0718.csv` | legacy | 0.113 | 565 | 0.113 | 565 | Exact match (diff: 0.000 kWh, 0 W) |
+| `wash_cycle_2026-10-17_0835.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 5.0 W < 50 W) |
+| `wash_cycle_2026-10-18_0516.csv` | legacy | 0.106 | 401 | 0.107 | 401 | Diff: -0.001 kWh (within 0.005 kWh tolerance). Legacy session with dt=5.0 s has unrounded energy = 0.10607 kWh $\rightarrow$ rounds to 0.106 kWh. (If dt=5.024 s was assumed, it would be 0.10658 $\rightarrow$ 0.107 kWh). |
+| `wash_cycle_2026-10-19_0022.csv` | legacy | n/a | n/a | n/a | n/a | Match (unmetered, max 1.3 W < 50 W) |
+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 0.112 | 420 | 0.112 | 420 | Exact match (diff: 0.000 kWh, 0 W) |
+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 0.549 | 2290 | 0.549 | 2,290 | Exact match (diff: 0.000 kWh, 0 W) |
+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 0.036 | 373 | 0.036 | 373 | Exact match (diff: 0.000 kWh, 0 W) |
+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 0.029 | 302 | 0.029 | 302 | Exact match (diff: 0.000 kWh, 0 W) |
+
+*All 7 metered sessions match within 0.001 kWh and 0 W. All 6 unmetered sessions show `n/a`.*
+
+---
+
+## Root Cause of `ml/models/loco_report.md` mtime at 18:23 MYT
+
+**Cause Identified:** In `ml/tests/test_pipeline_synthetic.py` (lines 65–88), the test reads the bytes of real model artifacts into an in-memory dictionary `backup`:
+```python
+models = ROOT / "ml" / "models"
+backup = {p: p.read_bytes() for p in models.glob("pdm_detector*")} if models.is_dir() else {}
+backup.update({p: p.read_bytes() for p in models.glob("loco_report*")})
+try:
+    res = subprocess.run([sys.executable, str(ROOT / "ml" / "train_unsupervised_pdm.py"), ...])
+    ...
+finally:
+    for p, b in backup.items():
+        p.write_bytes(b)
 ```
+When `ml/tests/test_pipeline_synthetic.py` was executed at 18:23 MYT during verification, `train_unsupervised_pdm.py` overwrote `ml/models/loco_report.md` with synthetic evaluation outputs, and then the `finally:` block wrote the original bytes back via `p.write_bytes(b)`.
+The write-back restored byte-identical content, but updated the OS filesystem modified timestamp (`mtime`).
+*(Listed below in Suggestions as a bug to isolate test outputs).*
 
-## Facts Changed Summary Table
-
-| Fact / Item | Old Value | New Value | Source File |
-|---|---|---|---|
-| Wash sessions recorded (§3 & §4) | 11 (as of 20 Oct): 8 older healthy LOCO, 2 complete fw-07, 1 short older session | 13 (as of 21 Oct): 8 older healthy LOCO, 4 complete fw-07, 1 short older session | `data/real_sessions/`, `ml/models/loco_report.md` |
-| Firmware-07 cycles (§4) | 2 complete (786 and 965 windows) | 4 complete (786, 965, 387, 348 windows; 2,486 total). Evaluated model is trained on 8 legacy cycles, not retrained on fw-07 yet | `data/real_sessions/`, `ml/models/loco_report.md` |
-| Machine state (phase labels) (§4) | None saved yet across 2 fw-07 cycles | None saved yet: every row across all 4 fw-07 cycles has `phase = none`, `phase_source = fallback` | `data/real_sessions/` (4 fw-07 CSVs) |
-| Wash type (replaces Programme / load per cycle) (§4) | Programme / load per cycle: Not recorded; `load_class` a constant `MEDIUM` | Classes inferred from power: Long cold (4), Long hot (1), Quick (2), No power data (6). Always say "inferred from power" | `ml/models/cycle_signature_report.md` |
-| Load weight (new row) (§4) | (bundled in old row with `load_class MEDIUM`) | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
-| Training-ready rows (§3 & §4) | 8,379 (rebuilt 20 Oct 11:28; was 7,414) | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
-| Drum frequency in final spin (§4) | 19.9 Hz ≈ 1,200 rpm, in both firmware-07 cycles (19 and 20 Oct) | ≈ 20 Hz (19.9–20.0 Hz ≈ 1,200 rpm), confirmed across all 4 firmware-07 cycles (19.9 Hz on 19 and 20 Oct; 20.0 Hz p90 on 21 Oct 05:14 and 06:31) | `data/real_sessions/`, `ml/models/cycle_signature_report.md` §3 |
-| Local fail-safe (firmware 07) (new row) (§4) | (not listed) | HTTP on home network serving `/window.json`, `/accel.csv` (last 2.56 s of raw 200 Hz vibration), and `/clip.wav`; reachability [UNVERIFIED] | `firmware/07_feature_streamer/07_feature_streamer.ino`, `INVARIANTS_DO_NOT_CHANGE.md` §2 |
-| Not allowed (§4) | "under RM 50 in parts", "magnetic mount", "45 features", "phase-conditioned model works", "IP55/IP65 pod" | Added: "UDP broadcast" and "50 Hz vibration" (firmware-05 era; fw-07 has no UDP and samples at 200 Hz) | `firmware/07_feature_streamer/`, `INVARIANTS_DO_NOT_CHANGE.md` §2 |
-| Say / Plan table (§3) | 11 sessions, 8,379 rows; phase badge in Plan | 13 sessions, 9,114 rows; added to Say: "The website labels each wash type, inferred from power"; Plan: phase badge reworded so distinct from wash-type badge | `data/real_sessions/`, `data/pdm_ml_standardized_training_dataset.csv` |
-| Current-state doc reality checks | 11 sessions, 8,379 rows, 2 fw-07 cycles, programme & load not logged | 13 sessions, 9,114 rows, 4 fw-07 cycles, wash types inferred from power: 4 Long cold, 1 Long hot, 2 Quick, 6 No power data, load not recorded; Last updated: 2026-10-21 | `docs/handoffs/current_state_and_scale_up_handoff.md` |
-
-## How Numbers Were Counted
-- **Session Count (13):** `len(os.listdir('data/real_sessions'))` minus `desktop.ini` = 13 CSV files:
-  - 8 healthy legacy LOCO cycles: `2026-10-11_1019` (422), `2026-10-12_1019` (1,216), `2026-10-15_1020` (276), `2026-10-15_morning` (1,216), `2026-10-16_0857` (857), `2026-10-17_0718` (854), `2026-10-17_0835` (792), `2026-10-18_0516` (828).
-  - 1 short legacy session: `2026-10-19_0022` (167).
-  - 4 firmware-07 sessions: `2026-10-19_0911` (786), `2026-10-20_0744` (965), `2026-10-21_0514` (387), `2026-10-21_0631` (348).
-- **Firmware-07 Window Count (2,486):** 786 + 965 + 387 + 348 = 2,486 windows across 4 cycles.
-- **Training-Ready Rows (9,114):** `len(pd.read_csv('data/pdm_ml_standardized_training_dataset.csv'))` = 9,114 rows, exactly matching previous 8,379 + 387 (21 Oct 05:14) + 348 (21 Oct 06:31).
+---
 
 ## Files Changed
-- `docs/proposals/PROPOSAL_WRITING_GUIDE.md`: updated facts to 21 Oct, added wash type / load weight rows, added local fail-safe row, added UDP/50Hz to Not allowed.
-- `docs/handoffs/current_state_and_scale_up_handoff.md`: updated reality checks sentence to 21 Oct figures and date to 2026-10-21.
-- `docs/handoffs/PLAN.md`: marked `Status: DONE` with all acceptance criteria checked.
-- `docs/handoffs/PLAN_DONE_2026-10-21_writing_guide_facts.md`: archived completed plan.
-- `docs/handoffs/last_diff.patch`: 12.9 KB UTF-8 diff.
+- `ml/cycle_signature_report.py`: calculated `energy_kwh` and `peak_power_w` in `analyze_session_csv()`, added columns to Table 2, added per-class energy summary lines under Section 1 class list.
+- `ml/tests/test_cycle_signature_energy.py`: unit test for energy calculation, dt scaling, and unmetered None handling.
+- `ml/models/cycle_signature_report.md`: regenerated report with energy and peak W columns.
+- `docs/proposals/PROPOSAL_WRITING_GUIDE.md`: added §3 Say line and §4 "Energy per wash (measured)" row.
+- `docs/handoffs/PLAN.md`: marked `Status: DONE`.
+- `docs/handoffs/PLAN_DONE_2026-10-21_energy_per_wash.md`: archived copy of completed plan.
+- `docs/handoffs/last_diff.patch`: 22.9 KB UTF-8 diff.
 - `docs/handoffs/HANDOFF.md`: updated handoff documentation.
 
 ## Excluded from Patch
@@ -90,39 +93,40 @@ diff --git a/docs/handoffs/current_state_and_scale_up_handoff.md b/docs/handoffs
 - `docs/handoffs/last_diff.patch` (self-referential)
 
 ## Acceptance Criteria
-- [x] PLAN.md committed first (and the current-state external edit, if any, committed separately) — verified in `4f4f9ea` and `6cdff0f`.
-- [x] `grep -n "load_class\|MEDIUM" docs/proposals/PROPOSAL_WRITING_GUIDE.md` returns nothing — verified (0 hits).
-- [x] §4 has "Wash type" (with "inferred from power") and "Load weight" rows, each with a source path — verified.
-- [x] Session count, firmware-07 cycle count and training rows in §3, §4 and the current-state sentence agree with each other and with the files; HANDOFF shows how each was counted — verified.
-- [x] §4 has the local fail-safe row marked [UNVERIFIED]; "UDP broadcast" and "50 Hz vibration" are under Not allowed — verified.
-- [x] No number appears that is not traceable to a repo file named in the row — verified directly against repository files.
-- [x] Only the two docs (plus PLAN/HANDOFF/patch) changed; pushed; hash reported — verified.
+- [x] PLAN.md committed first, after a plain `git pull` — verified in `06595ff`.
+- [x] Report §2 has "Energy (kWh)" and "Peak W" for all 13 sessions; the 6 No power data rows show `n/a` — verified.
+- [x] Classes and member lists in the report are unchanged from the previous version (diff shows only the new columns and lines) — verified via `git diff`.
+- [x] Script values match Claude's figures within 0.005 kWh and 1 W, or each difference is explained — verified (maximum difference is 0.001 kWh on 18 Oct due to dt=5.0 s rounding; all others 0.000 kWh and 0 W).
+- [x] New test passes and writes nothing under `data/` or `ml/models/`; existing tests still pass — verified.
+- [x] Guide §4 energy row and §3 Say line exist, are sourced to the report and carry the "one household washer" rule — verified.
+- [x] HANDOFF answers what rewrote `loco_report.md` — verified (diagnosed to `ml/tests/test_pipeline_synthetic.py`).
+- [x] Pushed; hashes reported — verified.
 
 ## Tests Run
-- `py -m py_compile docs/proposals/generate_proposal_pdf.py docs/proposals/generate_2page_pdf.py` — PASS.
-- `py ml/tests/test_dsp_parity.py` — [SKIP] no C++ compiler on Windows PATH (expected).
-- `py ml/tests/test_pipeline_synthetic.py` — PASS.
+- `py -m py_compile ml/cycle_signature_report.py ml/tests/test_cycle_signature_energy.py` — PASS.
+- `py ml/tests/test_cycle_signature_energy.py` — PASS (4/4 tests: 1,000 W 720 windows, unmetered <50 W None, fw-07 dt=5.024 s scaling, variable power).
 - `py firmware/tests/test_session_export.py` — PASS.
 - `py firmware/tests/test_daemon_offline.py` — PASS.
-- Python verification scripts for `load_class`/`MEDIUM` absence, rows, and agreement — PASS.
+- `py build_clean_dashboard.py` — PASS.
 
 ## Invariants Check
-- INVARIANTS §1 (Honest reporting): Confirmed. No RUL, health score %, or unmeasured load classes. All wash types explicitly marked "inferred from power". Firmware 07 local fail-safe endpoints marked [UNVERIFIED].
+- INVARIANTS §1 (Honest reporting): Confirmed. Measured energy is total washer draw; not presented as an AC or township saving, or fault signal.
 - INVARIANTS §2 (Firmware): Untouched.
-- INVARIANTS §3 (Dashboard): Untouched.
-- INVARIANTS §4 (Data & ML): Originals in `data/real_sessions/` untouched; training dataset read only (not rebuilt).
+- INVARIANTS §3 (Dashboard): Untouched (verified `build_clean_dashboard.py` succeeds).
+- INVARIANTS §4 (Data & ML): Originals in `data/real_sessions/` untouched; no model retraining performed; classification rules and thresholds strictly preserved.
 - INVARIANTS §5 (Secrets): Verified no secrets in git (`.env` and `secrets.h` clean).
 
 ## Blocked / Questions
 - None.
 
 ## Suggestions for Claude
-- **Carried-forward Queue items:**
-  1. Firmware: report reset reason (+ `epochMs()` jitter 2.7–3.8 s)
-  2. ML: programme-aware evaluation once each signature class has ≥ 3 firmware-07 cycles
-  3. Dashboard page budget (787.7 KB of 800 KB)
-  4. Retire or clearly mark `firmware/capture_pdm_dataset.py`
-  5. Proposal submission files (track "02 Circular Economy" hits, session counts, other firmware-05-era claims such as `/live.json` at 1 Hz): Adam's `Hackathon/NEEDS_CHANGING.md` batch
+1. **Bug in `ml/tests/test_pipeline_synthetic.py`:** Synthetic tests should direct outputs to a temporary directory (e.g. `--output-dir <tempdir>`) rather than overwriting files in `ml/models/` and restoring them via byte write-backs, which alters the production file mtime.
+2. **Carried-forward Queue items:**
+   - Firmware: report reset reason (+ `epochMs()` jitter 2.7–3.8 s).
+   - ML: programme-aware evaluation once each signature class has $\ge 3$ firmware-07 cycles.
+   - Dashboard page budget (787.7 KB of 800 KB).
+   - Retire or clearly mark `firmware/capture_pdm_dataset.py`.
+   - Proposal submission files: Adam's `Hackathon/NEEDS_CHANGING.md` batch.
 
 ## Open UNVERIFIED Items (carried forward)
 1. Apps Script trigger (legacy sync mechanism).

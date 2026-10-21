@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Measured energy per wash: add kWh and peak W to the cycle signature report and the writing guide
 **Date:** 2026-10-21
 
