@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Stop the synthetic ML test writing to the real `ml/models/`; clarify the energy note
 **Date:** 2026-10-21
 

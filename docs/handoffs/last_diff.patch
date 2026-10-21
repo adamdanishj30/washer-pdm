@@ -1,391 +1,301 @@
-diff --git a/docs/proposals/PROPOSAL_WRITING_GUIDE.md b/docs/proposals/PROPOSAL_WRITING_GUIDE.md
-index f53685d..3e61209 100644
---- a/docs/proposals/PROPOSAL_WRITING_GUIDE.md
-+++ b/docs/proposals/PROPOSAL_WRITING_GUIDE.md
-@@ -65,6 +65,7 @@ Use this order for the master proposal and the pitch deck. For the official 2-pa
- | Washer sound 36–90× louder than room noise in high bands | Tests on AC compressor / water pump | Force power back ON when switched off (safety problem on real equipment) |
- | Live dashboard you can open now | Machine-learning model on the new-firmware data (needs 3+ cycles first) | "1,400 rpm" as measured (that's the rated max) |
- | Shows electricity use live | | "Zero false alarms" as a general claim, "predicts failures", or the test result presented as a real fault |
-+| A heated wash used about 5× the energy of a cold wash on our rig (measured) | | Energy savings presented as a township or AC saving |
- | Leave-one-wash-out test on 8 earlier washes: 0 falsely flagged; a simulated sound fault caught in 7 of 8 (always say "simulated" and "eight earlier washes") | | "4 sensors" or "knows what the machine is doing" (no phase labels are saved yet) |
- 
- ---
-@@ -80,6 +81,7 @@ Use only these. If you need a new number, add it here first **with its source**.
- | Machine state (phase labels) | None saved yet: every row across all 4 firmware-07 cycles has `phase = none`, `phase_source = fallback`. Say "planned", never "knows what the machine is doing" | `data/real_sessions/` (the four firmware-07 CSVs) |
- | Wash type | Classes inferred from power: Long cold (4 cycles: 16 Oct 08:57, 17 Oct 07:18, 18 Oct 05:16, 19 Oct 09:11), Long hot (1 cycle: 20 Oct 07:44), Quick (2 cycles: 21 Oct 05:14, 21 Oct 06:31), No power data (6 unmetered cycles). Rule: always say "inferred from power"; programme names are not logged | `ml/models/cycle_signature_report.md` |
- | Load weight | Not recorded (`load_kg` is blank in `data/session_context.csv` across all cycles until a physical weighed load is entered) | `data/session_context.csv` |
-+| Energy per wash (measured) | Quick: 0.03–0.04 kWh per wash (peak 302–373 W); Long cold: 0.10–0.11 kWh per wash (peak 401–774 W); Long hot: 0.55 kWh per wash (peak 2,290 W). Heated wash used about 5× the energy of a cold wash. Rule: one household washer, measured by the smart plug; never present as an AC, township or fault saving | `ml/models/cycle_signature_report.md` |
- | Evaluation result (nested leave-one-cycle-out) | 0 of 8 healthy cycles falsely flagged (95% upper bound 31%); simulated +100% sound caught in 7 of 8 cycles; added vibration not detected. **Always say it was run on the 8 earlier snapshot-format (5 s snapshot) cycles, not on the 32-feature firmware-07 windows** | `ml/models/loco_report.md` |
- | Training-ready rows | 9,114 (as of 21 Oct; was 8,379 before the two 21 Oct quick washes) | `data/pdm_ml_standardized_training_dataset.csv` (`session_source` counts) |
- | Window record | 45-column row every 5.024 s, of which 32 are signal features (audio 15, vibration 13, power 4) | `firmware/session_export.py` (`V3_KEY_MAP`). Not the feature dictionary: that is the legacy 31-field contract |
 diff --git a/ml/cycle_signature_report.py b/ml/cycle_signature_report.py
-index 2eaad30..2e408d4 100644
+index 2e408d4..ccfcc7a 100644
 --- a/ml/cycle_signature_report.py
 +++ b/ml/cycle_signature_report.py
-@@ -260,7 +260,7 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-     else:
-         recorded_min = round(n_rows * dt_seconds / 60.0, 1)
+@@ -493,7 +493,7 @@ def generate_cycle_signature_report() -> Path:
+             else:
+                 lines.append(f"- **{display}:** n/a (unmetered runs)")
+     lines.append("")
+-    lines.append("Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.")
++    lines.append("Energy is integrated from the smart-plug power on each row: on firmware 07 a per-window mean of 1 Hz readings, on legacy runs a single reading every 5 s. Peak W is the highest row value, not an instantaneous peak. This is the washer's total electrical draw, not a fault signal.")
  
--    # 2. Active minutes (power >= 8W)
-+    # 2. Active minutes (power >= 8W) & Energy Integration
-     has_valid_power = max_power >= MAX_POWER_NO_DATA_W
-     if not has_valid_power:
-         active_min_num = 0.0
-@@ -271,6 +271,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         spin_blocks_str = "n/a"
-         high_power_blocks: List[Dict[str, Any]] = []
-         n_high_power_str = "n/a"
-+        energy_kwh: Optional[float] = None
-+        peak_power_w: Optional[int] = None
-     else:
-         active_indices = [i for i, p in enumerate(powers) if p >= 8.0]
-         if active_indices:
-@@ -297,6 +299,11 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         high_power_blocks = find_high_power_blocks(powers, dt_seconds=dt_seconds, threshold_w=200.0)
-         n_high_power_str = str(len(high_power_blocks))
- 
-+        # 6. Measured energy per wash (kWh) and peak power (W)
-+        # Integrated: Σ power_w * dt_seconds / 3,600,000 (total washer electrical draw)
-+        energy_kwh = round(sum(powers) * dt_seconds / 3600000.0, 3)
-+        peak_power_w = int(round(max_power))
-+
-     # 6. Signature class (inferred from power)
-     signature_class = classify_signature(
-         max_power=max_power,
-@@ -305,6 +312,10 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         active_min=active_min_num,
-     )
- 
-+    if signature_class == "No power data":
-+        energy_kwh = None
-+        peak_power_w = None
-+
-     # 7. Firmware-07 data quality counters
-     if is_fw07:
-         n_accels = [float(r["n_accel"]) for r in rows if r.get("n_accel")]
-@@ -385,6 +396,8 @@ def analyze_session_csv(csv_path: Path, context_info: Dict[str, str]) -> Dict[st
-         "n_high_power": n_high_power_str,
-         "blocks": high_power_blocks,
-         "signature_class": signature_class,
-+        "energy_kwh": energy_kwh,
-+        "peak_power_w": peak_power_w,
-         "med_n_accel": med_n_accel,
-         "min_n_accel": min_n_accel,
-         "fifo_ov": fifo_ov,
-@@ -460,6 +473,28 @@ def generate_cycle_signature_report() -> Path:
-         member_files = ", ".join(f"`{m['file']}`" for m in members)
-         lines.append(f"- **{sig_name} ({len(members)} cycles):** {member_files}")
- 
-+    # Per-class energy summary lines under the class list
-+    lines.append("")
-+    lines.append("**Measured Energy Per Wash:**")
-+    for key, display in [
-+        ("Long cold (inferred)", "Long cold"),
-+        ("Long hot (inferred)", "Long hot"),
-+        ("Quick (inferred)", "Quick"),
-+        ("No power data", "No power data"),
-+    ]:
-+        if key in groups:
-+            kwhs = [m["energy_kwh"] for m in groups[key] if m.get("energy_kwh") is not None]
-+            if kwhs:
-+                k_min, k_max = min(kwhs), max(kwhs)
-+                if round(k_min, 2) == round(k_max, 2):
-+                    lines.append(f"- **{display}:** {k_min:.2f} kWh per wash")
-+                else:
-+                    lines.append(f"- **{display}:** {k_min:.2f}–{k_max:.2f} kWh per wash")
-+            else:
-+                lines.append(f"- **{display}:** n/a (unmetered runs)")
-+    lines.append("")
-+    lines.append("Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.")
-+
      lines.extend([
          "",
-         "**Sensor Integrity Across Firmware-07 Runs:**",
-@@ -472,14 +507,16 @@ def generate_cycle_signature_report() -> Path:
-         "",
-         "## 2. Comprehensive Cycle Signatures Table",
-         "",
--        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
--        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
-+        "| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Energy (kWh) | Peak W | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |",
-+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
-     ])
- 
-     for r in results:
-+        energy_str = f"{r['energy_kwh']:.3f}" if r['energy_kwh'] is not None else "n/a"
-+        peak_str = str(r['peak_power_w']) if r['peak_power_w'] is not None else "n/a"
-         lines.append(
-             f"| `{r['file']}` | {r['schema']} | {r['rows']} | {r['recorded_min']} | {r['active_min']} | "
--            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | **{r['signature_class']}** | "
-+            f"{r['heater_min']} | {r['spin_blocks']} | {r['n_high_power']} | {energy_str} | {peak_str} | **{r['signature_class']}** | "
-             f"`{r['programme']}` | {r['water_temp'] or '-'} | {r['load_kg'] or '-'} | `{r['context_source']}` |"
-         )
- 
 diff --git a/ml/models/cycle_signature_report.md b/ml/models/cycle_signature_report.md
-index d7be05b..12a0961 100644
+index 12a0961..de538f9 100644
 --- a/ml/models/cycle_signature_report.md
 +++ b/ml/models/cycle_signature_report.md
 @@ -1,6 +1,6 @@
  # Wash Cycle Physical Signatures & Programme Report
  
--**Generated:** 2026-10-21 17:08:37  
-+**Generated:** 2026-10-21 19:05:25  
+-**Generated:** 2026-10-21 19:05:25  
++**Generated:** 2026-10-21 19:30:11  
  **Cycles Analyzed:** 13 archived sessions in `data/real_sessions/`  
  **Source:** Measured kinematics (MPU-6050), active electrical power (Tapo P110), and SmartThings API.  
  
-@@ -14,6 +14,14 @@ Archived wash cycles were classified by their measured electrical power and mech
- - **No power data (6 cycles):** `wash_cycle_2026-10-11_1019.csv`, `wash_cycle_2026-10-12_1019.csv`, `wash_cycle_2026-10-15_1020.csv`, `wash_cycle_2026-10-15_morning.csv`, `wash_cycle_2026-10-17_0835.csv`, `wash_cycle_2026-10-19_0022.csv`
- - **Quick (inferred) (2 cycles):** `wash_cycle_2026-10-21_0514.csv`, `wash_cycle_2026-10-21_0631.csv`
+@@ -20,7 +20,7 @@ Archived wash cycles were classified by their measured electrical power and mech
+ - **Quick:** 0.03–0.04 kWh per wash
+ - **No power data:** n/a (unmetered runs)
  
-+**Measured Energy Per Wash:**
-+- **Long cold:** 0.10–0.11 kWh per wash
-+- **Long hot:** 0.55 kWh per wash
-+- **Quick:** 0.03–0.04 kWh per wash
-+- **No power data:** n/a (unmetered runs)
-+
-+Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.
-+
+-Energy is integrated from 1 Hz smart-plug power averaged per window. It represents the washer's total electrical draw, not a fault signal.
++Energy is integrated from the smart-plug power on each row: on firmware 07 a per-window mean of 1 Hz readings, on legacy runs a single reading every 5 s. Peak W is the highest row value, not an instantaneous peak. This is the washer's total electrical draw, not a fault signal.
+ 
  **Sensor Integrity Across Firmware-07 Runs:**
  - Idle vibration noise floor `vib_mag_std` median is **0.032 m/s²** across all firmware-07 runs.
- - Maximum spin extraction dominant frequency $p90 \approx 20.0\text{ Hz}$ (~1,200 RPM) across all spin blocks.
-@@ -24,21 +32,21 @@ Archived wash cycles were classified by their measured electrical power and mech
- 
- ## 2. Comprehensive Cycle Signatures Table
- 
--| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
--|---|---|---|---|---|---|---|---|---|---|---|---|---|
--| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
--| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
--| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
-+| Session File | Schema | Rows | Rec. Min | Active Min | Heater Min | Spin Blocks | High-Pwr Blocks | Energy (kWh) | Peak W | Signature (inferred from power) | Programme | Water Temp | Load (kg) | Context Source |
-+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-+| `wash_cycle_2026-10-11_1019.csv` | legacy | 422 | 35.2 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-12_1019.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-15_1020.csv` | legacy | 276 | 23.0 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-15_morning.csv` | legacy | 1216 | 101.3 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-16_0857.csv` | legacy | 857 | 71.4 | 64 | 0 | 3 | 5 | 0.101 | 774 | **Long cold (inferred)** | `unknown` | - | - | `smartthings_live` |
-+| `wash_cycle_2026-10-17_0718.csv` | legacy | 854 | 71.2 | 76 | 0 | 3 | 3 | 0.113 | 565 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-17_0835.csv` | legacy | 792 | 66.0 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-18_0516.csv` | legacy | 828 | 69.0 | 64 | 0 | 3 | 4 | 0.106 | 401 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-19_0022.csv` | legacy | 167 | 13.9 | n/a | n/a | n/a | n/a | n/a | n/a | **No power data** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-19_0911.csv` | fw07 | 786 | 65.7 | 64 | 0 | 3 | 3 | 0.112 | 420 | **Long cold (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-20_0744.csv` | fw07 | 965 | 80.7 | 71 | 11.9 | 3 | 4 | 0.549 | 2290 | **Long hot (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-21_0514.csv` | fw07 | 387 | 32.3 | 22 | 0 | 1 | 1 | 0.036 | 373 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
-+| `wash_cycle_2026-10-21_0631.csv` | fw07 | 348 | 29.1 | 21 | 0 | 1 | 1 | 0.029 | 302 | **Quick (inferred)** | `unknown` | - | - | `unknown` |
- 
- ---
- 
-diff --git a/ml/tests/test_cycle_signature_energy.py b/ml/tests/test_cycle_signature_energy.py
+diff --git a/ml/tests/test_pipeline_synthetic.py b/ml/tests/test_pipeline_synthetic.py
 new file mode 100644
-index 0000000..6ca1443
+index 0000000..d151e88
 --- /dev/null
-+++ b/ml/tests/test_cycle_signature_energy.py
-@@ -0,0 +1,198 @@
++++ b/ml/tests/test_pipeline_synthetic.py
+@@ -0,0 +1,89 @@
 +"""
-+ml/tests/test_cycle_signature_energy.py
-+Unit tests for energy integration (kWh) and peak power (W) metrics in cycle signatures.
++test_pipeline_synthetic.py
++End-to-end mechanics test of the firmware-07 (windowed) ML path on SYNTHETIC
++cycles. It checks the code runs and behaves sensibly (phase conditioning,
++power features, calibration, injected-fault detection). Synthetic numbers
++say NOTHING about the real washer.
 +
-+Verifies:
-+1. Constant 1,000 W for 720 windows at 5.0 s yields exactly 1.000 kWh and 1,000 W peak.
-+2. Low-power session (< 50 W) yields None for both energy and peak power (No power data).
-+3. Firmware-07 windowed session (dt = 5.024 s) correctly scales energy by 5.024 s.
-+4. Variable power profile correctly extracts peak power and integrates kWh.
-+
-+Constraints:
-+- Operates strictly on synthetic files in tempfile.TemporaryDirectory().
-+- Never writes to data/ or ml/models/.
++Run:  py ml/tests/test_pipeline_synthetic.py
 +"""
-+
-+from __future__ import annotations
-+
-+import csv
-+from pathlib import Path
++# =============================================================================
++# SECTION 1: Synthetic firmware-07 cycles
++# =============================================================================
++import subprocess
 +import sys
 +import tempfile
-+from typing import List
++from pathlib import Path
 +
-+# =============================================================================
-+# SECTION 1: Path Setup & Module Import
-+# =============================================================================
++import numpy as np
++import pandas as pd
++
 +ROOT = Path(__file__).resolve().parents[2]
-+if str(ROOT) not in sys.path:
-+    sys.path.insert(0, str(ROOT))
++sys.path.insert(0, str(ROOT))
++from firmware.session_export import V3_COLUMNS  # noqa: E402
 +
-+from ml.cycle_signature_report import analyze_session_csv  # noqa: E402
-+
-+
-+# =============================================================================
-+# SECTION 2: Synthetic CSV Generator Helpers
-+# =============================================================================
-+def write_synthetic_legacy_csv(
-+    csv_path: Path,
-+    powers: List[float],
-+    dt_ms: int = 5000,
-+) -> None:
-+    """
-+    Write a synthetic legacy CSV session file with specified power profile.
-+    Uses legacy columns: timestamp_ms, power_w, accel_x, accel_y, accel_z, audio_rms.
-+    """
-+    fieldnames = ["timestamp_ms", "power_w", "accel_x", "accel_y", "accel_z", "audio_rms"]
-+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-+        writer = csv.DictWriter(f, fieldnames=fieldnames)
-+        writer.writeheader()
-+        t = 0
-+        for p in powers:
-+            writer.writerow({
-+                "timestamp_ms": t,
-+                "power_w": f"{p:.2f}",
-+                "accel_x": "-0.66",
-+                "accel_y": "2.88",
-+                "accel_z": "-9.00",
-+                "audio_rms": "120.0",
-+            })
-+            t += dt_ms
++PHASES = [("weightSensing", 24, 150, 0.03, 3.0), ("wash", 360, 90, 0.06, 6.0),
++          ("rinse", 240, 120, 0.08, 10.0), ("spin", 120, 450, 0.6, 20.0), ("finish", 12, 3, 0.01, 0.0)]
 +
 +
-+def write_synthetic_fw07_csv(
-+    csv_path: Path,
-+    powers: List[float],
-+    dt_ms: int = 5024,
-+) -> None:
-+    """
-+    Write a synthetic firmware-07 CSV session file with specified power profile.
-+    Contains epoch_ms and vib_mag_std to trigger schema_label == 'fw07'.
-+    """
-+    fieldnames = [
-+        "timestamp_ms", "epoch_ms", "power_w", "accel_x", "accel_y", "accel_z",
-+        "audio_rms", "vib_mag_std", "vib_dom_hz", "n_accel", "fifo_overflows",
-+        "accel_clip_samples",
-+    ]
-+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-+        writer = csv.DictWriter(f, fieldnames=fieldnames)
-+        writer.writeheader()
-+        t = 100000  # Start well above 30s to avoid boot_at_start
-+        epoch = 1729000000000
-+        for p in powers:
-+            writer.writerow({
-+                "timestamp_ms": t,
-+                "epoch_ms": epoch,
-+                "power_w": f"{p:.2f}",
-+                "accel_x": "-0.66",
-+                "accel_y": "2.88",
-+                "accel_z": "-9.00",
-+                "audio_rms": "150.0",
-+                "vib_mag_std": "0.032",
-+                "vib_dom_hz": "19.9",
-+                "n_accel": "1005",
-+                "fifo_overflows": "0",
-+                "accel_clip_samples": "0",
-+            })
-+            t += dt_ms
-+            epoch += dt_ms
++def make_cycle(seed: int) -> pd.DataFrame:
++    rng = np.random.default_rng(seed)
++    load = rng.uniform(0.8, 1.2)                     # benign cycle-to-cycle variation
++    rows, t = [], 0
++    for phase, n, pw, vib, dom in PHASES:
++        for _ in range(n):
++            t += 5024
++            rms = 150 * load * np.exp(0.15 * rng.standard_normal()) * (2.5 if phase == "spin" else 1)
++            hp = 0.4 * rms * np.exp(0.1 * rng.standard_normal())
++            v = vib * load * np.exp(0.2 * rng.standard_normal())
++            r = dict(timestamp_ms=t, accel_x=-0.6, accel_y=2.1, accel_z=-9.25, audio_rms=rms,
++                     power_w=pw * load * np.exp(0.1 * rng.standard_normal()), phase=phase, load_class="MEDIUM",
++                     epoch_ms=1.79e12 + t, n_audio=80384, n_accel=1005, n_power=5, fifo_overflows=0,
++                     accel_clip_samples=0, audio_peak=rms * 12, audio_crest=12 * np.exp(0.1 * rng.standard_normal()),
++                     audio_kurtosis=3.5 * np.exp(0.1 * rng.standard_normal()), audio_hp_rms=hp,
++                     audio_hp_kurtosis=3.2 * np.exp(0.1 * rng.standard_normal()), audio_block_rms_max=rms * 1.6,
++                     audio_block_rms_p90=rms * 1.2, audio_centroid_hz=2500 + 200 * rng.standard_normal(),
++                     audio_band_0_250=0.3 * rms, audio_band_250_500=0.3 * rms, audio_band_500_1k=0.35 * rms,
++                     audio_band_1k_2k=0.4 * rms, audio_band_2k_4k=0.4 * rms, audio_band_4k_8k=0.35 * rms,
++                     vib_std_x=v, vib_std_y=v, vib_std_z=0.4 * v, vib_ptp_x=3 * v, vib_ptp_y=3 * v,
++                     vib_ptp_z=1.2 * v, vib_mag_std=0.5 * v, vib_dom_hz=dom + rng.standard_normal() * 0.3,
++                     vib_dom_rms=0.8 * v, vib_band_0_5=0.2 * v, vib_band_5_15=0.3 * v,
++                     vib_band_15_30=(0.8 if phase == "spin" else 0.1) * v, vib_band_30_60=0.05 * v,
++                     power_min=pw * 0.9, power_max=pw * 1.1, power_std=pw * 0.05 + 0.1, phase_source="smartthings")
++            rows.append(r)
++    return pd.DataFrame(rows)[V3_COLUMNS]
 +
 +
 +# =============================================================================
-+# SECTION 3: Test Cases
-+# =============================================================================
-+def test_constant_1000w_720_windows() -> None:
-+    """
-+    Test 1: Constant 1,000 W for 720 windows at 5.0 s.
-+    Duration: 720 * 5.0 s = 3,600 s = 1.0 hour.
-+    Energy: 1,000 W * 3,600 s / 3,600,000 = 1.000 kWh.
-+    Peak power: 1,000 W.
-+    """
-+    with tempfile.TemporaryDirectory() as td:
-+        session_path = Path(td) / "wash_cycle_2026-11-01_1000.csv"
-+        powers = [1000.0] * 720
-+        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
-+
-+        res = analyze_session_csv(session_path, {})
-+        assert res["energy_kwh"] is not None, "energy_kwh should not be None for 1000 W session"
-+        assert res["peak_power_w"] is not None, "peak_power_w should not be None for 1000 W session"
-+
-+        # Check exact expected numbers
-+        assert res["energy_kwh"] == 1.000, f"Expected 1.000 kWh, got {res['energy_kwh']}"
-+        assert res["peak_power_w"] == 1000, f"Expected peak 1000 W, got {res['peak_power_w']}"
-+        print("  [PASS] test_constant_1000w_720_windows (1.000 kWh, 1000 W peak)")
-+
-+
-+def test_unmetered_low_power_yields_none() -> None:
-+    """
-+    Test 2: Low-power session (< 50 W maximum power).
-+    Must result in energy_kwh = None and peak_power_w = None.
-+    Signature class must be 'No power data'.
-+    """
-+    with tempfile.TemporaryDirectory() as td:
-+        session_path = Path(td) / "wash_cycle_2026-11-01_1001.csv"
-+        # Constant 25 W (well below 50 W threshold)
-+        powers = [25.0] * 120
-+        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
-+
-+        res = analyze_session_csv(session_path, {})
-+        assert res["energy_kwh"] is None, f"Expected energy_kwh=None, got {res['energy_kwh']}"
-+        assert res["peak_power_w"] is None, f"Expected peak_power_w=None, got {res['peak_power_w']}"
-+        assert res["signature_class"] == "No power data", f"Expected 'No power data', got {res['signature_class']}"
-+        print("  [PASS] test_unmetered_low_power_yields_none (None, None, 'No power data')")
-+
-+
-+def test_firmware_07_dt_scaling() -> None:
-+    """
-+    Test 3: Firmware-07 windowed session with dt = 5.024 s.
-+    720 windows at 1,000 W:
-+    Energy: 720 * 1,000 * 5.024 / 3,600,000 = 1.0048 kWh -> rounded to 3 dp = 1.005 kWh.
-+    Peak power: 1,000 W.
-+    """
-+    with tempfile.TemporaryDirectory() as td:
-+        session_path = Path(td) / "wash_cycle_2026-11-01_1002.csv"
-+        powers = [1000.0] * 720
-+        write_synthetic_fw07_csv(session_path, powers, dt_ms=5024)
-+
-+        res = analyze_session_csv(session_path, {})
-+        assert res["schema"] == "fw07", f"Expected schema fw07, got {res['schema']}"
-+        assert res["energy_kwh"] == 1.005, f"Expected 1.005 kWh, got {res['energy_kwh']}"
-+        assert res["peak_power_w"] == 1000, f"Expected peak 1000 W, got {res['peak_power_w']}"
-+        print("  [PASS] test_firmware_07_dt_scaling (1.005 kWh at dt=5.024s)")
-+
-+
-+def test_variable_power_profile() -> None:
-+    """
-+    Test 4: Variable power profile with distinct peak and active intervals.
-+    100 windows at 10 W, 50 windows at 2,290 W, 100 windows at 300 W (dt = 5.0 s).
-+    Total energy: (100*10 + 50*2290 + 100*300) * 5.0 / 3,600,000
-+                = (1,000 + 114,500 + 30,000) * 5.0 / 3,600,000
-+                = 145,500 * 5.0 / 3,600,000 = 0.202083... kWh -> 0.202 kWh.
-+    Peak power: 2,290 W.
-+    """
-+    with tempfile.TemporaryDirectory() as td:
-+        session_path = Path(td) / "wash_cycle_2026-11-01_1003.csv"
-+        powers = [10.0] * 100 + [2290.0] * 50 + [300.0] * 100
-+        write_synthetic_legacy_csv(session_path, powers, dt_ms=5000)
-+
-+        res = analyze_session_csv(session_path, {})
-+        assert res["energy_kwh"] == 0.202, f"Expected 0.202 kWh, got {res['energy_kwh']}"
-+        assert res["peak_power_w"] == 2290, f"Expected peak 2290 W, got {res['peak_power_w']}"
-+        print("  [PASS] test_variable_power_profile (0.202 kWh, 2290 W peak)")
-+
-+
-+# =============================================================================
-+# SECTION 4: Test Suite Runner
++# SECTION 2: Run training + evaluation on them, check the report
 +# =============================================================================
 +def main() -> int:
-+    print("[RUN] Running cycle signature energy calculation tests...")
-+    test_constant_1000w_720_windows()
-+    test_unmetered_low_power_yields_none()
-+    test_firmware_07_dt_scaling()
-+    test_variable_power_profile()
-+    print("[PASS] All cycle signature energy tests passed successfully.")
++    with tempfile.TemporaryDirectory() as td:
++        d = Path(td)
++        for i in range(6):
++            make_cycle(100 + i).to_csv(d / f"wash_cycle_2026-11-0{i + 1}_0800.csv", index=False)
++        models = d / "models"
++        res = subprocess.run([sys.executable, str(ROOT / "ml" / "train_unsupervised_pdm.py"),
++                              "--data-dir", str(d), "--models-dir", str(models),
++                              "--eval-models", "mahalanobis"],
++                             capture_output=True, text=True, cwd=str(ROOT))
++        print(res.stdout[-4000:])
++        assert res.returncode == 0, res.stderr[-3000:]
++        import json
++        rep = json.loads((models / "loco_report.json").read_text())
++        r = rep["results"][0]
++        assert rep["schema"] == "windowed"
++        assert r["uses_power"] is True
++        meta = json.loads((models / "pdm_detector_meta.json").read_text())
++        assert meta["phase_conditioned"] is True, "SmartThings-labelled data must be phase-conditioned"
++        assert r["false_alarm_cycles"] <= 1, r["false_alarm_cycles"]
++        big = {k: v["levels"][-1]["clean_detect_rate"] for k, v in r["faults"].items()}
++        print("largest-severity clean detection:", big)
++        assert big["bearing_impulsive"] >= 0.8 and big["suspension_rocking"] >= 0.8, big
++        assert "power_drag" in big, "power faults must be evaluated when every cycle has power"
++    print("[PASS] windowed pipeline mechanics")
 +    return 0
 +
 +
 +if __name__ == "__main__":
 +    sys.exit(main())
+diff --git a/ml/train_unsupervised_pdm.py b/ml/train_unsupervised_pdm.py
+new file mode 100644
+index 0000000..a3e4bca
+--- /dev/null
++++ b/ml/train_unsupervised_pdm.py
+@@ -0,0 +1,166 @@
++"""
++train_unsupervised_pdm.py  (v3)
++Train the Washer PdM anomaly detector on healthy cycles and evaluate it honestly.
++
++Steps
++-----
++1. Load data/real_sessions/*.csv (each file = one wash cycle).
++2. Pick the schema (firmware-07 window features if enough such cycles exist,
++   else the legacy snapshot schema) and audit the data (phase labels,
++   power availability, sensor re-mounting).
++3. Nested leave-one-cycle-out evaluation of every requested model
++   (Mahalanobis, Isolation Forest, One-Class SVM) on healthy cycles and on
++   severity-swept injected faults -> ml/models/loco_report.{md,json}.
++4. Fit the deployment model on ALL cycles (calibrated out-of-fold) and save
++   ml/models/pdm_detector.joblib + pdm_detector_meta.json.
++
++There is no "[PASS] Supervisor Mandate" line any more: the report states
++what was measured, including the parts that are weak.
++
++Usage
++-----
++  py ml/train_unsupervised_pdm.py                       # evaluate all 3 models, deploy Mahalanobis
++  py ml/train_unsupervised_pdm.py --model iforest       # deploy Isolation Forest instead
++  py ml/train_unsupervised_pdm.py --skip-eval           # just fit + save (fast)
++  py ml/train_unsupervised_pdm.py --schema legacy
++"""
++
++from __future__ import annotations
++
++# =============================================================================
++# SECTION 1: Imports & paths
++# =============================================================================
++import argparse
++import json
++import sys
++from datetime import datetime
++from pathlib import Path
++from typing import List
++
++import joblib
++import numpy as np
++import pandas as pd
++
++BASE_DIR = Path(__file__).resolve().parent.parent
++if str(BASE_DIR) not in sys.path:
++    sys.path.insert(0, str(BASE_DIR))
++
++from ml.feature_fusion import (REAL_SESSIONS_DIR, compute_features, detect_schema,  # noqa: E402
++                               load_sessions, session_power_valid)
++from ml.loco_eval import evaluate, to_markdown  # noqa: E402
++from ml.pipeline import PdmPipeline  # noqa: E402
++
++MODELS_DIR = BASE_DIR / "ml" / "models"
++ARTIFACT = MODELS_DIR / "pdm_detector.joblib"
++META = MODELS_DIR / "pdm_detector_meta.json"
++MIN_WINDOWED_CYCLES = 3
++ARTIFACT_VERSION = 3
++
++
++# =============================================================================
++# SECTION 2: Data audit (printed and written into the report)
++# =============================================================================
++def audit(raw: pd.DataFrame, schema: str) -> List[str]:
++    notes = []
++    n = raw["session"].nunique()
++    notes.append(f"{n} healthy cycles, {len(raw):,} windows of 5 s; effective sample size for "
++                 f"cycle-level claims is {n}, not {len(raw):,} (consecutive windows are strongly correlated).")
++    ph = compute_features(raw, schema)
++    lab = (ph["phase_source"] == "smartthings").mean()
++    notes.append(f"SmartThings phase labels present on {100 * lab:.0f}% of windows"
++                 + (" -> the model is NOT phase-conditioned (one pooled model for the whole cycle)."
++                    if lab < 0.5 else " -> per-phase sub-models are used."))
++    pv = session_power_valid(raw)
++    bad = [s for s, ok in pv.items() if not ok]
++    if bad:
++        notes.append(f"Power unusable in {len(bad)}/{n} cycles ({', '.join(bad)}) -> power features excluded.")
++    g = raw.groupby("session")[["accel_x", "accel_y", "accel_z"]].median()
++    shift = np.linalg.norm(g.to_numpy() - g.to_numpy()[0], axis=1).max()
++    if shift > 0.3:
++        notes.append(f"Accelerometer gravity vector moved by up to {shift:.2f} m/s^2 between cycles "
++                     f"(sensor re-mounted/tilted) -> only orientation-independent vibration features are used.")
++    if schema == "legacy":
++        notes.append("Legacy data = one instantaneous accel sample + one 8 ms audio RMS per 5 s. Impulsive "
++                     "(bearing) and spectral features cannot be computed; collect firmware-07 cycles.")
++    return notes
++
++
++# =============================================================================
++# SECTION 3: Main
++# =============================================================================
++def main() -> None:
++    ap = argparse.ArgumentParser(description="Train + evaluate the unsupervised PdM detector (v3)")
++    ap.add_argument("--model", default="mahalanobis", choices=["mahalanobis", "iforest", "ocsvm"],
++                    help="model to deploy (default: mahalanobis, the transparent baseline)")
++    ap.add_argument("--eval-models", default="mahalanobis,iforest,ocsvm",
++                    help="comma list of models to evaluate with nested LOCO")
++    ap.add_argument("--schema", default="auto", choices=["auto", "legacy", "windowed"])
++    ap.add_argument("--skip-eval", action="store_true", help="skip nested LOCO (fit + save only)")
++    ap.add_argument("--data-dir", default=str(REAL_SESSIONS_DIR))
++    ap.add_argument("--models-dir", default=str(MODELS_DIR),
++                    help="directory where model artifacts and reports are saved (default: ml/models)")
++    a = ap.parse_args()
++
++    models_dir = Path(a.models_dir)
++    artifact_path = models_dir / "pdm_detector.joblib"
++    meta_path = models_dir / "pdm_detector_meta.json"
++    loco_json_path = models_dir / "loco_report.json"
++    loco_md_path = models_dir / "loco_report.md"
++
++    # --- 3a: load + choose schema ---
++    paths = sorted(p for p in Path(a.data_dir).glob("*.csv") if ".bak" not in p.name)
++    raw_all = load_sessions(paths)
++    per_session_schema = {s: detect_schema(g) for s, g in raw_all.groupby("session")}
++    n_win = sum(v == "windowed" for v in per_session_schema.values())
++    schema = a.schema if a.schema != "auto" else ("windowed" if n_win >= MIN_WINDOWED_CYCLES else "legacy")
++    keep = [s for s, v in per_session_schema.items() if v == schema]
++    raw = raw_all[raw_all["session"].isin(keep)].copy()
++    print(f"[DATA] {len(keep)} cycle(s) with schema '{schema}' "
++          f"({n_win} firmware-07 cycle(s) available; need {MIN_WINDOWED_CYCLES} to switch)")
++    notes = audit(raw, schema)
++    for n in notes:
++        print("  -", n)
++
++    # --- 3b: nested LOCO evaluation ---
++    results = []
++    if not a.skip_eval:
++        for m in [x.strip() for x in a.eval_models.split(",") if x.strip()]:
++            print(f"\n[EVAL] nested leave-one-cycle-out: {m}")
++            results.append(evaluate(raw, m, schema))
++        models_dir.mkdir(parents=True, exist_ok=True)
++        loco_json_path.write_text(json.dumps(
++            {"generated": datetime.now().isoformat(timespec="seconds"), "schema": schema,
++             "data_notes": notes, "results": results}, indent=2), encoding="utf-8")
++        md = to_markdown(results, notes)
++        loco_md_path.write_text(md, encoding="utf-8")
++        print("\n" + md)
++
++    # --- 3c: deployment model on all cycles ---
++    pv = session_power_valid(raw)
++    use_power = all(pv.values())
++    pipe = PdmPipeline(model_name=a.model).fit(compute_features(raw, schema), schema, use_power)
++    models_dir.mkdir(parents=True, exist_ok=True)
++    joblib.dump({"version": ARTIFACT_VERSION, "pipeline": pipe}, artifact_path)
++    meta = {"version": ARTIFACT_VERSION, "trained_at": datetime.now().isoformat(timespec="seconds"),
++            **pipe.describe(), "data_notes": notes,
++            "evaluation": [{k: r[k] for k in ("model", "false_alarm_cycles", "n_cycles",
++                                              "false_alarm_rate_upper95")} for r in results]}
++    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
++
++    try:
++        artifact_disp = artifact_path.relative_to(BASE_DIR)
++        meta_disp = meta_path.relative_to(BASE_DIR)
++        loco_disp = f"{loco_md_path.relative_to(BASE_DIR)} / .json"
++    except ValueError:
++        artifact_disp = artifact_path
++        meta_disp = meta_path
++        loco_disp = f"{loco_md_path} / .json"
++
++    print(f"\n[SAVE] {artifact_disp} ({a.model}, persistence threshold h = {pipe.calibrator.h:.2f})")
++    print(f"[SAVE] {meta_disp}")
++    if results:
++        print(f"[SAVE] {loco_disp}")
++
++
++if __name__ == "__main__":
++    main()
