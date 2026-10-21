@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** Repo hygiene: commit untracked source files (after a secrets scan) and mark `capture_pdm_dataset.py` as legacy
 **Date:** 2026-10-21
 
