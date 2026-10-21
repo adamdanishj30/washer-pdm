@@ -7,7 +7,7 @@
 
 ## Commits
 - `bb8aca3` docs: plan load_class retirement (Step 0)
-- `90dd839` fix(data): stop exporting guessed load_class; add load_kg to session context
+- `020e93e` fix(data): stop exporting guessed load_class; add load_kg to session context
 - **Branch:** main (pushed to origin/main)
 
 ## What Changed
