@@ -33,3 +33,4 @@ secrets.h
 
 *.zip
 *.bak_unscaled
+.agents/ecc-install-state.json
