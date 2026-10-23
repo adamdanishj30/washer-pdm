@@ -4,7 +4,8 @@
 > Built for the Sime Darby Property *Township of Tomorrow* Hackathon, track **PLANET · 03 Energy Efficiency**.
 >
 > 🌐 **Live dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)
-> 📄 **Proposal:** [PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf) ([Markdown](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.md))
+> 📄 **Proposal:** [submission/Apex_PdM_Proposal.pdf](submission/Apex_PdM_Proposal.pdf)
+> 📊 **Pitch deck:** [submission/Apex_PdM_Pitch_Deck.pdf](submission/Apex_PdM_Pitch_Deck.pdf)
 > 📊 **Model evaluation:** [ml/models/loco_report.md](ml/models/loco_report.md)
 
 **Team:** ADAM DANISH BIN JAMALUDIN, CHIK AMIR ASHRAF BIN AHMAD ADLAN (UiTM) · AITHISHWARAN A/L SHANKAR GANESH (UMPSA) · MANIKKAVASAGAN A/L SOMAIAH DEIVARAJAN (UKM) · MUHAMAD TOWA BIN MUHAMAD BUHARI (UPM)
@@ -78,8 +79,8 @@ No kWh, ringgit, carbon or scrap savings have been measured yet.
 | `ml/` | Feature fusion, detectors, calibration, leave-one-cycle-out evaluation ([ml/README.md](ml/README.md)) |
 | `data/` | Session CSVs, session context, legacy feature dictionary |
 | `index.html`, `historical.html`, `build_clean_dashboard.py` | Live and historical dashboards |
-| `docs/` | Proposals, hardware guides, handoffs (start with `docs/handoffs/current_state_and_scale_up_handoff.md`) |
-| `Hackathon/` | Submission material |
+| `docs/` | Hardware wiring guide, approved-facts guide, engineering handoffs (start with `docs/handoffs/current_state_and_scale_up_handoff.md`) |
+| `submission/` | Final hackathon proposal and pitch deck (PDF) |
 
 ## 8. Run it
 

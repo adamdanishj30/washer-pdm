@@ -33,3 +33,15 @@ secrets.h
 
 *.zip
 *.bak_unscaled
+.agents/ecc-install-state.json
+
+# Local scratch and internal files (not for public repo)
+Hackathon/
+IoT Class/
+archive/
+paperResearch/
+scratch/
+ml/ClaudeRecommendation/
+ml/outputs/
+data/.firebase_usage.json
+*.joblib

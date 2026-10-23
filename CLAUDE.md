@@ -33,60 +33,47 @@ If two files disagree: `INVARIANTS_DO_NOT_CHANGE.md` wins, then the source of tr
 | Numbers allowed in any pitch, proposal or video | `docs/proposals/PROPOSAL_WRITING_GUIDE.md` §4 |
 | ML design and results | `ml/README.md`, `ml/models/loco_report.md` (generated) |
 | Supervisor directive (why one-class) | `docs/handoffs/supervisor_ml_guidance_and_fusion.md` |
-| Prices actually paid (receipts) | `Hackathon/HARDWARE_BOM_AND_COST_BREAKDOWN.md` |
 | Wiring, assembly, drilling guide | `docs/hardware_guides/hardware_bom_and_setup_guide.md` (its price column is the original plan) |
 | Firmware 07, Firebase quota, endpoints | `firmware/07_feature_streamer/README.md` |
-| Hackathon rules, dates, rubric | `Hackathon/SDP_HACKATHON_BRIEFING_SUMMARY.md` |
-| Video script and 10-slide deck outline | `Hackathon/VIDEO_SCRIPT_AND_SLIDE_BLUEPRINT.md` |
-| Submission Q&A pack | `docs/proposals/HACKATHON_INFO_AND_AI_EXECUTIVE_SUMMARY.md` |
 | Task plan and executor handoff | `docs/handoffs/PLAN.md`, `docs/handoffs/HANDOFF.md` |
+| Final submission files (PDF) | `submission/` |
 | Agent rules | `AGENTS.md`, `.agents/rules/architect-handoff-workflow.md` |
-| Superseded material (do not read unless given an exact path) | `archive/` (logs: `archive/ARCHIVE_LOG_*.md`) |
+| Superseded material | Not in git; kept only on Adam's Drive `archive/` (do not read) |
 
 ## Common Tasks & Commands
 - **Flash Rig Firmware (07, current):** `py -3.12 firmware/07_feature_streamer/flash_firmware.py --compile --port COM3` (credentials from `.env` only)
-- **Flash Legacy Firmware (06):** `py -3.12 firmware/06_standalone_tapo_streamer/flash_firmware.py --port COM3`
 - **Archive Daemon (quota-aware):** `py firmware/auto_drive_sync_daemon.py` (`--once`, `--prune-archived`)
 - **Collect Raw Audio Clips (LAN only):** `py firmware/collect_audio_clips.py`
 - **Train + Nested LOCO Evaluation:** `py ml/train_unsupervised_pdm.py` -> `ml/models/loco_report.md`
 - **Score a Cycle:** `py ml/predict_pdm.py --file data/real_sessions/<cycle>.csv`
 - **Tests:** `py ml/tests/test_dsp_parity.py`, `py ml/tests/test_pipeline_synthetic.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`
-- **Run Live Tapo Streamer (firmware 05 only; 07 reads Tapo itself):** `py -3.12 firmware/tapo_firebase_streamer.py` (default 5 s)
-- **Capture Multimodal Prediction Snapshot (legacy, not the production path):** `py -3.12 firmware/capture_pdm_dataset.py --snapshot`
-- **Continuous Multimodal Dataset Recording (legacy, not the production path):** `py -3.12 firmware/capture_pdm_dataset.py --record --interval 2 --duration 300`
 - **Run Cloud Multimodal Sync (Once):** `py -3.12 firmware/cloud_multimodal_sync.py --once`
 - **Run Continuous Cloud Sync Daemon:** `py -3.12 firmware/cloud_multimodal_sync.py --interval 30` (wrapper around the archive daemon; min 30 s)
 - **Download Firebase Sessions (incremental):** `py firmware/cloud_downloader.py` (`--force` re-downloads everything: costly)
 - **Recompile HTML Dashboards:** `py build_clean_dashboard.py`
   - Deploys need `preset_sessions.js` committed with the pages.
-- **Run Wi-Fi UDP Logger:** `py firmware/wifi_logger.py`
-- **Verify Python Syntax:** `py -m py_compile build_clean_dashboard.py firmware/cloud_multimodal_sync.py firmware/capture_pdm_dataset.py firmware/tapo_firebase_streamer.py`
+- **Verify Python Syntax:** `py -m py_compile build_clean_dashboard.py firmware/cloud_multimodal_sync.py`
 
 ## Project Structure
 ```
-PdM SideProject/
-├── firmware/                        # Arduino sketches & Python daemons
-│   │   (01, 01b, 02, 04 sketches and one-off flashers/tests are in archive/firmware/, see archive/ARCHIVE_LOG_2026-10-18.md)
-│   ├── 05_firebase_multimodal_streamer/ # Dual-Core FreeRTOS + Firebase RTDB
-│   ├── 06_standalone_tapo_streamer/ # Autonomous ESP32 + Tapo P110 (KLAP) + Firebase
-│   │   ├── 06_standalone_tapo_streamer.ino # Main FreeRTOS firmware (Core 0/1)
-│   │   ├── tapo_device.h            # C++ Tapo P110 energy client
-│   │   ├── tapo_protocol.h & cipher.h # Local KLAP encryption implementation
-│   │   ├── secrets.h / secrets.h.example # Network & hardware credentials
-│   │   └── flash_firmware.py        # Automated flasher & compiler
-│   ├── capture_pdm_dataset.py       # Synchronous 3-API capture engine (legacy, not the production path)
-│   ├── tapo_firebase_streamer.py    # Real-time LAN Tapo P110 to Firebase bridge (with Force-ON Guard)
-│   ├── cloud_multimodal_sync.py     # Autonomous Cloud-to-Cloud Bridge (Firebase + SmartThings)
+washer-pdm/
+├── firmware/
+│   ├── 07_feature_streamer/         # Current ESP32 firmware (FreeRTOS dual core, Tapo KLAP, Firebase) + flasher + README
+│   ├── firebase_rest.py             # Quota-aware Firebase client used by every PC script
+│   ├── session_export.py            # Firmware-07 window schema (V3_KEY_MAP) and CSV export
+│   ├── smartthings_client.py, session_context.py
+│   ├── cloud_multimodal_sync.py     # Cloud-to-cloud sync (used by the GitHub Action)
 │   ├── auto_drive_sync_daemon.py    # Offline auto-archiver to data/
-│   └── cloud_downloader.py          # Session downloader CLI
-├── data/                            # Datasets, snapshots, and schemas
-│   ├── pdm_multimodal_prediction_dataset.csv # 22-column unified ML training table
-│   ├── pdm_feature_dictionary.json  # Data contract & feature engineering schema
-│   ├── live_multimodal_pdm_snapshot.json # Full hierarchical live telemetry snapshot
-│   └── wash_cycle_*.csv             # Archived physical wash cycle logs
-├── *.html                           # Telemetry dashboards (cloud, live, historical, index)
-├── build_clean_dashboard.py         # Static HTML dashboard generator (includes Card 4 Energy)
-└── .github/workflows/               # Serverless GitHub Actions cron & mobile sync
+│   ├── cloud_downloader.py, collect_audio_clips.py, pdm_ml_standardizer.py
+│   └── tests/
+├── ml/                              # Feature fusion, detectors, calibration, LOCO evaluation, tests, reports (ml/models/)
+├── data/                            # real_sessions/, testing_data/, session_context.csv, training CSV, feature dictionary
+├── functions/api/live.js            # Cached /api/live endpoint for the dashboard (Cloudflare Pages)
+├── index.html, historical.html, dashboard.html, cloud_dashboard.html, preset_sessions.js   # Generated by build_clean_dashboard.py
+├── build_clean_dashboard.py         # Static dashboard generator
+├── submission/                      # Final hackathon proposal + pitch deck (PDF)
+├── docs/                            # handoffs/, hardware_guides/, proposals/PROPOSAL_WRITING_GUIDE.md
+└── .github/workflows/               # 30-min cloud sync job
 ```
 
 ## Hardware Pinout
@@ -100,4 +87,4 @@ PdM SideProject/
 - **Security:** Do not commit production Wi-Fi passwords, Firebase database secrets, or SmartThings PATs. No hard-coded fallback credentials anywhere: sketches `#error` without `secrets.h`; Python reads `.env` via `firmware/firebase_rest.py`.
 - **Firebase Quota (Spark: 10 GB/month download, 1 GB stored):** All PC access goes through `firmware/firebase_rest.py` (keep-alive, `print=silent`, shallow listings). PC-side scripts never poll faster than 30 s or re-download archived sessions (dashboard viewers: cadence per INVARIANTS §3, via the cached `/api/live`). Budget in `firmware/07_feature_streamer/README.md`.
 - **Smart Plug Safety:** Keep Tapo P110 relay ON permanently; operate as a passive inline meter with automated Force-ON Guard enabled.
-- **AI Token Conservation & Archive Quarantine:** Never read or scan files inside `archive/`. Those are preserved historical drafts/intermediates. Refer strictly to active files in `docs/`, `ml/`, and `firmware/`.
+- **AI Token Conservation & Archive Quarantine:** `archive/` is no longer in git. Never read or scan it if it exists locally. Those are preserved historical drafts/intermediates. Refer strictly to active files in `docs/`, `ml/`, and `firmware/`.
