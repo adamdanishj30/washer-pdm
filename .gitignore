@@ -45,3 +45,8 @@ ml/ClaudeRecommendation/
 ml/outputs/
 data/.firebase_usage.json
 *.joblib
+
+# Agent configuration files
+AGENTS.md
+CLAUDE.md
+.agents/
