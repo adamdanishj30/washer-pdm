@@ -79,7 +79,7 @@ No kWh, ringgit, carbon or scrap savings have been measured yet.
 | `ml/` | Feature fusion, detectors, calibration, leave-one-cycle-out evaluation ([ml/README.md](ml/README.md)) |
 | `data/` | Session CSVs, session context, legacy feature dictionary |
 | `index.html`, `historical.html`, `build_clean_dashboard.py` | Live and historical dashboards |
-| `docs/` | Hardware wiring guide, approved-facts guide, engineering handoffs (start with `docs/handoffs/current_state_and_scale_up_handoff.md`) |
+| `docs/hardware_guides/` | Hardware wiring schematics, assembly pinout, and sensor mounting instructions |
 | `submission/` | Final hackathon proposal and pitch deck (PDF) |
 
 ## 8. Run it

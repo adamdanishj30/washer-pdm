@@ -50,3 +50,7 @@ data/.firebase_usage.json
 AGENTS.md
 CLAUDE.md
 .agents/
+
+# Internal development notes & handoffs
+docs/handoffs/
+docs/proposals/
