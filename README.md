@@ -1,183 +1,98 @@
-# Apex PdM: Multimodal Predictive Maintenance for Sustainable Townships
+# Apex PdM: Hear It Before It Breaks
 
-> **From Home Appliances to Township Infrastructure**  
-> An autonomous IoT edge rig, cloud streaming pipeline, and predictive AI platform designed for the **Sime Darby Property Hackathon ("Township of Tomorrow")**.
+> A low-cost sensor pod that feels, hears and meters township machines, so wear and wasted power are caught before a breakdown.
+> Built for the Sime Darby Property *Township of Tomorrow* Hackathon, track **PLANET · 03 Energy Efficiency**.
 >
-> 🌐 **Live Deployed Dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)  
-> 📄 **2-Page Executive Proposal:** [PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf) ([Markdown Brief](docs/proposals/PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.md))  
-> 📑 **Full Competition Dossier:** [PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf) ([Full Whitepaper](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.md))  
+> 🌐 **Live dashboard:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)
+> 📄 **Proposal:** [PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf) ([Markdown](docs/proposals/PROPOSAL_Apex_PdM_Township_of_Tomorrow.md))
+> 📊 **Model evaluation:** [ml/models/loco_report.md](ml/models/loco_report.md)
+
+**Team:** ADAM DANISH BIN JAMALUDIN, CHIK AMIR ASHRAF BIN AHMAD ADLAN (UiTM) · AITHISHWARAN A/L SHANKAR GANESH (UMPSA) · MANIKKAVASAGAN A/L SOMAIAH DEIVARAJAN (UKM) · MUHAMAD TOWA BIN MUHAMAD BUHARI (UPM)
 
 ---
 
-## 1. Executive Summary & Vision
+## 1. The problem
 
-In modern residential townships and commercial developments, mechanical equipment (from household washing machines to massive rooftop air-conditioning chillers) is traditionally managed through **reactive "run-to-failure" maintenance**. 
+Mosques, suraus, kuils, malls and clubhouses run many machines that spin: air-conditioning compressors, water pumps and fans. They are usually fixed only after they break. Over 55% of an average facility's maintenance is still reactive, "run it till it breaks" (US DOE FEMP *O&M Best Practices Guide*, Release 2.0, 2004, §5.2; US figures, not Malaysian data).
 
-When a bearing wears down or a suspension damper fatigues:
-1. **Parasitic Energy Waste:** Mechanical friction silently leeches **15% to 35% excess electrical power** for months without being noticed.
-2. **Catastrophic Failure:** Unaddressed friction leads to total motor burnout or structural damage, forcing full equipment replacement (RM 800–1,800+ for appliances, RM 15,000–50,000+ for commercial HVAC).
-3. **Massive E-Waste:** Perfectly salvageable 70 kg machines and heavy industrial hardware are dumped into landfills simply because a **RM 25 consumable component** failed unnoticed.
+Before a machine fails, a worn bearing, damper or seal slowly makes it shake more, sound different and work harder. A part worth tens of ringgit turns into a new motor or compressor worth thousands, and a worn machine uses more electricity along the way. Industrial vibration sensors cost thousands of ringgit each, so only big factories use them.
 
-### The Solution: Option 2 Positioning
-**Apex PdM** solves this by uniting a **proven physical testbed** with a **scalable township infrastructure architecture**:
-* **Micro (The Proven Hardware Rig):** A fully functioning edge-AI rig deployed on a front-load Samsung washing machine, capturing 3-axis vibration kinematics, 16 kHz acoustic sound pressure, active electrical wattage, and cycle ground truth in real time.
-* **Macro (Township-Scale Expansion):** Scaling the exact same multimodal sensor pods across commercial township assets—monitoring **20 to 30 air conditioning compressors in mosques, suraus, commercial malls, clubhouses, and water pump stations** from a single centralized facility dashboard.
+## 2. The solution
+
+A small pod on the **outside** of a machine (3M VHB tape, nothing inside opened) plus a smart plug (no rewiring):
+
+| Sense | Hardware | What it catches |
+|---|---|---|
+| Feel | MPU-6050 accelerometer, 200 Hz via FIFO, 44 Hz anti-alias filter | Shaking, drum speed, suspension rocking |
+| Hear | INMP441 MEMS microphone, 16 kHz (I2S DMA) | Grinding and rubbing; sound becomes numbers on the chip and is never uploaded as a recording |
+| Meter | TP-Link Tapo P110 smart plug, 1 s (local KLAP) | How hard the motor is working |
+
+A one-class (unsupervised) model learns each machine's own normal from healthy runs only, so it needs no broken-machine examples. A live web dashboard shows every run.
+
+It is proven first on a Samsung WW10TP44DSX front-load washer: a hard test machine that shakes, sloshes and keeps changing speed.
+
+## 3. How it works
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                   THE TOWNSHIP PDM PLATFORM                            │
-│                                                                        │
-│   [ MICRO: The Proven Testbed ]         [ MACRO: The Township Vision ] │
-│   • Home Appliance (Samsung Washer)     • Mosques, Suraus & Clubhouses │
-│   • Dual-core ESP32 Edge Processing     • Commercial Malls & Offices   │
-│   • Kinematics + Acoustics + Tapo P110  • Township Water Pump Stations │
-│   • Real Data & Live Web Dashboard      • 20–30+ Centralized HVACs     │
-└────────────────────────────────────────────────────────────────────────┘
+Sensors ──► ESP32 (dual core) ──► Firebase RTDB ──► Live dashboard (washer-pdm.pages.dev)
+                                          └──────► One-class anomaly model ──► flag the machine
 ```
 
----
+- **Core 1:** continuous I2S audio, 200 Hz MPU FIFO and window DSP. **Core 0:** Tapo KLAP, session gating, batched Firebase upload, web server, OTA.
+- Every **5.024 s** the pod sends one **45-column record with 32 signal features** (audio 15, vibration 13, power 4). About 4 minutes of data are kept during Wi-Fi drops.
+- PC scripts and dashboard viewers never poll the cloud faster than every 30 s (Firebase Spark quota).
 
-## 2. Alignment with Sime Darby "Township of Tomorrow"
+## 4. Evidence so far (TRL 4–5)
 
-| Challenge Pillar | Specific Criterion | Township Impact |
-| :--- | :--- | :--- |
-| **Planet** | **02 Circular Economy (reuse, don't waste)** | Extends appliance and commercial HVAC lifespan by **5 to 10 years** by catching faults early on the **P-F Interval** (replacing RM 25 dampers/bearings before drum or compressor seizure), preventing tons of bulky landfill e-waste. |
-| **Planet** | **03 Energy Efficiency** | Quantifies and eliminates **parasitic friction drag** (+15% to +35% excess wattage), reducing residential and commercial grid load across the township. |
-| **People** | **05 Digital Living** | Replaces stressful emergency breakdowns with proactive mobile asset health transparency (**0%–100% Machine Health Index**) for residents and automated triage for facility managers. |
-| **Business** | **Facility OpEx Reduction** | Replaces manual 1-by-1 physical inspections of 30+ township AC compressors with centralized, AI-driven dispatching. |
+| What | Result | Source |
+|---|---|---|
+| Pilot kit cost | RM 169.68 net paid (sensor node RM 131.07 + smart plug) | Shopee receipts (7 orders) |
+| Data | 13 wash sessions, 9,114 training-ready rows (as of 21 Oct), 4 complete firmware-07 cycles | `data/real_sessions/` |
+| Vibration idle → spin | over 20× | firmware-07 cycles |
+| Drum frequency in final spin | ≈ 20 Hz (≈ 1,200 rpm) in all 4 firmware-07 cycles | `ml/models/cycle_signature_report.md` |
+| Nested leave-one-wash-out test | 0 of 8 healthy washes falsely flagged (95% upper bound 31%); simulated doubling of sound caught in 7 of 8; added vibration **not** detected | `ml/models/loco_report.md` |
 
----
+**Limits, stated plainly:** the model test ran on 8 earlier washes in the older snapshot format (one 5 s snapshot, no phase labels), not on the 32-feature firmware-07 windows. Faults were simulated, not real. There is one test machine so far. The firmware-07 model needs at least 3 cycles of each wash type first.
 
-## 3. Multimodal Telemetry Matrix
+## 5. Impact: Planet · Energy Efficiency
 
-Rotating electromechanical machinery shares universal degradation physics:
-$$\text{Micro-Vibration Harmonics} \longrightarrow \text{Acoustic Friction} \longrightarrow \text{Parasitic Electrical Drag} \longrightarrow \text{Catastrophic Breakdown}$$
+- **Energy (our estimate, to be confirmed in the pilot):** one machine with a 5 kW power draw running 10 h a day uses about 18,250 kWh a year. If a worn part makes it use 10% more, that is about 1,825 kWh, or **about RM 900 a year** at about RM 0.50/kWh. The 10% is an assumption; it sits inside the 5–20% energy savings the US DOE guide gives for O&M programmes (§2.4). A ~RM 170 pod that catches one such problem pays for itself within months (estimate).
+- **Context:** air-conditioning is about 57% of energy use in Malaysian office buildings (Saidur, 2009). Surveys cited by the US DOE guide found predictive maintenance eliminated 70–75% of breakdowns (§5.4, US figures).
+- **Second benefit:** fixing a small part early means machines last longer and less is scrapped.
 
-Our platform captures all 4 diagnostic dimensions simultaneously:
+No kWh, ringgit, carbon or scrap savings have been measured yet.
 
-| Modality | Hardware / Source | Sampling / Specs | Diagnostic Function |
-| :--- | :--- | :--- | :--- |
-| **1. Kinematics** | MPU-6050 Accelerometer | 50 Hz, $\pm 16\text{g}$, I2C | Detects drum unbalance, violent chassis rocking, and damper fatigue. |
-| **2. Acoustics** | INMP441 MEMS Microphone | 16 kHz I2S DMA $\rightarrow$ RMS | Identifies high-frequency bearing squeal, rubbing, and cavitation. |
-| **3. Electrical** | TP-Link Tapo P110 Smart Plug | 1 Hz local KLAP ($W, V, mA$) | Measures active motor load, parasitic friction drag, and cycle kWh. |
-| **4. Ground Truth** | Samsung SmartThings API | REST OAuth2 (`washerJobState`) | Contextual phase supervisory labels (`wash`, `rinse`, `spin`). |
+## 6. Roadmap
 
----
+1. **Next:** 20+ more firmware-07 cycles, train and test the new model, noise baselines, then an air compressor and a water pump.
+2. **Pilot:** about ten AC units at one township site (e.g. City of Elmina), measuring real kWh and false-alarm rates.
+3. **Scale:** custom board, industrial accelerometer, one fleet dashboard for the township.
 
-## 4. Hardware Architecture & Dual-Core Discipline
+## 7. Repository map
 
-To ensure rock-solid data integrity without thread starvation or dropped audio packets, the ESP32 firmware enforces a strict **FreeRTOS dual-core separation**:
+| Path | What |
+|---|---|
+| `firmware/07_feature_streamer/` | Current ESP32 firmware (FreeRTOS dual core, Tapo, Firebase); see its README |
+| `firmware/firebase_rest.py`, `firmware/auto_drive_sync_daemon.py`, `firmware/cloud_downloader.py` | Quota-aware cloud access, archiver and session downloader |
+| `firmware/session_export.py` | Firmware-07 window schema (`V3_KEY_MAP`) |
+| `ml/` | Feature fusion, detectors, calibration, leave-one-cycle-out evaluation ([ml/README.md](ml/README.md)) |
+| `data/` | Session CSVs, session context, legacy feature dictionary |
+| `index.html`, `historical.html`, `build_clean_dashboard.py` | Live and historical dashboards |
+| `docs/` | Proposals, hardware guides, handoffs (start with `docs/handoffs/current_state_and_scale_up_handoff.md`) |
+| `Hackathon/` | Submission material |
 
-```
-             ┌──────────────────────────────────────────────┐
-             │            ESP32 NodeMCU DevKit              │
-             ├──────────────────────┬───────────────────────┤
-             │       CORE 1         │        CORE 0         │
-             │ (High-Speed Sensors) │   (Network & Cloud)   │
-             ├──────────────────────┼───────────────────────┤
-             │ • MPU-6050 (I2C)     │ • Wi-Fi 802.11 b/g/n  │
-             │ • INMP441 (I2S DMA)  │ • SSL / HTTPS Client  │
-             │ • Real-time RMS Calc │ • Firebase RTDB Sync  │
-             │ • Mutex Spinlocks    │ • Watchdog Keep-Alive │
-             └──────────────────────┴───────────────────────┘
-```
+## 8. Run it
 
-* **Chassis Enclosure:** IP65 weatherproof junction box with PG7 cable glands and 3M VHB vibration-coupling mounting.
-* **Screw Terminal Shield:** High-vibration-resistant screw terminals preventing jumper wire disconnects during 1,400 RPM spin cycles.
-
----
-
-## 5. Live Interactive Dashboard
-
-The dashboard provides a real-time, responsive dark UI built with pure web technologies (zero heavy frameworks, instant loading on mobile and desktop):
-
-* **Card 1 (Kinematic Waveform):** Real-time tri-axial acceleration ($a_x, a_y, a_z$) in $\text{m/s}^2$ with baseline gravity reference.
-* **Card 2 (Acoustic Pressure):** Standardized $[0, 1200]\text{ RMS}$ audio energy waveform with dynamic anomaly threshold and peak spike badges.
-* **Card 3 (Vibration Magnitude):** Combined Euclidean acceleration $|a| = \sqrt{a_x^2 + a_y^2 + a_z^2}$ tracking centrifugal spin dynamics.
-* **Card 4 (Electrical Power & Energy Diagnostics):** Active wattage curve ($W$), centrifugal spin threshold ($400\text{ W}$), automatic load mass classification (`LIGHT`, `MEDIUM`, `HEAVY`), parasitic motor drag detection, and cumulative cycle energy cost ($\text{kWh}$ and $\text{RM}$).
-
-🔗 **Access the live site:** [https://washer-pdm.pages.dev](https://washer-pdm.pages.dev)
-
----
-
-## 6. Repository Structure
-
-```
-├── docs/
-│   ├── proposals/                     # Sime Darby Hackathon Proposals & Presentations
-│   │   ├── PROPOSAL_2PAGE_Apex_PdM_Township_of_Tomorrow.pdf
-│   │   ├── PROPOSAL_Apex_PdM_Township_of_Tomorrow.pdf
-│   │   ├── proposal_presentation.html
-│   │   └── generate_proposal_pdf.py   # Headless PDF compile scripts
-│   ├── handoffs/                      # Project blueprints, logs & Tapo/SmartThings specs
-│   │   ├── project_progress_and_handoff_log.md
-│   │   ├── tapo_and_smartthings_pdm_handoff.md
-│   │   └── washing_machine_fault_project_blueprint.md
-│   └── hardware_guides/               # BOM, visual wiring widgets & pinout schematics
-│       ├── hardware_bom_and_setup_guide.md
-│       ├── step_by_step_visual_guide.html
-│       └── diagrams/                  # Layout cutaway diagrams & wiring pinouts
-├── hardware/
-│   ├── drivers/                       # CP210x USB UART Windows Drivers
-│   └── photos/                        # Bench assembly, wiring & enclosure photo logs
-├── firmware/
-│   ├── 06_standalone_tapo_streamer/   # ESP32 FreeRTOS Dual-Core C++ Firmware
-│   ├── capture_pdm_dataset.py         # Real-time multimodal session recorder
-│   ├── cloud_multimodal_sync.py       # Autonomous Cloud-to-Cloud sync daemon
-│   ├── standardize_datasets.py        # Acoustic RMS normalization engine
-│   ├── pdm_ml_standardizer.py         # ML feature transformer (canonical scale, log, dB)
-│   └── audit_all_datasets.py          # Integrity audit across all historical CSVs
-├── data/
-│   ├── real_sessions/                 # Full multi-minute wash cycles (6-column standardized)
-│   ├── testing_data/                  # Diagnostic bench logs and buffer dump traces
-│   ├── pdm_multimodal_prediction_dataset.csv  # 31-column ML master dataset
-│   ├── pdm_ml_standardized_training_dataset.csv # 3,980-point active ML training dataset
-│   └── pdm_feature_dictionary.json   # Formal ML schema & physical unit contract
-├── scripts/
-│   ├── run_auto_sync_daemon.bat       # 1-tap Windows background sync daemon runner
-│   ├── google_apps_script_drive_sync.js # Google Cloud trigger daemon
-│   └── generate_dashboard.ps1
-├── build_clean_dashboard.py           # Dashboard generator & preset compiler
-├── index.html                         # Live Rig default dashboard view (GitHub Pages)
-├── historical.html                    # Historical Archive default view
-├── dashboard.html / cloud_dashboard.html # Synchronized distribution builds
-├── AGENTS.md                          # Engineering & architecture guidelines
-└── README.md                          # Project documentation
-```
-
----
-
-## 7. How to Run Locally
-
-### Prerequisites
-* Python 3.12+ (standard library only; no compiled C-extension requirements)
-* Web browser (Chrome, Edge, Brave, Safari)
-
-### 1. Launch the Dashboard
-Simply double-click `index.html` or run a local HTTP server:
 ```powershell
-py -3.12 -m http.server 8080
-```
-Open `http://localhost:8080` in your browser.
-
-### 2. Download Latest Cloud Sessions
-To pull new wash sessions from Firebase RTDB and update dashboard presets:
-```powershell
-py -3.12 firmware/cloud_downloader.py
-py -3.12 build_clean_dashboard.py
-```
-
-### 3. Run ML Dataset Standardizer & Audit
-```powershell
-py -3.12 firmware/standardize_datasets.py
-py -3.12 firmware/pdm_ml_standardizer.py
-py -3.12 firmware/audit_all_datasets.py
+# Flash firmware 07 (credentials come from .env only)
+py -3.12 firmware/07_feature_streamer/flash_firmware.py --compile --port COM3
+# Download new sessions (incremental) and rebuild the dashboards
+py firmware/cloud_downloader.py
+py build_clean_dashboard.py
+# Train + nested leave-one-cycle-out evaluation -> ml/models/loco_report.md
+py ml/train_unsupervised_pdm.py
+# Score one cycle
+py ml/predict_pdm.py --file data/real_sessions/<cycle>.csv
 ```
 
----
-
-## 8. Sustainability & Financial Impact Equation
-
-$$\text{Early Detection (Point P)} \longrightarrow \text{RM 25–50 Component Fix} \ll \text{RM 1,500+ Replacement} + \text{15–35% Energy Saved}$$
-
-By transforming reactive appliance breakdown into **Township Asset Intelligence**, Apex PdM proves that sustainable townships start with smart, friction-free engineering.
+Tests: `py ml/tests/test_dsp_parity.py`, `py ml/tests/test_pipeline_synthetic.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`.
