@@ -1,0 +1,680 @@
+{
+  "generated": "2026-10-31T19:38:27",
+  "schema": "windowed",
+  "data_notes": [
+    "9 healthy cycles, 7,443 windows of 5 s; effective sample size for cycle-level claims is 9, not 7,443 (consecutive windows are strongly correlated).",
+    "SmartThings phase labels present on 0% of windows -> the model is NOT phase-conditioned (one pooled model for the whole cycle).",
+    "Accelerometer gravity vector moved by up to 15.46 m/s^2 between cycles (sensor re-mounted/tilted) -> only orientation-independent vibration features are used."
+  ],
+  "results": [
+    {
+      "model": "mahalanobis",
+      "schema": "windowed",
+      "uses_power": true,
+      "n_cycles": 9,
+      "false_alarm_cycles": 2,
+      "false_alarm_rate_upper95": 0.55,
+      "healthy_window_red_pct": 0.26,
+      "healthy_window_amber_pct": 5.11,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-19_0911",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.456,
+          "h": 2.288145841573158
+        },
+        {
+          "session": "wash_cycle_2026-10-20_0744",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "power"
+          ],
+          "healthy_max_persistence": 1.178,
+          "h": 2.271956458859684
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0514",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.478,
+          "h": 2.312651786753823
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.439,
+          "h": 2.3363035900704765
+        },
+        {
+          "session": "wash_cycle_2026-10-24_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.103,
+          "h": 2.4647905643880472
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0624",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "overall",
+            "vibration"
+          ],
+          "healthy_max_persistence": 2.117,
+          "h": 2.00068999267391
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0918",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.287,
+          "h": 2.2799845746715097
+        },
+        {
+          "session": "wash_cycle_2026-10-28_0832",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.148,
+          "h": 2.260162109274692
+        },
+        {
+          "session": "wash_cycle_2026-10-29_0625",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.623,
+          "h": 2.294205852042209
+        }
+      ],
+      "faults": {
+        "power_drag": {
+          "unit": "W",
+          "meaning": "extra motor power to overcome friction",
+          "levels": [
+            {
+              "severity": 5.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 10.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 20.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 40.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "bearing_impulsive": {
+          "unit": "x hp RMS",
+          "meaning": "impulsive 2-8 kHz energy (spall impacts), amplitude relative to the healthy high-band RMS",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 19.7,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.778,
+              "detect_rate": 0.889,
+              "median_delay_min": 7.5,
+              "post_onset_red_pct": 0.5
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "suspension_rocking": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra 0.5-15 Hz cabinet rocking (worn damper)",
+          "levels": [
+            {
+              "severity": 0.01,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.8,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 34.5,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 20.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 37.3,
+              "post_onset_red_pct": 0.4
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "imbalance_1x": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra once-per-revolution vibration during spin",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 33.0,
+              "post_onset_red_pct": 0.2
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 18.9,
+              "post_onset_red_pct": 0.3
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 26.2,
+              "post_onset_red_pct": 0.9
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 6.2
+    },
+    {
+      "model": "iforest",
+      "schema": "windowed",
+      "uses_power": true,
+      "n_cycles": 9,
+      "false_alarm_cycles": 2,
+      "false_alarm_rate_upper95": 0.55,
+      "healthy_window_red_pct": 2.44,
+      "healthy_window_amber_pct": 1.57,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-19_0911",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.817,
+          "h": 2.149755730522301
+        },
+        {
+          "session": "wash_cycle_2026-10-20_0744",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "power"
+          ],
+          "healthy_max_persistence": 0.911,
+          "h": 2.1509931686335815
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0514",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.34,
+          "h": 2.186014969008366
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.774,
+          "h": 2.31504856370757
+        },
+        {
+          "session": "wash_cycle_2026-10-24_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.608,
+          "h": 2.4589907198493965
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0624",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "overall",
+            "vibration"
+          ],
+          "healthy_max_persistence": 2.566,
+          "h": 1.9450626356364416
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0918",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.857,
+          "h": 2.163928731659023
+        },
+        {
+          "session": "wash_cycle_2026-10-28_0832",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.385,
+          "h": 2.1309363040130407
+        },
+        {
+          "session": "wash_cycle_2026-10-29_0625",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.788,
+          "h": 2.2270049451540768
+        }
+      ],
+      "faults": {
+        "power_drag": {
+          "unit": "W",
+          "meaning": "extra motor power to overcome friction",
+          "levels": [
+            {
+              "severity": 5.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.3,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 10.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.3,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 20.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.3,
+              "post_onset_red_pct": 4.5
+            },
+            {
+              "severity": 40.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.3,
+              "post_onset_red_pct": 4.5
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "bearing_impulsive": {
+          "unit": "x hp RMS",
+          "meaning": "impulsive 2-8 kHz energy (spall impacts), amplitude relative to the healthy high-band RMS",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.2,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.1,
+              "post_onset_red_pct": 4.8
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 19.7,
+              "post_onset_red_pct": 5.0
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.778,
+              "detect_rate": 0.889,
+              "median_delay_min": 7.5,
+              "post_onset_red_pct": 5.2
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "suspension_rocking": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra 0.5-15 Hz cabinet rocking (worn damper)",
+          "levels": [
+            {
+              "severity": 0.01,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.2,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 34.5,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 20.2,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 37.3,
+              "post_onset_red_pct": 4.7
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "imbalance_1x": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra once-per-revolution vibration during spin",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.2,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 33.0,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 18.9,
+              "post_onset_red_pct": 4.7
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 26.2,
+              "post_onset_red_pct": 4.7
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 25.8
+    },
+    {
+      "model": "ocsvm",
+      "schema": "windowed",
+      "uses_power": true,
+      "n_cycles": 9,
+      "false_alarm_cycles": 2,
+      "false_alarm_rate_upper95": 0.55,
+      "healthy_window_red_pct": 0.11,
+      "healthy_window_amber_pct": 4.42,
+      "per_cycle": [
+        {
+          "session": "wash_cycle_2026-10-19_0911",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.653,
+          "h": 2.3717292440185367
+        },
+        {
+          "session": "wash_cycle_2026-10-20_0744",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "power"
+          ],
+          "healthy_max_persistence": 1.686,
+          "h": 2.3737362122139656
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0514",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.828,
+          "h": 2.411897995444862
+        },
+        {
+          "session": "wash_cycle_2026-10-21_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.665,
+          "h": 2.3995202771628863
+        },
+        {
+          "session": "wash_cycle_2026-10-24_0631",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 1.114,
+          "h": 2.3032530411249117
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0624",
+          "healthy_alarm": true,
+          "triggered_by": [
+            "overall",
+            "vibration"
+          ],
+          "healthy_max_persistence": 2.031,
+          "h": 1.9851352733858534
+        },
+        {
+          "session": "wash_cycle_2026-10-27_0918",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.873,
+          "h": 2.392741168898936
+        },
+        {
+          "session": "wash_cycle_2026-10-28_0832",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.505,
+          "h": 2.4103182483733145
+        },
+        {
+          "session": "wash_cycle_2026-10-29_0625",
+          "healthy_alarm": false,
+          "triggered_by": [],
+          "healthy_max_persistence": 0.603,
+          "h": 2.380064288562961
+        }
+      ],
+      "faults": {
+        "power_drag": {
+          "unit": "W",
+          "meaning": "extra motor power to overcome friction",
+          "levels": [
+            {
+              "severity": 5.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 10.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 20.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 40.0,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "bearing_impulsive": {
+          "unit": "x hp RMS",
+          "meaning": "impulsive 2-8 kHz energy (spall impacts), amplitude relative to the healthy high-band RMS",
+          "levels": [
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.25,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.5,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 19.7,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 1.0,
+              "clean_detect_rate": 0.778,
+              "detect_rate": 0.889,
+              "median_delay_min": 7.5,
+              "post_onset_red_pct": 0.1
+            }
+          ],
+          "min_detectable_severity": 1.0
+        },
+        "suspension_rocking": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra 0.5-15 Hz cabinet rocking (worn damper)",
+          "levels": [
+            {
+              "severity": 0.01,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 35.8,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 34.5,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 20.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 37.3,
+              "post_onset_red_pct": 0.0
+            }
+          ],
+          "min_detectable_severity": null
+        },
+        "imbalance_1x": {
+          "unit": "m/s2 RMS",
+          "meaning": "extra once-per-revolution vibration during spin",
+          "levels": [
+            {
+              "severity": 0.02,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 36.2,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.05,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 33.0,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.1,
+              "clean_detect_rate": 0.111,
+              "detect_rate": 0.111,
+              "median_delay_min": 18.9,
+              "post_onset_red_pct": 0.0
+            },
+            {
+              "severity": 0.2,
+              "clean_detect_rate": 0.444,
+              "detect_rate": 0.556,
+              "median_delay_min": 26.2,
+              "post_onset_red_pct": 0.0
+            }
+          ],
+          "min_detectable_severity": null
+        }
+      },
+      "seconds": 6.8
+    }
+  ]
+}

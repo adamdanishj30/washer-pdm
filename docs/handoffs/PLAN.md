@@ -1,6 +1,6 @@
 # Plan for Antigravity
 
-**Status:** READY  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
+**Status:** DONE  <!-- WAITING = no task yet | READY = execute | DONE = finished -->
 **Title:** ML: first honest nested-LOCO report on the firmware-07 washes (report only, deployed model untouched) + refresh the handoff facts
 **Date:** 2026-10-31
 
@@ -35,14 +35,14 @@ Produce the first nested leave-one-cycle-out report on the firmware-07 (45-colum
 `ml/models/` (deployed model, `loco_report.md`), any ML code, thresholds, `data/real_sessions/*.csv` (no edits, moves or deletes), firmware, dashboard, workflow, secrets, proposal / `Hackathon/` / video files, `archive/`.
 
 ## Acceptance Criteria
-- [ ] PLAN.md committed before any other git command; 25 Oct firmware commit status reported.
-- [ ] HANDOFF has the inventory table; duplicate pairs and suspected test sessions are marked; no wash counted twice.
-- [ ] Report generated in `ml/outputs/fw07_loco_2026-10-31/` with schema `windowed`; `git diff --stat ml/models/` is empty.
-- [ ] `git diff` shows no change to any `.py` under `ml/` or to any file in `data/real_sessions/`.
-- [ ] Report states n cycles, false-alarm cycles and the 95% upper bound (rule of three); it is labelled a pilot because n < 20.
-- [ ] Handoff doc updated as in step 4; dead link gone; gating step marked WAITING ON ADAM.
-- [ ] Existing tests still pass: `py ml/tests/test_dsp_parity.py`, `py ml/tests/test_pipeline_synthetic.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`.
-- [ ] Pushed; hash reported.
+- [x] PLAN.md committed before any other git command; 25 Oct firmware commit status reported.
+- [x] HANDOFF has the inventory table; duplicate pairs and suspected test sessions are marked; no wash counted twice.
+- [x] Report generated in `ml/outputs/fw07_loco_2026-10-31/` with schema `windowed`; `git diff --stat ml/models/` is empty.
+- [x] `git diff` shows no change to any `.py` under `ml/` or to any file in `data/real_sessions/`.
+- [x] Report states n cycles, false-alarm cycles and the 95% upper bound (rule of three); it is labelled a pilot because n < 20.
+- [x] Handoff doc updated as in step 4; dead link gone; gating step marked WAITING ON ADAM.
+- [x] Existing tests still pass: `py ml/tests/test_dsp_parity.py`, `py ml/tests/test_pipeline_synthetic.py`, `py firmware/tests/test_session_export.py`, `py firmware/tests/test_daemon_offline.py`.
+- [x] Pushed; hash reported.
 
 ## Queue (do not start; Claude plans these only when Adam asks)
 1. **Archiver: close sessions cut off at the wall** (from the 25 Oct HANDOFF suggestion). Adam's father switches the wall power off when the wash ends, so the 10-min idle END marker is never written. In `cloud_downloader.py` / the daemon: if a session has had no new window for > 15 min and `/live` is offline or IDLE, archive it with `end_reason: "ungraceful_poweroff"`. PC side only; no firmware change; ≥ 30 s polling rule unchanged.
