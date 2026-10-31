@@ -177,6 +177,8 @@ static WiFiClientSecure g_tls;
 static HTTPClient g_http;
 static bool g_ntp_ok = false;
 static uint32_t g_boot_ms = 0;
+static const char* g_reset_reason_str = "UNKNOWN";
+static volatile bool g_force_test_mode = false;
 
 #if USE_TAPO
 static TapoDevice g_tapo;
@@ -553,7 +555,24 @@ static void serviceUploads() {
 // SECTION 12: Session state machine (Core 0)
 // =========================================================================
 
+static const char* getResetReasonStr() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:   return "POWERON";
+    case ESP_RST_EXT:       return "EXT_PIN";
+    case ESP_RST_SW:        return "SW_RESET";
+    case ESP_RST_PANIC:     return "CRASH_PANIC";
+    case ESP_RST_INT_WDT:   return "INT_WDT";
+    case ESP_RST_TASK_WDT:  return "TASK_WDT";
+    case ESP_RST_WDT:       return "OTHER_WDT";
+    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT:  return "BROWNOUT";
+    case ESP_RST_SDIO:      return "SDIO";
+    default:                return "UNKNOWN";
+  }
+}
+
 static bool windowIsActive(const WindowRecord& w) {
+  if (g_force_test_mode) return true;
 #if USE_TAPO
   if (g_tapo_ok && w.p_n > 0 && isfinite(w.p_mean)) return w.p_mean > ACTIVE_POWER_W;
 #endif
@@ -633,7 +652,7 @@ static void handleWindow(WindowRecord& w) {
       metaPush(g_sid, "tags", "PATCH", body);
       g_pending_tag[0] = '\0';
     }
-    if (g_idle_streak >= IDLE_TIMEOUT_WINDOWS) closeSession("idle_timeout");
+    if (g_idle_streak >= IDLE_TIMEOUT_WINDOWS && !g_force_test_mode) closeSession("idle_timeout");
   }
 }
 
@@ -663,13 +682,14 @@ static void maybeSendLive() {
   jnum(az, 16, have ? w.v.mean[2] : NAN); jnum(rms, 16, have ? w.a.rms : NAN);
   jnum(vib, 16, have ? w.v.mag_std : NAN); jnum(pwr, 16, g_last_power);
 
-  char body[480];
+  char body[512];
   snprintf(body, sizeof(body),
     "{\"ts\":{\".sv\":\"timestamp\"},\"fw\":\"%s\",\"schema\":%d,\"uptime\":%lu,\"cnt\":%lu,"
-    "\"session\":\"%s\",\"active\":%s,\"state\":\"%s\",\"ax\":%s,\"ay\":%s,\"az\":%s,\"rms\":%s,"
+    "\"session\":\"%s\",\"active\":%s,\"state\":\"%s\",\"rst\":\"%s\",\"ax\":%s,\"ay\":%s,\"az\":%s,\"rms\":%s,"
     "\"vibe\":%s,\"vib_std\":%s,\"power\":%s,\"outbox\":%d,\"drops\":%lu,\"rssi\":%d,\"heap\":%lu}",
     FW_VERSION, SCHEMA_VERSION, (unsigned long)((millis() - g_boot_ms) / 1000), (unsigned long)(have ? w.idx : 0),
     g_sid, g_session_active ? "true" : "false", g_session_active ? "RUNNING" : "IDLE",
+    g_reset_reason_str,
     ax, ay, az, rms, vibe, vib, pwr, g_ob_count, (unsigned long)(g_outbox_drops + g_queue_drops),
     (int)WiFi.RSSI(), (unsigned long)ESP.getFreeHeap());
   const int code = firebaseRequest("PUT", "live", body, strlen(body));
@@ -682,19 +702,44 @@ static void maybeSendLive() {
 
 // GET /  -> tiny status page (no heavy dashboard: saves flash and CPU)
 static void handleRoot() {
-  char html[900];
+  char html[1200];
   snprintf(html, sizeof(html),
     "<!doctype html><meta name=viewport content='width=device-width'><title>Washer PdM 07</title>"
     "<body style='font-family:sans-serif;background:#0f172a;color:#e2e8f0;padding:16px'>"
     "<h3>Washer PdM rig &middot; fw %s</h3>"
-    "<p>Session: <b>%s</b> | outbox %d | uploads ok %lu / fail %lu | drops %lu</p>"
+    "<p>Session: <b>%s</b> %s | outbox %d | uploads ok %lu / fail %lu | drops %lu | rst: <b>%s</b></p>"
+    "<p><a style='display:inline-block;padding:8px 14px;background:#0284c7;color:#fff;text-decoration:none;border-radius:6px' href='/start_test'>Start Test Session</a> &nbsp; "
+    "<a style='display:inline-block;padding:8px 14px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px' href='/stop_test'>Stop Test Session</a></p>"
     "<p><a style='color:#38bdf8' href='/window.json'>latest window</a> &middot; "
     "<a style='color:#38bdf8' href='/clip.wav?sec=2'>2 s audio clip</a> &middot; "
     "<a style='color:#38bdf8' href='/accel.csv'>accel ring (2.56 s)</a></p>"
     "<p>Tag the running session: /tag?name=unbalanced_load</p></body>",
-    FW_VERSION, g_session_active ? g_sid : "(idle)", g_ob_count,
-    (unsigned long)g_upload_ok, (unsigned long)g_upload_fail, (unsigned long)(g_outbox_drops + g_queue_drops));
+    FW_VERSION, g_session_active ? g_sid : "(idle)",
+    g_force_test_mode ? "<span style='color:#38bdf8'>[TEST MODE ACTIVE]</span>" : "",
+    g_ob_count,
+    (unsigned long)g_upload_ok, (unsigned long)g_upload_fail, (unsigned long)(g_outbox_drops + g_queue_drops),
+    g_reset_reason_str);
   server.send(200, "text/html", html);
+}
+
+// GET /start_test -> forces session start regardless of washer power/vibration
+static void handleStartTest() {
+  g_force_test_mode = true;
+  if (!g_session_active) {
+    openSession();
+  }
+  char resp[128];
+  snprintf(resp, sizeof(resp), "{\"status\":\"ok\",\"test_mode\":true,\"session\":\"%s\"}", g_sid);
+  server.send(200, "application/json", resp);
+}
+
+// GET /stop_test -> closes forced test session cleanly
+static void handleStopTest() {
+  g_force_test_mode = false;
+  if (g_session_active) {
+    closeSession("manual_stop");
+  }
+  server.send(200, "application/json", "{\"status\":\"ok\",\"test_mode\":false}");
 }
 
 // GET /window.json -> latest window in the same compact format as Firebase
@@ -885,7 +930,8 @@ static void cloudTask(void*) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.printf("\n=== Washer PdM firmware %s (windowed features) ===\n", FW_VERSION);
+  g_reset_reason_str = getResetReasonStr();
+  Serial.printf("\n=== Washer PdM firmware %s (windowed features) [rst: %s] ===\n", FW_VERSION, g_reset_reason_str);
   g_boot_ms = millis();
 
   // --- 16a: DSP engines and the Core1->Core0 queue ---
@@ -913,6 +959,8 @@ void setup() {
 #endif
   ArduinoOTA.begin();
   server.on("/", handleRoot);
+  server.on("/start_test", handleStartTest);
+  server.on("/stop_test", handleStopTest);
   server.on("/data", handleData);
   server.on("/window.json", handleWindowJson);
   server.on("/tag", handleTag);

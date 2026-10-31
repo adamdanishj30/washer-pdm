@@ -69,7 +69,9 @@ Keys `t, rms, ax, ay, az, pwr` match 05/06, so older tools still read the basics
 
 | URL | What |
 |---|---|
-| `http://washer-pdm.local/` | status page |
+| `http://washer-pdm.local/` | status page (includes Start/Stop test buttons) |
+| `/start_test` | force start an active session immediately (bypasses power & vibration gating) |
+| `/stop_test` | cleanly close forced test session (`"manual_stop"`) |
 | `/window.json` | latest window, same format as Firebase |
 | `/data` | `{ax, ay, az, rms, cnt}`, compatible with the 05/06 dashboards |
 | `/clip.wav?sec=2` | 2 s of raw 16 kHz audio (64 kB of heap; returns 507 if the heap is short) |
