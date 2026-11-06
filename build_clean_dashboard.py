@@ -2,6 +2,8 @@ import hashlib
 import json
 import os
 import sys
+import re
+from datetime import datetime
 import numpy as np
 
 # Import shared physics-based cycle signature thresholds and classification rules
@@ -121,6 +123,11 @@ def discover_all_sessions():
         files = sorted(os.listdir(real_dir), reverse=True)
         for fname in files:
             if fname.endswith('.csv') and not fname.startswith('.'):
+                # Prefer canonical 4-digit HHMM v3 files over 6-digit legacy snapshot duplicates
+                m_dup = re.match(r'(wash_cycle_\d{4}-\d{2}-\d{2}_\d{4})\d{2}\.csv', fname)
+                if m_dup and os.path.exists(os.path.join(real_dir, m_dup.group(1) + '.csv')):
+                    continue
+
                 fpath = os.path.join(real_dir, fname)
                 rows = load_csv(fpath)
                 if not rows or len(rows) < 3:
@@ -191,6 +198,7 @@ def discover_all_sessions():
                     'run_medians': run_medians
                 }
                 
+                m_ts = re.match(r'wash_cycle_(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})', fname)
                 if '2026-10-17_0835' in fname:
                     disp = f"🧺 17 Oct 2026, 08:35 AM ({duration_m}m Full Wash, {pts_cnt} pts)"
                 elif '2026-10-17_0718' in fname:
@@ -205,6 +213,14 @@ def discover_all_sessions():
                     disp = f"🧺 12 Oct 2026, 10:19 AM (101m Wash, {pts_cnt} pts)"
                 elif '2026-10-11_1019' in fname:
                     disp = f"🧺 11 Oct 2026, 10:19 AM (24m Wash, {pts_cnt} pts)"
+                elif m_ts:
+                    try:
+                        dt = datetime(int(m_ts.group(1)), int(m_ts.group(2)), int(m_ts.group(3)), int(m_ts.group(4)), int(m_ts.group(5)))
+                        dt_str = dt.strftime('%d %b %Y, %I:%M %p')
+                        wash_type = 'Full Wash' if duration_m >= 60 else ('Short Wash' if duration_m <= 20 else 'Wash')
+                        disp = f"🧺 {dt_str} ({duration_m}m {wash_type}, {pts_cnt} pts)"
+                    except Exception:
+                        disp = f"🧺 Wash: {fname} ({duration_m}m, {pts_cnt} pts)"
                 else:
                     disp = f"🧺 Wash: {fname} ({duration_m}m, {pts_cnt} pts)"
 
