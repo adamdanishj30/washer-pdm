@@ -22,6 +22,12 @@ list_washes()                                    what is available
 wash_overview(wash_id)                           phases, power, energy, data quality
 compare_to_normal(wash_id, sensor_group, phase)  this wash vs other washes, per phase
 detector_score(wash_id, baseline)                one-class detector verdict, pooled or per phase
+similar_washes(wash_id, k)                       the k most similar past washes and how they differ
+render_plot(wash_id, kind, signals, phase)       one 800x450 PNG with the normal range shaded
+
+Use `ApexLens.call(name, **args)` (text only) or `call_full` (text + PNG):
+they add the per-call `ref:` line, the `quality:` lines, the output budget
+and turn errors into text. Tool names and schemas live in registry.py.
 """
 
 from __future__ import annotations
@@ -67,6 +73,12 @@ GROUP_OF = {col: g for g, items in KEY_FEATURES.items() for col, _, _ in items}
 SENSOR_GROUPS = ("sound", "vibration", "power", "all")
 MIN_PHASE_WINDOWS = 6           # a phase shorter than 30 s is not summarised
 SAME_CLASS_MIN = 3              # compare within the inferred wash class if >= 3 such washes exist
+MIN_REF_WASHES = 3              # a phase seen in fewer other washes than this is "insufficient data"
+MIN_VIB_OK = 0.5                # below this share of usable vibration windows, vibration answers abstain
+MAX_TOOL_TOKENS = 1500          # hard output budget per tool answer (approximate tokens)
+# short signal name -> (CSV column, unit), for render_plot and similar_washes
+SIGNAL_COLS: Dict[str, Tuple[str, str]] = {name: (col, unit) for items in KEY_FEATURES.values()
+                                           for col, name, unit in items}
 
 
 # =============================================================================
@@ -127,6 +139,17 @@ class ApexLens:
         self.store = store or WashStore.from_dir()
         self.show_ids = list(show_ids) if show_ids is not None else None   # ids list_washes may reveal
         self._detectors: Dict[Tuple[Tuple[str, ...], str], PdmPipeline] = {}
+        self._scored: Dict[str, pd.DataFrame] = {}      # last detector_score output per wash
+        self._n_calls = 0                               # numbers the ref: line of each answer
+
+    # ------------------------------------------------------------- helpers
+    def _vib_ok_share(self, w: Wash) -> float:
+        """Share of running (non-idle) windows with usable accelerometer data."""
+        run = w.df["phase"] != "idle"
+        return float(w.df.loc[run, "vib_ok"].mean()) if run.any() else 0.0
+
+    def _ref_washes_with_phase(self, refs: Sequence[str], ph: str) -> int:
+        return sum(int((self.store.get(k).df["phase"] == ph).sum() >= MIN_PHASE_WINDOWS) for k in refs)
 
     # ----------------------------------------------------------- list_washes
     def list_washes(self) -> str:
@@ -148,7 +171,6 @@ class ApexLens:
         energy_kwh = float(np.nansum(p) * WINDOW_S / 3.6e6)
         head = [f"wash {wash_id}: {w.duration_min:.1f} min, class {w.wash_class if w.is_wash else 'not a wash'} "
                 f"(inferred from power), energy {energy_kwh:.3f} kWh, peak {fmt(p.max())} W."]
-        head += [f"note: {n}" for n in w.notes]
         rows = []
         for ph, i0, n in _phase_spans(w):
             if n < MIN_PHASE_WINDOWS:
@@ -182,13 +204,26 @@ class ApexLens:
         if phase is not None and phase not in PHASES:
             raise ValueError(f"phase must be one of {PHASES}")
         w = self.store.get(wash_id)
+        if not w.is_wash:
+            return f"abstain: {wash_id} is not a wash (see quality lines), so it has no normal to compare with."
         refs, ref_desc = self._reference(wash_id)
         groups = list(KEY_FEATURES) if sensor_group == "all" else [sensor_group]
+        notes = []
+        if "vibration" in groups and self._vib_ok_share(w) < MIN_VIB_OK:
+            groups.remove("vibration")
+            notes.append(f"abstain: vibration not compared, only {round(100 * self._vib_ok_share(w))}% of "
+                         "running windows have usable accelerometer data.")
+            if not groups:
+                return f"wash {wash_id} vs {ref_desc}.\n" + notes[0]
         phases = [phase] if phase else [p for p in PHASES if p != "idle"]
         rows, n_checked = [], 0
         for ph in phases:
             mine = w.df["phase"] == ph
             if mine.sum() < MIN_PHASE_WINDOWS:
+                continue
+            n_have = self._ref_washes_with_phase(refs, ph)
+            if n_have < MIN_REF_WASHES:
+                notes.append(f"{ph}: insufficient data (n={n_have} other washes have this phase).")
                 continue
             for g in groups:
                 for col, name, unit in KEY_FEATURES[g]:
@@ -202,7 +237,7 @@ class ApexLens:
                         if m.sum() >= MIN_PHASE_WINDOWS and col in r.df.columns:
                             ref_meds.append(_valid(r, col)[m].median())
                     ref_meds = np.array([x for x in ref_meds if np.isfinite(x)])
-                    if len(ref_meds) < 2 or not np.isfinite(v):
+                    if len(ref_meds) < MIN_REF_WASHES or not np.isfinite(v):
                         continue
                     n_checked += 1
                     lo, med, hi = np.min(ref_meds), np.median(ref_meds), np.max(ref_meds)
@@ -216,6 +251,8 @@ class ApexLens:
         if sensor_group == "all":
             head += (f" Showing only measurements outside the normal range: {len(rows)} of {n_checked} checked. "
                      "Ask for one sensor_group to see every row.")
+        if notes:
+            head += "\n" + "\n".join(notes)
         if not rows:
             return head + "\nnothing outside the normal range."
         return head + "\n" + table(
@@ -275,12 +312,15 @@ class ApexLens:
         if baseline not in ("per_phase", "pooled"):
             raise ValueError("baseline must be 'per_phase' or 'pooled'")
         w = self.store.get(wash_id)
+        if not w.is_wash:
+            return f"abstain: {wash_id} is not a wash (see quality lines); the detector is not run."
         refs = self.store.reference_ids(wash_id)
         if len(refs) < 3:
             return f"cannot score {wash_id}: need at least 3 other washes, have {len(refs)}."
         det = self._detector(refs, baseline)
         feats = self._features([wash_id], fill=self._vib_fill(refs))
         scored = det.score(feats)
+        self._scored[wash_id] = scored          # lets render_plot mark the red windows
         s = det.summarize(scored)
         n_idle = int((w.df["phase"] == "idle").sum())
         n_bad = int(((~w.df["vib_ok"]) & (w.df["phase"] != "idle")).sum())
@@ -296,6 +336,16 @@ class ApexLens:
         ]
         if s.get("top_features_in_red_windows"):
             head.append("measures driving red windows: " + ", ".join(s["top_features_in_red_windows"]))
+        if self._vib_ok_share(w) < MIN_VIB_OK:
+            head.append(f"abstain: vibration, only {round(100 * self._vib_ok_share(w))}% of running windows have "
+                        "usable accelerometer data, so this verdict rests on sound and power only.")
+        if baseline == "per_phase":
+            thin = [f"{ph} (n={n})" for ph in PHASES if ph != "idle"
+                    and (scored["phase_group"] == ph).sum() >= MIN_PHASE_WINDOWS
+                    and (n := self._ref_washes_with_phase(refs, ph)) < MIN_REF_WASHES]
+            if thin:
+                head.append("insufficient data for a per-phase normal in: " + ", ".join(thin)
+                            + " other washes; treat those rows with caution.")
         head.append("ABNORMAL means unusual for this household's washes, not a diagnosed fault.")
         rows = []
         for ph in PHASES:
@@ -311,14 +361,110 @@ class ApexLens:
             ["phase", "windows", "red_pct", "median_pct", "sound_p95_pct", "vibration_p95_pct", "power_p95_pct"],
             rows)
 
+    # -------------------------------------------------------- similar_washes
+    def _profile(self, wash_id: str) -> pd.Series:
+        """Per-phase medians of every key measurement, as one vector ('spin:vib_level', ...)."""
+        w = self.store.get(wash_id)
+        out = {}
+        for ph in ("tumble", "heat", "spin"):
+            m = w.df["phase"] == ph
+            if m.sum() < MIN_PHASE_WINDOWS:
+                continue
+            for name, (col, _) in SIGNAL_COLS.items():
+                if col in w.df.columns:
+                    out[f"{ph}:{name}"] = _valid(w, col)[m].median()
+        return pd.Series(out, dtype=float)
+
+    def similar_washes(self, wash_id: str, k: int = 3) -> str:
+        """
+        The k reference washes closest to this one. Each measurement is
+        scaled by the median and IQR of the REFERENCE washes only (no leakage),
+        then distance = root-mean-square difference over the measurements both
+        washes have. Candidates never include this wash or its origin.
+        """
+        k = int(k)
+        if not 1 <= k <= 5:
+            raise ValueError("k must be between 1 and 5")
+        w = self.store.get(wash_id)
+        if not w.is_wash:
+            return f"abstain: {wash_id} is not a wash (see quality lines)."
+        refs = self.store.reference_ids(wash_id)
+        if not refs:
+            return f"no other washes to compare {wash_id} with."
+        P = pd.DataFrame({r: self._profile(r) for r in refs}).T
+        mine = self._profile(wash_id)
+        cols = [c for c in mine.index if c in P.columns]
+        med = P[cols].median()
+        iqr = (P[cols].quantile(0.75) - P[cols].quantile(0.25)).replace(0, np.nan)
+        iqr = iqr.fillna(med.abs() * 0.1 + 1e-9)        # constant measurement: scale by 10% of its level
+        zm = (mine[cols] - med) / iqr
+        rows = []
+        for r in refs:
+            zr = (P.loc[r, cols] - med) / iqr
+            d = (zm - zr).dropna()
+            if len(d) < 3:
+                continue
+            top = d.abs().sort_values(ascending=False).index[:3]
+            diffs = "; ".join(f"{c} {fmt(mine[c])} vs {fmt(P.loc[r, c])}" for c in top)
+            rows.append((r, self.store.get(r).wash_class, float(np.sqrt((d ** 2).mean())), len(d), diffs))
+        rows.sort(key=lambda x: x[2])
+        head = (f"wash {wash_id}: {min(k, len(rows))} most similar of {len(rows)} other washes. "
+                "distance = RMS of robust-scaled per-phase medians (0 = identical; about 1 = typical spread "
+                "between washes). biggest_differences = this wash vs that wash.")
+        return head + "\n" + table(["wash_id", "class", "distance", "n_measures", "biggest_differences"],
+                                    [(a, b, c, n, f'"{e}"') for a, b, c, n, e in rows[:k]])
+
+    # ----------------------------------------------------------- render_plot
+    def render_plot(self, wash_id: str, kind: str = "trace", signals: Optional[Sequence[str]] = None,
+                    phase: Optional[str] = None) -> Tuple[bytes, str]:
+        """One fixed-size PNG plus a caption with the numbers it shows (see plots.py)."""
+        from apex_lens import plots           # matplotlib is only imported when a plot is asked for
+        return plots.render(self, wash_id, kind, signals, phase)
+
     # ------------------------------------------------------------- dispatch
-    def call(self, name: str, **kwargs) -> str:
-        """Run a tool by name; errors come back as text so an agent can recover."""
-        fn = {"list_washes": self.list_washes, "wash_overview": self.wash_overview,
-              "compare_to_normal": self.compare_to_normal, "detector_score": self.detector_score}.get(name)
+    def call_full(self, name: str, **kwargs) -> Tuple[str, Optional[bytes]]:
+        """
+        Run a tool by name. Returns (text, png or None). The text starts with
+        `ref: <tool>#<n>` (so an answer can cite where a number came from),
+        then any `quality:` lines for the wash, then the tool's answer, cut to
+        the output budget. Errors come back as text so an agent can recover.
+        """
+        fns = {"list_washes": self.list_washes, "wash_overview": self.wash_overview,
+               "compare_to_normal": self.compare_to_normal, "detector_score": self.detector_score,
+               "similar_washes": self.similar_washes, "render_plot": self.render_plot}
+        fn = fns.get(name)
         if fn is None:
-            return f"error: unknown tool '{name}'"
+            return f"error: unknown tool '{name}'. Tools: {', '.join(fns)}", None
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
         try:
-            return fn(**kwargs)
+            res = fn(**kwargs)
         except (KeyError, ValueError, TypeError) as e:
-            return f"error: {e}"
+            return f"error: {str(e).strip(chr(39))}", None
+        png = None
+        if isinstance(res, tuple):
+            png, res = res
+        self._n_calls += 1
+        lines = [f"ref: {name}#{self._n_calls}"]
+        wid = kwargs.get("wash_id")
+        if wid in self.store.washes:
+            lines += [f"quality: {n}" for n in self.store.get(wid).notes]
+        return budget("\n".join(lines + [res])), png
+
+    def call(self, name: str, **kwargs) -> str:
+        """Text-only version of call_full (the CLI and the tests use it)."""
+        return self.call_full(name, **kwargs)[0]
+
+
+def budget(text: str, max_tokens: int = MAX_TOOL_TOKENS) -> str:
+    """Cut an answer to the output budget, keeping whole lines and saying how much was left out."""
+    from apex_lens.experiment import count_tokens
+    if count_tokens(text) <= max_tokens:
+        return text
+    lines = text.split("\n")
+    keep = []
+    for ln in lines:
+        if count_tokens("\n".join(keep + [ln])) > max_tokens - 40:
+            break
+        keep.append(ln)
+    omitted = len(lines) - len(keep)
+    return "\n".join(keep + [f"truncated: {omitted} rows omitted; narrow with phase= or sensor_group="])
