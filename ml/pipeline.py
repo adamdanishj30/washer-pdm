@@ -79,7 +79,13 @@ class PdmPipeline:
         return scores, routes
 
     # ------------------------------------------------------------------ fit
-    def fit(self, df_feat: pd.DataFrame, schema: str, use_power: bool) -> "PdmPipeline":
+    def fit(self, df_feat: pd.DataFrame, schema: str, use_power: bool,
+            conditioned: Optional[bool] = None) -> "PdmPipeline":
+        """
+        `conditioned=None` (default) conditions on phase only when at least half
+        the rows carry SmartThings labels. Pass True/False to force it, e.g.
+        when phases come from another source (apex_lens derives them from power).
+        """
         sessions = df_feat["session"].to_numpy()
         if len(np.unique(sessions)) < 3:
             raise ValueError("need at least 3 healthy cycles for leave-one-cycle-out calibration")
@@ -87,7 +93,7 @@ class PdmPipeline:
         self.spec = make_spec(schema, use_power)
         groups = df_feat["phase_group"].to_numpy().astype(object)
         labelled = (df_feat["phase_source"] == "smartthings").mean()
-        self.conditioned = bool(labelled >= CONDITION_MIN_LABELLED)
+        self.conditioned = bool(labelled >= CONDITION_MIN_LABELLED) if conditioned is None else bool(conditioned)
         X = feature_matrix(df_feat, self.spec)
 
         # --- main detector ---
