@@ -1,0 +1,10 @@
+# Apex Lens (tools + MCP server). Install:  py -m pip install -r apex_lens/requirements.txt
+# Minimum versions are the ones it was tested with on 7 Nov 2026 (Python 3.13); newer minor versions should work.
+numpy>=2.0
+pandas>=2.2
+scipy>=1.13
+scikit-learn>=1.5
+matplotlib>=3.9
+tiktoken>=0.7        # approximate token counts only
+mcp>=2.3,<3          # MCP Python SDK v2 (low-level Server API)
+pytest>=8

@@ -46,7 +46,7 @@ There are no fault labels (the machine is a working household appliance), so the
 
 ## 4. Model
 
-1. **Phase conditioning.** If at least 50% of training windows carry a SmartThings phase label, one sub-model is fitted per phase (with at least 150 windows) plus a pooled model. Otherwise one pooled model is used. Phases are **never guessed from audio loudness** (v2 did that, which made "audio is unusual for this phase" circular).
+1. **Phase conditioning.** If at least 50% of training windows carry a SmartThings phase label, one sub-model is fitted per phase (with at least 150 windows) plus a pooled model. Otherwise one pooled model is used. `PdmPipeline.fit(..., conditioned=True/False)` overrides this rule; `apex_lens/` uses it with phases derived from power. Phases are **never guessed from audio loudness** (v2 did that, which made "audio is unusual for this phase" circular).
 2. **Detector.** Default `mahalanobis`: robust scaling (10–90% range) + Ledoit-Wolf shrinkage covariance, squared Mahalanobis distance. It is transparent: per-feature contributions sum exactly to the score (`top_features` in the output). `iforest` and `ocsvm` are available and evaluated side by side.
 3. **Calibration (no leakage).** Inside the training set each cycle is scored by a model fitted on the other cycles. Those out-of-fold healthy scores define:
    * the **baseline percentile** of a window (99 = more unusual than 99% of held-out healthy windows), and its band: green < 95, amber 95–99.5, red ≥ 99.5;
