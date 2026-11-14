@@ -750,6 +750,7 @@
             <option value="live">📡 Live Rig Telemetry (Adaptive Sync)</option>
           </optgroup>
           <optgroup label="🧺 Real Wash Sessions">
+            <option value="preset_real_wash_cycle_2026_11_14_0542">🧺 14 Nov 2026, 05:42 AM (92m Full Wash, 1102 pts)</option>
             <option value="preset_real_wash_cycle_2026_11_11_0802">🧺 11 Nov 2026, 08:02 AM (95m Full Wash, 1141 pts)</option>
             <option value="preset_real_wash_cycle_2026_11_10_0634">🧺 10 Nov 2026, 06:34 AM (64m Full Wash, 768 pts)</option>
             <option value="preset_real_wash_cycle_2026_11_09_0852">🧺 09 Nov 2026, 08:52 AM (226m Full Wash, 2696 pts)</option>
@@ -1035,15 +1036,15 @@
 
   <div id="toast" class="toast-notification">Notification</div>
 
-  <script src="preset_sessions.js?v=5cf93953e4"></script>
+  <script src="preset_sessions.js?v=c41ca5f663"></script>
   <script>
     let LOADED_SESSIONS = Object.assign({}, PRESET_SESSIONS);
-    let activeSessionKey = 'preset_real_wash_cycle_2026_11_11_0802';
+    let activeSessionKey = 'preset_real_wash_cycle_2026_11_14_0542';
     if (!LOADED_SESSIONS[activeSessionKey]) {
       const _sessionKeys = Object.keys(LOADED_SESSIONS);
       activeSessionKey = _sessionKeys.length > 0 ? _sessionKeys[0] : '';
     }
-    let activeSessionName = LOADED_SESSIONS[activeSessionKey] ? (LOADED_SESSIONS[activeSessionKey].name || 'wash_cycle_2026-11-11_0802') : 'wash_cycle_2026-11-11_0802';
+    let activeSessionName = LOADED_SESSIONS[activeSessionKey] ? (LOADED_SESSIONS[activeSessionKey].name || 'wash_cycle_2026-11-14_0542') : 'wash_cycle_2026-11-14_0542';
     let ACTIVE_DATA = (LOADED_SESSIONS[activeSessionKey] && LOADED_SESSIONS[activeSessionKey].data) ? LOADED_SESSIONS[activeSessionKey].data : [];
 
     let currentMode = (activeSessionKey === '' && 'historic' === 'historic') ? 'live' : 'historic'; // 'live' or 'historic'
